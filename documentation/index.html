@@ -1,15 +1,31 @@
 <!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
+    <script type="importmap">
+          {
+            "imports": {
+              "vue": "https://unpkg.com/vue@3.4.19/dist/vue.esm-browser.js"
+            }
+          }
+    </script>
     <title>REPLACETITLEHERE</title>
     <link rel="stylesheet" href="/styles/styles.css">
-    <script src="/scripts/frontend.js"></script>
+    <link rel="favicon" href="/favicon.ico">
+    <script type="module" src="/scripts/frontend.js"></script>
 </head>
 <body>
-    <nav>Navbar</nav>
-    <div id='sitecontent'>
-        REPLACECONTENTHERE
+    <nav id='sitenavbar' class='navbarwrapper'>
+        <reactivenavbar :quote='quote'></reactivenavbar>
+    </nav>
+    <div class='sitescrollingcontent'>
+        <div id='sitecontent'>
+            REPLACECONTENTHERE
+            <sitesidebar :endpoints="state.documentation"></sitesidebar>
+            <loadingscreen :finishedloading="state.finishedLoading" :siteloadingerror="state.siteLoadingError"></loadingscreen>
+        </div>
+        <footer id='sitefootercontent'>
+            <footerapp></footerapp>
+        </footer>
     </div>
-    <footer id='sitefootercontent'>
-        <footerapp></footerapp>
-    </footer>
 </body>

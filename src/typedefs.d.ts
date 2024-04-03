@@ -191,7 +191,7 @@ export type documentedRoute = {
          * Parameter Documentation
          * - An array of objects that describe what each parameter of the route does.
          */
-        parameterDocs: {
+        parameterDocs?: {
             /**
              * Parameter ID
              * - ID of the parameter, not the name; what's used in the route. For example, for the route "/cubeicon/:cubeid" this could be ":cubeid". 
@@ -313,3 +313,5 @@ export type documentedRoute = {
         }[]
     }
 }
+
+export type routeDocumentation = documentedRoute["documentation"];

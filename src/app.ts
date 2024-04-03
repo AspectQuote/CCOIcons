@@ -14,66 +14,42 @@ const networkPort = process.env.PORT ?? 80;
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
 const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityConfig.json')
 
+import { cubeIconRoute } from './routes/cubeicon';
+
 const routes: CCOIcons.documentedRoute[] = [
     {
-        routes: ['/cubeicon/:cubeid', '/cubeicon/'],
+        routes: ['/alldocumentation'],
         documentation: {
-            title: "Cube Icon",
-            subtitle: "GETs icons for cubes, generates them if needed.",
-            resolves: "image",
+            title: "All Documentation",
+            subtitle: "GETs all documentation JSON.",
+            resolves: "json",
             author: "AspectQuote",
-            description: "Blurb about icons and what this does",
-            examples: [{
-                example: "/cubeicon/green?s=512",
-                description: "Will resolve into a 512x512 version of the Green Cube icon."
-            }],
-            parameterDocs: [
-                {
-                    parameter: 'cubeid',
-                    name: "Cube ID", 
-                    subtitle: "ID of any Cube", 
-                    description: "", 
-                    required: false,
-                    requiredNote: "If no cubeid is given the server will default to 'green'.",
-                    examples: [{
-                        example: "/cubeicon/green",
-                        description: "Will return the icon for the green cube."
-                    }]
-                }
-            ],
-            queryDocs: [
-                {
-                    query: 's',
-                    name: "Icon Size",
-                    subtitle: "The desired size.",
-                    description: "The desired size of the returned icon in pixels. Must be a power of 2, with the minimum being 16, and the maximum being 2048.",
-                    examples: [{
-                        example: "/cubeicon?s=1024",
-                        description: "Will return the default icon at a size of 1024x1024px."
-                    }]
-                }
-            ]
+            description: "Blah Blah Blah, I'll write this later.",
         },
         responseFunction: (req, res) => {
-            res.send('THIS IS AN ICON!?!')
+            let returnObject: {[key: string]: Partial<CCOIcons.routeDocumentation>} = {};
+            routes.forEach(routeInfo => {
+                routeInfo.routes.forEach(routeString => {
+                    returnObject[routeString] = {title: routeInfo.documentation.title};
+                })
+            })
+            res.json(returnObject);
         }
-    }
+    },
+    cubeIconRoute
 ];
 
 routes.forEach((routeInformation) => {
     app.get(routeInformation.routes.map(routeString => `/docs${routeString}`), (req, res) => {
-        res.send(documentationUtils.buildDocumentationFromRoute(routeInformation))
+        res.send(documentationUtils.buildDocumentationFromRoute(routeInformation.documentation, req.url));
     })
     app.get(routeInformation.routes.map(routeString => `/docsjson${routeString}`), (req, res) => {
         res.json(routeInformation.documentation)
     })
+    app.get(routeInformation.routes, routeInformation.responseFunction);
 })
 
 app.use(express.static('./documentation'))
-
-app.get(['/cubeicon/:cubeid/:cubeinfo', '/cubeicon/:cubeid'], async (req, res) => {
-    res.send('Icon!!')
-})
 
 const expressServer = app.listen(networkPort, function () {
     console.log(`[SERVER] Listening on port ${networkPort}.`)

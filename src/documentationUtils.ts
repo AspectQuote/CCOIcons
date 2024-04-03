@@ -5,12 +5,12 @@ const contentReplacementKeyword = `REPLACECONTENTHERE`;
 const titleReplacementKeyword = `REPLACETITLEHERE`;
 const baseHTMLDocument = fs.readFileSync(`./documentation/index.html`, {encoding: 'utf-8'});
 
-function buildDocumentationFromRoute(routeInformation: CCOIcons.documentedRoute): string {
-    let documentHTML = `<documentationcontent></documentationcontent>`;
+function buildDocumentationFromRoute(routeInformation: CCOIcons.documentedRoute["documentation"], routeString: string): string {
+    let documentHTML = `<documentationcontent :route='"${routeString}"'></documentationcontent>`;
 
     return baseHTMLDocument
         .replaceAll(contentReplacementKeyword, documentHTML)
-        .replaceAll(titleReplacementKeyword, `CCOIcon Docs: ${routeInformation.documentation.title}`);
+        .replaceAll(titleReplacementKeyword, `CCIcon Docs: ${routeInformation.title}`);
 }
 
 export {

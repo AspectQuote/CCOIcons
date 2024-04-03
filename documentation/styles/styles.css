@@ -1,9 +1,297 @@
+@font-face {
+    font-family: "Regular";
+    src: url("/media/fonts/NotoSans-Regular.ttf");
+}
+
+@font-face {
+    font-family: "Light";
+    src: url("/media/fonts/NotoSans-Light.ttf");
+}
+
+@font-face {
+    font-family: "Bold";
+    src: url("/media/fonts/NotoSans-Bold.ttf");
+}
+
+:root {
+    --errorBackground: #201312;
+    --darkError: #8f1e1e;
+    --error: #f94848;
+    --lightError: #fd6969;
+
+    --normalNestedNestedBackground: #090909;
+    --normalNestedBackground: #131313;
+    --normalBackground: #212121;
+    --darkNormal: #2d4a1f;
+    --normal: #61a53f;
+    --lightNormal: #95CD7A;
+
+    --accentBackground: #101a22;
+    --darkAccent: #25556A;
+    --accent: #3A86A6;
+    --lightAccent: #74B3CE;
+
+    --lessEmphaticColor: #828282;
+}
+
 * {
+    font-family: Regular;
     margin: 0;
     padding: 0;
     color: white;
+    font-size: 1vw;
 }
 
 body {
-    background: #212121;
+    height: 100vh;
+    width: 100vw;
+    font-size: 1vw;
+    overflow: hidden;
+    background-color: var(--normalBackground);
+}
+
+.loadingscreenerror {
+    color: var(--error);
+    background: var(--errorBackground);
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    margin: 1em;
+    font-size: 1.4em;
+    text-align: right;
+    padding: 0.2em 0.4em;
+    border: 2px solid;
+    box-shadow: 0.4em 0.4em 0px rgba(0, 0, 0, 0.5);
+}
+
+.loadingscreenflavor {
+    color: var(--normal);
+    font-size: 3.3em;
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0.1em 0.3em;
+}
+
+.loadingscreencoverup {
+    background-color: var(--normalBackground);
+    background-image: url('/media/images/cubebackgroundtile.png');
+    background-size: 2em 3em;
+    image-rendering: pixelated;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    transition: 0.5s;
+    z-index: 1;
+}
+
+.navbarwrapper {
+    height: 8vh;
+    width: 100vw;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.2);
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-bottom: 3px solid var(--darkNormal);
+}
+
+.sitescrollingcontent {
+    width: 100vw;
+    height: 92vh;
+    overflow-x: hidden;
+    margin-top: 8vh;
+}
+
+#sitecontent {
+    min-height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: right;
+}
+
+#sitefootercontent {
+    height: 25vh;
+    border-top: 3px solid var(--darkAccent);
+    background-color: var(--accentBackground);
+    color: var(--accent);
+}
+
+.navbarcontent {
+    display: flex;
+    justify-content: left;
+    height: 100%;
+    overflow: hidden;
+}
+
+.navbarlogo {
+    height: 100%;
+    aspect-ratio: 1;
+    background-image: url(/media/images/cciconslogocube.png);
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.navbarprojectname {
+    height: 70%;
+    margin: auto 0em;
+    aspect-ratio: 3.7/1;
+    background-image: url(/media/images/cciconslogotext.png);
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.navbarseparator {
+    height: 60%;
+    border-right: 2px solid var(--normal);
+    margin: auto 0.9em;
+}
+
+.navbarlink {
+    margin: auto 1em;
+    color: var(--lightNormal);
+}
+
+.navbarlink a {
+    font-size: 2vh;
+    color: inherit;
+}
+
+.sitesidebar {
+    width: 20vw;
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 4px solid var(--darkNormal);
+}
+
+.sidebartitle {
+    font-size: 1.2em;
+    color: var(--normal);
+    padding-block: 1.7vh;
+    margin-inline: 0.7em 0em;
+    border-bottom: 2px solid;
+}
+
+.sidebarcontent {
+    width: 91%;
+    margin: 0.7em auto;
+}
+
+.sidebardocitem {
+    color: var(--lightNormal);
+    padding: 0.2em 0.6em;
+    background: var(--normalBackground);
+    margin-block: 0.6em;
+    transition: 0.2s;
+    border-left: 3px solid;
+    box-sizing: border-box;
+}
+
+.sidebardoclinktitle {
+    color: inherit;
+}
+
+.sidebardoclink {
+    color: inherit;
+}
+
+.sidebardoclinksubtitle {
+    color: var(--normal);
+    margin-top: -0.4em;
+    font-size: 0.7em;
+    transition: inherit;
+}
+
+.sidebardocitem:hover {
+    transition: 0s;
+    color: var(--lightAccent);
+    background: var(--accentBackground);
+}
+
+.sidebardocitem:hover .sidebardoclinksubtitle {
+    color: var(--accent);
+}
+
+.documentationcontainer {
+    flex-grow: 1;
+}
+
+.failedtoloaddocsmessage {
+    color: var(--error);
+    font-family: Bold;
+    font-size: 2em;
+}
+
+.documentationloading {
+    text-align: center;
+    font-size: 3em;
+    font-weight: bolder;
+    color: var(--normal);
+}
+
+.doctitle {
+    font-size: 3em;
+    font-family: bold;
+    color: var(--normal);
+    margin-left: 0.2em;
+}
+
+.doctitleendpoint {
+    font-family: light;
+    color: var(--lessEmphaticColor);
+    display: inline-block;
+    font-size: inherit;
+}
+
+.docsubtitle {
+    color: var(--lessEmphaticColor);
+    font-size: 0.9em;
+    margin-top: -0.5em;
+    margin-left: 1.2em;
+}
+
+.docsubtitleresolution {
+    font-size: 0.7em;
+    box-sizing: border-box;
+    color: var(--lightAccent);
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid;
+    border-radius: 0.3em;
+    padding: 0.1em 0.4em;
+}
+
+.doccontent {
+    margin-inline: 1em 10em;
+    margin-top: 1.5em;
+}
+
+.doccontent:first-letter {
+    padding-left: 2em;
+}
+
+.docdescriptionauthor {
+    display: block;
+    text-align: right;
+    color: var(--lightNormal);
+}
+
+.navbarquote {
+    margin: auto 1em auto auto;
+    max-width: 20vw;
+    text-align: right;
+    color: var(--lessEmphaticColor);
+}
+
+.navbarquotecontent {
+    font-size: 0.7em;
+    color: inherit;
+}
+
+.navbarquoteoriginator {
+    font-size: 0.6em;
+    color: inherit;
 }
