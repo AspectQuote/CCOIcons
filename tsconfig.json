@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "module": "Node16",
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "sourceMap": false,
+        "baseUrl": "./",
+        "target": "ES2022",
+        "strict": false,
+        "paths": {},
+        "moduleResolution": "Node16",
+        "outDir": "build",
+        "rootDir": "src",
+        "resolveJsonModule": true
+    },
+    "include": [
+        "src/*"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "Sacred": {
+        "prefixLayout": [
+            {
+                "image": "backImage",
+                "method": "composite",
+                "position": ["center", "center"]
+            }
+        ]
+    }
+}

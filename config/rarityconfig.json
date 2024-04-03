@@ -1,0 +1,82 @@
+{
+    "common": {
+        "color": "#4d950f",
+        "name": "Common"
+    },
+    "uncommon": {
+        "color": "#293f14",
+        "name": "Uncommon"
+    },
+    "rare": {
+        "color": "#468586",
+        "name": "Rare"
+    },
+    "epic": {
+        "color": "#741a62",
+        "name": "Epic"
+    },
+    "legendary": {
+        "color": "#ee39bb",
+        "name": "Legendary"
+    },
+    "relic": {
+        "color": "#cc0000",
+        "name": "Relic"
+    },
+    "cubic": {
+        "color": "#0d0809",
+        "name": "Cubic"
+    },
+    "gold": {
+        "color": "#ebc634",
+        "name": "Gold"
+    },
+    "unreal": {
+        "color": "#240e0e",
+        "name": "Unreal"
+    },
+    "divine": {
+        "color": "#ffffff",
+        "name": "Divine"
+    },
+    "slated": {
+        "color": "#213047",
+        "name": "Slated"
+    },
+    "coldiv": {
+        "color": "#660808",
+        "name": "Collector's Divine"
+    },
+    "colslat": {
+        "color": "#660808",
+        "name": "Collector's Slated"
+    },
+    "collectors": {
+        "color": "#660808",
+        "name": "Collector's"
+    },
+    "exotic": {
+        "color": "#84b512",
+        "name": "Exotic"
+    },
+    "special": {
+        "color": "#70aeff",
+        "name": "Special"
+    },
+    "crafted": {
+        "color": "#4a2c1c",
+        "name": "Crafted"
+    },
+    "materialcube": {
+        "color": "#787878",
+        "name": "Material"
+    },
+    "contraband": {
+        "color": "#574000",
+        "name": "Contraband"
+    },
+    "mythic": {
+        "color": "#f2b3f2",
+        "name": "Mythical"
+    }
+}
