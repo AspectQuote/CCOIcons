@@ -18,20 +18,19 @@
     --darkError: #8f1e1e;
     --error: #f94848;
     --lightError: #fd6969;
-
     --normalNestedNestedBackground: #090909;
     --normalNestedBackground: #131313;
     --normalBackground: #212121;
     --darkNormal: #2d4a1f;
     --normal: #61a53f;
     --lightNormal: #95CD7A;
-
     --accentBackground: #101a22;
     --darkAccent: #25556A;
     --accent: #3A86A6;
     --lightAccent: #74B3CE;
-
+    --darkLessEmphaticColor: #4f4f4f;
     --lessEmphaticColor: #828282;
+    --lightLessEmphaticColor: #b9b9b9;
 }
 
 * {
@@ -294,4 +293,137 @@ body {
 .navbarquoteoriginator {
     font-size: 0.6em;
     color: inherit;
+}
+
+.documentationrequestmodifiertitle {
+    font-size: 2em;
+    font-family: light;
+    color: var(--normal);
+    margin-left: 0.5em;
+}
+
+.documentationrequestmodifiercontainer {
+    margin: 1em 2em;
+}
+
+.documentationrequestmodifierwrapper {
+    color: var(--lessEmphaticColor);
+    border: 2px solid;
+    background: var(--normalNestedBackground);
+    box-shadow: 0.5em 0.5em 0px rgba(0, 0, 0, 0.5);
+}
+
+.documentationrequestmodifiername {
+    color: var(--lightLessEmphaticColor);
+    font-size: 1.3em;
+    padding: 0.2em 0.4em;
+    font-family: 'Bold';
+}
+
+.documentationrequestmodifiersubtitle {
+    font-size: 0.8em;
+    padding: 0.2em 1.4em;
+    width: 50%;
+    margin-top: -1em;
+    color: var(--lessEmphaticColor);
+}
+
+.documentationrequestmodifierdescription {
+    width: 88%;
+    margin: 0 auto 0 1%;
+    box-sizing: border-box;
+    padding: 0.5em;
+    font-size: 0.9em;
+}
+
+.documentationrequestmodifierdescription:first-letter {
+    padding-left: 2.1em;
+}
+
+.parameterrequiredflagdisplay {
+    color: var(--error);
+    border: 2px solid;
+    margin: 1em;
+    background: var(--errorBackground);
+    padding: 0.2em 0.4em;
+    box-shadow: 0.5em 0.5em 0px rgba(0, 0, 0, 0.5);
+}
+
+.parameterrequiredflagflavor {
+    color: inherit;
+    font-size: 1.2em;
+    font-family: 'Bold';
+}
+
+.parameterrequiredflagnote {
+    color: inherit;
+    font-style: italic;
+    font-size: 0.8em;
+}
+
+.parameterrequiredflagconfirmation {
+    color: inherit;
+    font-size: 0.7em;
+    margin-top: -0.4em;
+    filter: brightness(0.8);
+}
+
+.parameterrequiredflagdisplay.notrequired {
+    color: var(--accent);
+    background: var(--accentBackground);
+}
+
+.requestmodifierexamplecontainer {
+    margin: 1em;
+    border: 2px solid;
+    color: var(--lessEmphaticColor);
+    background: var(--normalNestedNestedBackground);
+    box-shadow: 0.5em 0.5em 0px rgba(0, 0, 0, 0.5);
+}
+
+.requestmodifierexamplename {
+    color: var(--lightLessEmphaticColor);
+    font-family: 'Bold';
+    padding: 0.2em 0.4em;
+    font-size: 1.3em;
+}
+
+.requestmodifierexampledesc {
+    color: var(--darkLessEmphaticColor);
+    font-size: 0.9em;
+    padding-left: 0.6em;
+}
+
+.requestmodifierexampledesc:first-letter {
+    padding-left: 2.1em;
+}
+
+.requestmodifierexamplelink {
+    display: flex;
+    border: 2px solid;
+    margin: 0.4em;
+    padding: 0.2em 0.4em;
+    min-width: 50vw;
+    color: var(--accent);
+}
+
+.requestmodifierexamplelinkstring {
+    font-style: italic;
+    font-family: 'Light';
+    color: var(--lightLessEmphaticColor);
+    flex-grow: 1;
+}
+
+.custombutton {
+    aspect-ratio: 1;
+    height: 1.4em;
+    border: 1px solid;
+    margin-left: 0.4em;
+    background: url(/media/images/buttonicons.png);
+    background-size: 17em;
+    cursor: pointer;
+}
+
+.custombutton:hover {
+    color: var(--accentcolor);
 }

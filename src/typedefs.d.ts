@@ -1,5 +1,6 @@
 import * as cubes from 'config/cubes.json';
 import * as rarityConfig from 'config/rarityconfig.json';
+import * as prefixes from 'config/prefixes.json';
 import { RequestHandler, Application, Response } from 'express';
 
 /**
@@ -43,6 +44,12 @@ export type prefixImageApplicationStep = {
      */
     position?: [prefixApplicationYPosition, prefixApplicationYPosition]
 }
+
+/**
+ * Prefix ID
+ * - The ID of any particular prefix
+ */
+export type prefixID = keyof typeof prefixes;
 
 /**
  * Prefix Application Method
@@ -234,6 +241,11 @@ export type documentedRoute = {
              */
             examples: {
                 /**
+                 * Example Name
+                 * - A short title that conveys the basic premise of the example.
+                 */
+                name: string,
+                /**
                  * Example Link
                  * - A relative path to the URL that shows off specific functionality. e.g. "/cubeicon/" to show off the default cube icon.
                  */
@@ -282,6 +294,12 @@ export type documentedRoute = {
              */
             examples: {
                 /**
+                 * Example Name
+                 * - A short title that conveys the basic premise of the example.
+                 */
+                name: string,
+
+                /**
                  * Example Link
                  * - A relative path to the URL that shows off specific functionality. e.g. "/cubeicon?s=512" to show off the default cube icon, resized to 512x512.
                  */
@@ -299,6 +317,12 @@ export type documentedRoute = {
          * - Show off different combinations of Query Modifiers and Paremeters.
          */
         examples?: {
+            /**
+             * Example Name
+             * - A short title that conveys the basic premise of the example.
+             */
+            name: string,
+
             /**
              * Route Example Link
              * - A relative link to the URL that shows off specific funcitonality.

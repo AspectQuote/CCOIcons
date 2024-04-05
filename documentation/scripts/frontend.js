@@ -2,6 +2,8 @@ import * as Vue from 'vue';
 
 console.log(Vue);
 
+const siteURL = new URL(document.URL);
+
 async function requestJSON(path) {
     var compurl = ((window.location.hostname === "localhost") ? "http://" + window.location.hostname : "https://" + window.location.hostname)
     var comprequest = {
@@ -143,11 +145,109 @@ siteApp.component('documentationcontent', {
             <div class='doctitle'>{{docData.title}} - <span class='doctitleendpoint'>{{route.replace("/docs", "")}}</span></div>
             <div class='docsubtitle'>{{docData.subtitle}} <span class='docsubtitleresolution'>{{docData.resolves}}</span></div>
             <div class='doccontent'>{{docData.description}}<span class='docdescriptionauthor'>- Written By {{docData.author}}</span></div>
-            <div class='docparamexamples'>Example Parameters</div>
-            <div class='docqueryexamples'>Example Query Modifiers</div>
-            <div class='docrequestbuilder'>Request Builder</div>
+            <div v-if='docData.parameterDocs' class='documentationrequestmodifiertitle'>Endpoint Parameters</div>
+            <parametersdocumentation v-if='docData.parameterDocs' :parameters='docData.parameterDocs' :resolutiontype='docData.resolves'></parametersdocumentation>
+            <div class='documentationrequestmodifiertitle' v-if='docData.queryDocs'>Endpoint Query Modifiers</div>
+            <querymodifiersdocumentation v-if='docData.queryDocs' :querymods='docData.queryDocs' :resolutiontype='docData.resolves'></querymodifiersdocumentation>
+            <div class='documentationrequestmodifiertitle'>Request Examples</div>
+            <requestmodifierexample v-for='example in docData.examples' :exampledata='example' :resolutiontype='docData.resolves'></requestmodifierexample>
+            <div class='documentationrequestmodifiertitle'>Request Builder</div>
         </div>
         <div class='documentationloading' v-else>Loading Documentation...</div>
+    </div>`
+})
+
+siteApp.component('fancybutton', {
+    props: ['icon'],
+    computed: {
+        style: function() {
+            const baseStyleObject = {
+                "background-position": "0 0"
+            }
+
+            const iconPositionIncrementor = (52/576) * 100
+
+            const iconStyles = {
+                "copy": {
+                    "background-position": "0 0"
+                },
+                "open": {
+                    "background-position": `${iconPositionIncrementor * 1}% 0`
+                }
+            }
+
+            if (iconStyles[this.icon]) {
+                Object.assign(baseStyleObject, iconStyles[this.icon]);
+            }
+
+            return baseStyleObject;
+        }
+    },
+    template: `<div class='custombutton' :style='style'></div>`
+})
+
+siteApp.component('requestpreview', {
+    props: ['url', 'expectedrequesttype'],
+    template: `<div class='requestpreviewcontainer'>Request Preview</div>`
+})
+
+siteApp.component('requestmodifierexample', {
+    props: ['exampledata', 'resolutiontype'],
+    data: function() {
+        return {
+            baseURL: siteURL.protocol+"//"+siteURL.hostname
+        }
+    },
+    methods: {
+        copyToClipboard: async function(string) {
+            await navigator.clipboard.writeText(string);
+            alert("Copied URL to clipboard.");
+        },
+        openInNewTab: function(string) {
+            window.open(string);
+        }
+    },
+    computed: {},
+    template: `<div class='requestmodifierexamplecontainer'>
+        <div class='requestmodifierexamplename'>Example: {{exampledata.name}}</div>
+        <div class='requestmodifierexampledesc'>{{exampledata.description}}</div>
+        <div class='requestmodifierexamplelink'>
+            <div class='requestmodifierexamplelinkstring'>{{baseURL+exampledata.example}}</div>
+            <fancybutton :icon='"copy"' @click='() => {copyToClipboard(baseURL+exampledata.example)}'></fancybutton>
+            <fancybutton :icon='"open"' @click='() => {openInNewTab(baseURL+exampledata.example)}'></fancybutton>
+        </div>
+    </div>`
+})
+
+siteApp.component('parametersdocumentation', {
+    props: ['parameters', 'resolutiontype'],
+    template: `<div class='documentationrequestmodifiercontainer documentationparameterscontainer'>
+        <div class='documentationrequestmodifierwrapper' v-for='parameter in parameters'>
+            <div class='documentationrequestmodifiername'>Parameter '{{parameter.name}}' - {{parameter.parameter}}</div>
+            <div class='documentationrequestmodifiersubtitle'>{{parameter.subtitle}}</div>
+            <div class='documentationrequestmodifierdescription'>{{parameter.description}}</div>
+
+            <div class='parameterrequiredflagdisplay' :class='((parameter.required) ? "" : " notrequired")'>
+                <div class='parameterrequiredflagflavor'>This parameter is {{((parameter.required) ? " " : "not ")}}required.</div>
+                <div class='parameterrequiredflagconfirmation'>You {{((parameter.required) ? "" : "do NOT")}} need to include this parameter in your requests.</div>
+                <div class='parameterrequiredflagnote' v-if='parameter.requiredNote'>Note: {{parameter.requiredNote}}</div>
+            </div>
+
+            <requestmodifierexample v-for='example in parameter.examples' :exampledata='example' :resolutiontype='resolutiontype'></requestmodifierexample>
+        </div>
+    </div>`
+})
+
+siteApp.component('querymodifiersdocumentation', {
+    props: ['querymods', 'resolutiontype'],
+    template: `<div class='documentationrequestmodifiercontainer documentationquerymodscontainer'>
+        <div class='documentationrequestmodifierwrapper' v-for='queryModifier in querymods'>
+            <div class='documentationrequestmodifiername'>Query Modifier: '{{queryModifier.name}}' - ?{{queryModifier.query}}=''</div>
+            <div class='documentationrequestmodifiersubtitle'>{{queryModifier.subtitle}}</div>
+            <div class='documentationrequestmodifierdescription'>{{queryModifier.description}}</div>
+
+            <requestmodifierexample v-for='example in queryModifier.examples' :exampledata='example' :resolutiontype='resolutiontype'></requestmodifierexample>
+        </div>
     </div>`
 })
 
