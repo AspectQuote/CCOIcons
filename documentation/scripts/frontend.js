@@ -5,7 +5,7 @@ console.log(Vue);
 const siteURL = new URL(document.URL);
 
 async function requestJSON(path) {
-    var compurl = ((window.location.hostname === "localhost") ? "http://" + window.location.hostname : "https://" + window.location.hostname)
+    var compurl = (path.includes('http')) ? path : ((window.location.hostname === "localhost") ? "http://" + window.location.hostname : "https://" + window.location.hostname) + path
     var comprequest = {
         method: 'GET', // *GET, POST, PUT, DELETE, etc.
         mode: 'cors', // no-cors, *cors, same-origin
@@ -18,7 +18,7 @@ async function requestJSON(path) {
         redirect: 'follow', // manual, *follow, error
         referrerPolicy: 'no-referrer' // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
     }
-    var response = await fetch(compurl + path, comprequest);
+    var response = await fetch(compurl, comprequest);
     if (response.redirected) {
         window.location = response.url
     }
@@ -173,6 +173,9 @@ siteApp.component('fancybutton', {
                 },
                 "open": {
                     "background-position": `${iconPositionIncrementor * 1}% 0`
+                },
+                "refresh": {
+                    "background-position": `${iconPositionIncrementor * 2}% 0`
                 }
             }
 
@@ -188,7 +191,107 @@ siteApp.component('fancybutton', {
 
 siteApp.component('requestpreview', {
     props: ['url', 'expectedrequesttype'],
-    template: `<div class='requestpreviewcontainer'>Request Preview</div>`
+    data: function() {
+        return {
+            refreshing: true,
+            imageProperties: {
+                width: 0,
+                height: 0,
+                size: "0 Bytes",
+                show: true
+            },
+            jsonProperties: {
+                jsonObject: {},
+                size: "0 Bytes"
+            }
+        }
+    },
+    methods: {
+        imgload: function() {
+            this.refreshImageProperties();
+        },
+        refreshImageProperties: async function() {
+            return new Promise(async (res, rej) => {
+                const imageFileSize = await new Promise((res, rej) => {
+                    // This code was mostly written by Christian on StackOverflow at https://stackoverflow.com/questions/1310378/determining-image-file-size-dimensions-via-javascript
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('HEAD', this.url, true);
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState == 4) {
+                            if (xhr.status == 200) {
+                                res(xhr.getResponseHeader('Content-Length'));
+                            } else {
+                                res(0);
+                            }
+                        }
+                    };
+                    xhr.send(null);
+                })
+                this.imageProperties.size = this.getReadableBytes(imageFileSize);
+                let image = (this.$refs.previewimage);
+                this.imageProperties.height = image.naturalHeight;
+                this.imageProperties.width = image.naturalWidth;
+                this.refreshing = false;
+            })
+        },
+        getReadableBytes: function(number) {
+            if (number > 1000000) {
+                return `~${(number / 1000000).toFixed(2)}MB`
+            } else if (number > 1000) {
+                return `~${(number / 1000).toFixed(2)}KB`
+            } else {
+                return `~${number} Bytes`
+            }
+        },
+        getTheJSON: async function() {
+            return new Promise(async (res, rej) => {
+                const json = await requestJSON(this.url);
+                const jsonString = JSON.stringify(json.data);
+                this.jsonProperties.jsonObject = json.data;
+                const jsonSize = new Blob([jsonString]).size;
+                this.jsonProperties.size = this.getReadableBytes(jsonSize);
+                this.refreshing = false;
+                res(true);
+            })
+        },
+        refresh: async function() {
+            if (this.refreshing) return;
+            this.refreshing = true;
+            console.log(this.refreshing,this.$data)
+            if (this.expectedrequesttype === "json") {
+                await this.getTheJSON();
+            } else if (this.expectedrequesttype === "image") {
+                this.imageProperties.show = false;
+                Vue.nextTick(async () => {
+                    this.imageProperties.show = true;
+                    await this.refreshImageProperties();
+                })
+            } else {
+                console.warn(`Cannot refresh request type '${this.expectedrequesttype}'`)
+            }
+        }
+    },
+    mounted: function() {
+        if (this.expectedrequesttype === "json") {
+            this.getTheJSON();
+        }
+    },
+    template: `<div class='requestpreviewcontainer'>
+        <div class='requestpreviewflavor'>Request Preview</div>
+        <div class='requestpreviewrefreshbutton' @click='refresh' v-if='!refreshing'>
+            <fancybutton :icon='"refresh"'></fancybutton>Refresh
+        </div>
+        <div class='requestpreviewURL'>{{url}}</div>
+        <div v-if='expectedrequesttype === "image"' class='requestpreviewimagewrapper'>
+            <img class='requestpreviewimage' v-if='imageProperties.show' ref='previewimage' :onload='imgload' :src='url' />
+            <div class='requestpreviewimagedata'>{{imageProperties.width+"PX x "+imageProperties.height+"PX @ "+imageProperties.size}}</div>
+        </div>
+        <div v-else-if='expectedrequesttype === "json"' class='requestpreviewjsonwrapper'>
+            <pre class='requestpreviewjson'>{{JSON.stringify(jsonProperties.jsonObject, null, "    ")}}</pre>
+            <div class='requestpreviewjsondata'>{{jsonProperties.size}}</div>
+        </div>
+        <div v-else>No response type display for type {{expectedrequesttype}}</div>
+    </div>`
 })
 
 siteApp.component('requestmodifierexample', {
@@ -215,6 +318,9 @@ siteApp.component('requestmodifierexample', {
             <div class='requestmodifierexamplelinkstring'>{{baseURL+exampledata.example}}</div>
             <fancybutton :icon='"copy"' @click='() => {copyToClipboard(baseURL+exampledata.example)}'></fancybutton>
             <fancybutton :icon='"open"' @click='() => {openInNewTab(baseURL+exampledata.example)}'></fancybutton>
+        </div>
+        <div class='requestmodifierpreview'>
+            <requestpreview :url='baseURL+exampledata.example' :expectedrequesttype='resolutiontype'></requestpreview>
         </div>
     </div>`
 })

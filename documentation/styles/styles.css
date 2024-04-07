@@ -427,3 +427,95 @@ body {
 .custombutton:hover {
     color: var(--accentcolor);
 }
+
+.requestpreviewcontainer {
+    color: var(--accent);
+    background: var(--accentBackground);
+    border: 1px solid;
+    margin: 1em;
+    position: relative;
+    min-height: 20vh;
+}
+
+.requestpreviewflavor {
+    font-size: 2em;
+    font-family: 'Light';
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: inherit;
+    filter: brightness(0.5);
+    font-style: italic;
+}
+
+.requestpreviewURL {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.2em 0.4em;
+    font-size: 1.2em;
+}
+
+.requestpreviewimagewrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-height: 100%;
+    padding: 1.2vh;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.requestpreviewimage {
+    max-height: 14.7vh;
+}
+
+.requestpreviewimagedata {
+    position: absolute;
+    bottom: -0.5em;
+    right: 50%;
+    white-space: nowrap;
+    font-size: 0.7em;
+    background: black;
+    border: 2px solid;
+    transform: translateX(50%);
+}
+
+.requestpreviewjsonwrapper {
+    margin: 3em 0.5em 0.5em 0.5em;
+    background: black;
+    border: 1px solid;
+    padding: 0.5em;
+    position: relative;
+    color: var(--lightAccent);
+}
+
+.requestpreviewjsondata {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    color: var(--lightAccent);
+    font-size: 0.8em;
+    margin-right: 0.3em;
+}
+
+.requestpreviewjson {
+    font-family: monospace;
+    font-size: 0.7em;
+}
+.requestpreviewrefreshbutton {
+    position: absolute;
+    bottom: 0.3em;
+    left: 0;
+    display: flex;
+    cursor: pointer;
+}
+
+.requestpreviewrefreshbutton:hover {
+    color: var(--accent);
+}
+
+.requestpreviewrefreshbutton .custombutton {
+    color: inherit;
+}

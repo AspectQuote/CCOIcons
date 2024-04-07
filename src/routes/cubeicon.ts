@@ -197,12 +197,19 @@ const route: CCOIcons.documentedRoute = {
                 subtitle: "ID of any Cube",
                 description: "Accepts any cube ID. Changes the requested icon to that cube ID. For example, 'green' will give the green cube icon. Similarly, 'red' will return the Red Cube's icon, so on and so forth.",
                 required: false,
-                requiredNote: "If no cubeid is given the server will default to 'green'.",
-                examples: [{
-                    name: "green cube icon",
-                    example: "/cubeicon/green",
-                    description: "Will return the icon for the green cube."
-                }]
+                requiredNote: "If no cubeid is given the server will return a random cube icon.",
+                examples: [
+                    {
+                        name: "Red Cube Icon",
+                        example: "/cubeicon/red",
+                        description: "Will return the icon for the red cube."
+                    },
+                    {
+                        name: "Red Cube Icon",
+                        example: "/cubeicon/raccoon",
+                        description: "Will return the icon for the raccoon cube."
+                    }
+                ]
             }
         ],
         queryDocs: [
@@ -211,11 +218,18 @@ const route: CCOIcons.documentedRoute = {
                 name: "Icon Size",
                 subtitle: "The desired size.",
                 description: "The desired size of the requested icon in pixels. Must be a power of 2, with the minimum being 16, and the maximum being 2048.",
-                examples: [{
-                    name: "1024x1024 cube icon",
-                    example: "/cubeicon?s=1024",
-                    description: "Will return the default icon at a size of 1024x1024px."
-                }]
+                examples: [
+                    {
+                        name: "512x512 Cube Icon",
+                        example: "/cubeicon?s=512",
+                        description: "Will return a random icon at a size of 512x512px."
+                    },
+                    {
+                        name: "16x16 Cardboard Box Cube Icon",
+                        example: "/cubeicon/cardboardbox?s=16",
+                        description: "Will return the cardboard box icon at a size of 16x16px. Note: This is the smallest version of any icon you can request."
+                    }
+                ]
             }
         ]
     },
@@ -225,12 +239,12 @@ const route: CCOIcons.documentedRoute = {
         if (cubes[req.params.cubeid as CCOIcons.cubeID] !== undefined) {
             requestedCubeID = (req.params.cubeid as CCOIcons.cubeID) ?? 'green';
         } else {
-            requestedCubeID = 'green';
+            requestedCubeID = Object.keys(cubes)[Math.round(Math.random() * Object.keys(cubes).length)] as CCOIcons.cubeID;
         }
+        console.log(requestedCubeID)
         // Cube icon generation parameters storer
         const cubeIconParams: Partial<cubeIconGenerationParameters> = {};
         if (Object.keys(req.query).length > 0) {
-            console.log(req.query)
             if (typeof req.query.s === "string") { // Cube Icon Size query modifier
                 cubeIconParams.size = {
                     use: true,
@@ -240,8 +254,15 @@ const route: CCOIcons.documentedRoute = {
                 }
             }
         }
-        // Create the image (if needed) and get its path
-        let imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, 0);
+        let imagePath = '';
+        try {
+            // Create the image (if needed) and get its path
+            imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, 0);
+        } catch (e) {
+            console.log(e);
+            res.status(403);
+            res.send('Failed to get this image. Internal error: '+e)
+        }
         // Finally, send the file.
         console.log(imagePath);
         res.sendFile(imagePath);

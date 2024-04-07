@@ -25,6 +25,13 @@ const routes: CCOIcons.documentedRoute[] = [
             resolves: "json",
             author: "AspectQuote",
             description: "Blah Blah Blah, I'll write this later.",
+            examples: [
+                {
+                    name: "Get all Documentation",
+                    example: "/alldocumentation",
+                    description: "Simply gets all the documentation data."
+                }
+            ]
         },
         responseFunction: (req, res) => {
             let returnObject: {[key: string]: Partial<CCOIcons.routeDocumentation>} = {};
