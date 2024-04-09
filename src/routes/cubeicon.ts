@@ -2,13 +2,14 @@ import * as CCOIcons from './../typedefs';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as Jimp from 'jimp';
+let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
 const prefixes: { [key in CCOIcons.prefixID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/prefixes.json');
 const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityConfig.json')
 
 const relativeRootDirectory = `${__dirname}/../../..`;
-const sourceImagesDirectory = '/sourceimages';
+const sourceImagesDirectory = './sourceicons/cubes/';
 
 const iconModifiers = {
     baseIcon: {
@@ -19,21 +20,42 @@ const iconModifiers = {
             // Create the directory path of the outcome of this modification
             const outcomePath = path.resolve(`${relativeRootDirectory}/ccicons`);
             // Create the outcome path of the file
-            const outcomeFile = `${outcomePath}${modifyingIcon}`;
+            const outcomeFile = `${outcomePath}/${modifyingID}.png`;
             // If the path to the directory doesn't exist, create it.
             if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
             // If the icon hasn't been generated yet, then generate it (in this case, it's copying it to the generated icons directory to make sure the original image isn't accidentally modified)
             if (!fs.existsSync(outcomeFile)) fs.copyFileSync(originalImagePath, outcomeFile);
             // Return the directory to add to the icon generation function.
-            return `/ccicons`;
+            return `/ccicons/`;
         }
     },
     contraband: {
         directory: '/contraband',
         modificationFunction: async function(modifyingPath, modifyingID, modifyingIcon, data: any) {
             const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
-            
-            return `/contraband`;
+            // Create the directory path of the outcome of this modification
+            const outcomePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}/contraband`);
+            console.log(outcomePath)
+            // Create the outcome path of the file
+            const outcomeFile = `${outcomePath}/${modifyingID}.png`;
+            // If the path to the directory doesn't exist, create it.
+            if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
+            // If the icon hasn't been generated yet, then generate it (in this case, it's masking the accent image with a 'contraband' image, then compositing the original image with the masked accent image.)
+            if (!fs.existsSync(outcomeFile)) {
+                const customMaskImagePath = `${sourceImagesDirectory}${modifyingID}/accents.png`;
+                const maskImage = await Jimp.read((!fs.existsSync(customMaskImagePath)) ? `${sourceImagesDirectory}_DEFAULT_/accents.png` : customMaskImagePath);
+                const baseImage = await Jimp.read(`${sourceImagesDirectory}${modifyingID}/cube.png`);
+                const contrabandEffectImage = await Jimp.read(`./sourceicons/attributeeffects/contraband.png`);
+                var patternRNG = new seedrandom(`${modifyingID}`);
+
+                const cropX = Math.round(patternRNG() * (contrabandEffectImage.bitmap.width - baseImage.bitmap.width));
+                const cropY = Math.round(patternRNG() * (contrabandEffectImage.bitmap.height - baseImage.bitmap.height));
+                contrabandEffectImage.crop(cropX, cropY, baseImage.bitmap.width, baseImage.bitmap.height);
+                contrabandEffectImage.mask(maskImage, 0, 0);
+                baseImage.composite(contrabandEffectImage, 0, 0);
+                await baseImage.writeAsync(outcomeFile);
+            }
+            return `/contraband/`;
         }
     },
     bSide: {
@@ -78,13 +100,13 @@ const iconModifiers = {
             const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
 
             // Sizes can be in many forms, so let's create a separate directory for each size.
-            const resizeDirectory = `/sizex${data.size}`;
+            const resizeDirectory = `/sizex${data.size}/`;
 
             // Create the directory path of the outcome of this modification
             const outcomeDirectory = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${resizeDirectory}`);
 
             // Create the outcome path of the file
-            const outcomeFile = `${outcomeDirectory}${modifyingIcon}`;
+            const outcomeFile = `${outcomeDirectory}/${modifyingIcon}`;
 
             // If the path to the directory doesn't exist, create it.
             if (!fs.pathExistsSync(outcomeDirectory)) fs.mkdirSync(outcomeDirectory, { recursive: true });
@@ -144,8 +166,9 @@ interface cubeIconGenerationParameters {
 
 async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParameters>, cubeID: CCOIcons.cubeID, iconSeed: number): Promise<string> {
     let imageDirectories: string[] = [];
-    const imageFileName = cubes[cubeID].icon.replace('./sourceimages/cubes', '');
-    const baseDirectory = await iconModifiers.baseIcon.modificationFunction(["/CCOIcons/sourceimages/cubes"], cubeID, imageFileName, { seed: iconSeed });
+    let imageFileName = 'cube.png';
+    const baseDirectory = await iconModifiers.baseIcon.modificationFunction([`/CCOIcons/sourceicons/cubes/${cubeID}/`], cubeID, imageFileName, { seed: iconSeed });
+    imageFileName = `${cubeID}.png`;
     imageDirectories.push(baseDirectory);
 
     // These IF..ELSE statements are set up in this order to enforce the image application filter order... obviously we don't want 'b-side' to be applied after 'size' and stuff like that... it wouldn't look quite right
@@ -186,7 +209,7 @@ const route: CCOIcons.documentedRoute = {
         author: "AspectQuote",
         description: "Blurb about icons and what this does",
         examples: [{
-            name: "large green cube icon",
+            name: "Large Green Cube Icon",
             example: "/cubeicon/green?s=512",
             description: "Will resolve into a 512x512 version of the Green Cube icon."
         }],
@@ -197,7 +220,7 @@ const route: CCOIcons.documentedRoute = {
                 subtitle: "ID of any Cube",
                 description: "Accepts any cube ID. Changes the requested icon to that cube ID. For example, 'green' will give the green cube icon. Similarly, 'red' will return the Red Cube's icon, so on and so forth.",
                 required: false,
-                requiredNote: "If no cubeid is given the server will return a random cube icon.",
+                requiredNote: "If no cubeid is given the server will return the 'green' cube icon.",
                 examples: [
                     {
                         name: "Red Cube Icon",
@@ -205,7 +228,7 @@ const route: CCOIcons.documentedRoute = {
                         description: "Will return the icon for the red cube."
                     },
                     {
-                        name: "Red Cube Icon",
+                        name: "Raccoon Cube Icon",
                         example: "/cubeicon/raccoon",
                         description: "Will return the icon for the raccoon cube."
                     }
@@ -222,12 +245,30 @@ const route: CCOIcons.documentedRoute = {
                     {
                         name: "512x512 Cube Icon",
                         example: "/cubeicon?s=512",
-                        description: "Will return a random icon at a size of 512x512px."
+                        description: "Will return the 'green' cubeID icon at a size of 512x512px."
                     },
                     {
                         name: "16x16 Cardboard Box Cube Icon",
                         example: "/cubeicon/cardboardbox?s=16",
                         description: "Will return the cardboard box icon at a size of 16x16px. Note: This is the smallest version of any icon you can request."
+                    }
+                ]
+            },
+            {
+                query: 'c',
+                name: "Contraband Attribute",
+                subtitle: "Whether or not you want the contraband attribute modification to be applied.",
+                description: "You don't have to include anything as part of this parameter, simply including 'c' as a query modifier in the URL is enough.",
+                examples: [
+                    {
+                        name: "Contraband Green Cube Icon",
+                        example: "/cubeicon?c",
+                        description: "Will return the 'green' cubeID icon in its contraband variant."
+                    },
+                    {
+                        name: "512x512 Contraband Red Cube Icon",
+                        example: "/cubeicon/red?c&s=512",
+                        description: "Will return the contraband red cube icon at a size of 512x512px. Note: 'c' is simply provided without any value in the URL."
                     }
                 ]
             }
@@ -239,7 +280,7 @@ const route: CCOIcons.documentedRoute = {
         if (cubes[req.params.cubeid as CCOIcons.cubeID] !== undefined) {
             requestedCubeID = (req.params.cubeid as CCOIcons.cubeID) ?? 'green';
         } else {
-            requestedCubeID = Object.keys(cubes)[Math.round(Math.random() * Object.keys(cubes).length)] as CCOIcons.cubeID;
+            requestedCubeID = 'green';
         }
         console.log(requestedCubeID)
         // Cube icon generation parameters storer
@@ -251,6 +292,12 @@ const route: CCOIcons.documentedRoute = {
                     data: {
                         size: Number.parseInt(req.query.s)
                     }
+                }
+            }
+            if (req.query.c !== undefined) {
+                cubeIconParams.contraband = {
+                    use: true,
+                    data: {}
                 }
             }
         }

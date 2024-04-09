@@ -3,7 +3,7 @@ import * as CCOIcons from './typedefs';
 import * as ExpressJS from 'express';
 const express = require('express');
 import * as path from 'path';
-import * as jimp from 'jimp';
+import Jimp from 'jimp';
 import * as GifWrap from 'gifwrap';
 import * as fs from 'fs-extra';
 import * as documentationUtils from './documentationUtils';
@@ -12,9 +12,11 @@ var app: ExpressJS.Application = express();
 const networkPort = process.env.PORT ?? 80;
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
+let allCubeIDs = (Object.keys(cubes) as CCOIcons.cubeID[]);
 const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityConfig.json')
 
 import { cubeIconRoute } from './routes/cubeicon';
+
 
 const routes: CCOIcons.documentedRoute[] = [
     {
