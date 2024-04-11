@@ -1,4 +1,5 @@
 import * as cubes from 'config/cubes.json';
+import * as patterns from 'config/patterneditems.json';
 import * as rarityConfig from 'config/rarityconfig.json';
 import * as prefixes from 'config/prefixes.json';
 import { RequestHandler, Application, Response } from 'express';
@@ -140,6 +141,108 @@ export type rarityDefinition = {
      * - A string naming the rarity of a particular ID.
      */
     name: string
+}
+
+/**
+ * Patterned Cube ID
+ * - Each of these are {@link cubeID|Cube ID}, they correspond to a {@link cubeID|Cube ID}.
+ */
+export type patternedCubeID = keyof typeof patterns;
+
+/**
+ * Patterned Cube Definition
+ * - A configuration object for defining a cube pattern
+ */
+export interface patternedCubeDefinition {
+    /**
+     * Base Image
+     * - The name of the base image file in the directory './sourceicons/seededcubetextures/{@link cubeID|cubeID}/'
+     */
+    baseimage: string,
+
+    /**
+     * Final Overlay
+     * - The name of the overlay image file in the directory './sourceicons/seededcubetextures/{@link cubeID|cubeID}/' (this is usually the lighting of the cube)
+     */
+    overlayimage: string,
+
+    /**
+     * Mask Images
+     * - The patterns to apply to the icon, each is applied in order.
+     */
+    masks: {
+        /**
+         * Possible Mask Images
+         * - Paths to image files in the directory './sourceicons/seededcubetextures/{@link cubeID|cubeID}/' (the image is chosen at random, based on the seed.)
+         */
+        images: string[],
+
+        /**
+         * Pattern Image Index
+         * - Index of the {@link patternedCubeDefinition.patternimages|PatternImage} image to mask using the randomized mask image
+         */
+        patternimage: number
+    }[],
+
+    /**
+     * Pattern Image Definitions
+     * - An array of pattern images and the transformations to apply to them, referenced by the 'patternimage' property in the elements of {@link patternedCubeDefinition.masks|masks}
+     */
+    patternimages: {
+        /**
+         * Pattern Image Path
+         * - Path an image file in the directory './sourceicons/textures/' (don't include '.png' in the path name)
+         */
+        path: string,
+
+        /**
+         * Pattern Seed Rotation
+         * - Whether or not to rotate the pattern image. If the image is rotated, then the server will shrink the image to cut out the whitespace in the corners.
+         */
+        seedrotate: boolean,
+
+        /**
+         * Pattern Seed Hue Rotation
+         * - Whether or not to rotate the hue of the pattern (basically shifting all the colors of the pattern image, this is the reason that pattern images are usually monochromatic/green)
+         */
+        seedhuerotate: boolean,
+
+        /**
+         * Pattern Seed Scale
+         * - Whether or not to scale the pattern, the 'seedscalerange' property determines how large or small it can be scaled to. (Scaling is changing the size of the patterned image before it is masked.)
+         */
+        seedscale: boolean,
+
+        /**
+         * Pattern Seed Scale Range
+         * - How large/small to scale the pattern image, each element is the range of multipliers to scale with (0.2 is 20% size, 2 is 200% size)
+         */
+        seedscalerange: [number, number],
+
+        /**
+         * Pattern Seed Brightness
+         * - Whether or brighten/darken the image
+         */
+        seedbrightness: boolean,
+
+        /**
+         * Pattern Brightness Range
+         * - How much to brighten/darken image, each element is the range of multipliers to brightness with (-20 is 20% darker, 200 is 200% brighter)
+         */
+        seedbrightnessrange: [number, number],
+
+        /**
+         * Pattern Seed Saturation
+         * - Whether or not to saturate/desaturate the image
+         */
+        seedsaturate: boolean,
+
+        /**
+         * Pattern Saturation Range
+         * - How much to saturate the image, each element is the range of multipliers to saturate with (-20 is 20% desaturated, 200 is 200% more saturated)
+         */
+        seedsaturaterange: [number, number]
+    }[]
 }
 
 /**

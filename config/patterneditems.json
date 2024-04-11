@@ -1,0 +1,560 @@
+{
+    "polkacapsule": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "polkadots",
+                "seedrotate": true,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "elixir": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "bubbles",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "chalkboard": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "chalkboard",
+                "seedrotate": false,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "heartratemonitor": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "pulse",
+                "seedrotate": false,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "striped": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "stripes",
+                "seedrotate": true,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "houndstooth": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "houndstooth",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "barcode": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "barcode",
+                "seedrotate": false,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "static": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "pollock",
+                "seedrotate": true,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "infested": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "lurkers",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": true,
+                "seedscalerange": [
+                    1,
+                    2
+                ]
+            }
+        ]
+    },
+    "topographical": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "topography",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "confetti": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "gayfetti",
+                "seedrotate": true,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "perceiving": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "verygreen",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "general": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask1"
+                ],
+                "patternimage": 0
+            },
+            {
+                "images": [
+                    "patternmask2"
+                ],
+                "patternimage": 1
+            },
+            {
+                "images": [
+                    "patternmask3"
+                ],
+                "patternimage": 2
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "bubbles",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            },
+            {
+                "path": "bubbles",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            },
+            {
+                "path": "bubbles",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "eclipse": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "eclipse",
+                "seedrotate": false,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "twilight": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "sunset",
+                "seedrotate": false,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "emo": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "bubbles",
+                "seedrotate": true,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "crowded": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "crowded",
+                "seedrotate": false,
+                "seedhuerotate": false,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ]
+            }
+        ]
+    },
+    "racerhelmet": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "helmetcolormask"
+                ],
+                "patternimage": 0
+            },
+            {
+                "images": [
+                    "helmetpatternmask1",
+                    "helmetpatternmask2",
+                    "helmetpatternmask3"
+                ],
+                "patternimage": 1
+            },
+            {
+                "images": [
+                    "helmetvisoroutline"
+                ],
+                "patternimage": 1
+            },
+            {
+                "images": [
+                    "leftnumbermask0",
+                    "leftnumbermask1",
+                    "leftnumbermask2",
+                    "leftnumbermask3",
+                    "leftnumbermask4",
+                    "leftnumbermask5",
+                    "leftnumbermask6",
+                    "leftnumbermask7",
+                    "leftnumbermask8",
+                    "leftnumbermask9"
+                ],
+                "patternimage": 2
+            },
+            {
+                "images": [
+                    "rightnumbermask0",
+                    "rightnumbermask1",
+                    "rightnumbermask2",
+                    "rightnumbermask3",
+                    "rightnumbermask4",
+                    "rightnumbermask5",
+                    "rightnumbermask6",
+                    "rightnumbermask7",
+                    "rightnumbermask8",
+                    "rightnumbermask9"
+                ],
+                "patternimage": 2
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "basegreen",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ],
+                "seedbrightness": true,
+                "seedbrightnessrange": [
+                    0.5,
+                    2
+                ],
+                "seedsaturate": true,
+                "seedsaturaterange": [
+                    0.5,
+                    2
+                ]
+            },
+            {
+                "path": "pollock",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ],
+                "seedbrightness": false,
+                "seedbrightnessrange": [
+                    0.5,
+                    2
+                ],
+                "seedsaturate": false,
+                "seedsaturaterange": [
+                    0.5,
+                    2
+                ]
+            },
+            {
+                "path": "basegreen",
+                "seedrotate": false,
+                "seedhuerotate": true,
+                "seedscale": false,
+                "seedscalerange": [
+                    0.1,
+                    2
+                ],
+                "seedbrightness": true,
+                "seedbrightnessrange": [
+                    0.5,
+                    2
+                ],
+                "seedsaturate": true,
+                "seedsaturaterange": [
+                    0.5,
+                    2
+                ]
+            }
+        ]
+    }
+}
