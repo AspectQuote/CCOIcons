@@ -506,13 +506,13 @@
                 ],
                 "seedbrightness": true,
                 "seedbrightnessrange": [
-                    -10,
-                    50
+                    0.5,
+                    2
                 ],
                 "seedsaturate": true,
                 "seedsaturaterange": [
-                    0,
-                    0
+                    0.5,
+                    2
                 ]
             },
             {
