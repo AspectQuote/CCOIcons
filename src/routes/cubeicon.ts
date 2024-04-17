@@ -1,8 +1,8 @@
 import * as CCOIcons from './../typedefs';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { off } from 'process';
-let Jimp = require('jimp');
+import Jimp from 'jimp';
+import { JimpBitmap } from 'gifwrap';
 let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
@@ -55,12 +55,14 @@ function getPatternAtlasCoordinates(iconWidth: number, iconHeight: number, patte
     return {x, y};
 }
 
-async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<typeof Jimp> {
+async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jimp> {
     const patternInfo: undefined | CCOIcons.patternedCubeDefinition = patternSchema[cubeID];
     const patternAtlasDirectory = path.resolve(`${relativeRootDirectory}/ccicons/patternatlases`);
     if (!fs.existsSync(patternAtlasDirectory)) fs.mkdirSync(patternAtlasDirectory, { recursive: true });
     const patternAtlasFilePath = path.resolve(`${patternAtlasDirectory}/${cubeID}patternatlas.png`);
-    if (!fs.existsSync(patternAtlasFilePath)) {
+    if (fs.existsSync(patternAtlasFilePath)) {
+        return await Jimp.read(patternAtlasFilePath);
+    } else {
         // Image Directory
         const imageDirectory = `./sourceicons/seededcubetextures/${cubeID}`;
         // Load the base cube image from the seeded cube directory.
@@ -69,23 +71,18 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<typ
         const iconWidth = (baseImage.bitmap.width + (patternAtlasPadding * 2));
         const iconHeight = (baseImage.bitmap.height + (patternAtlasPadding * 2));
         
-        const newPatternAtlas: typeof Jimp = new Jimp((patternAtlasRoot * iconWidth * xAtlasTypes.length) - (patternAtlasPadding * 2), (patternAtlasRoot * iconHeight) - (patternAtlasPadding * 2), 0x00000000);
+        const newPatternAtlas: Jimp = new Jimp((patternAtlasRoot * iconWidth * xAtlasTypes.length) - (patternAtlasPadding * 2), (patternAtlasRoot * iconHeight) - (patternAtlasPadding * 2), 0x00000000);
         // Read mask overlay image and put that over the composite later
         const overlayImage = await Jimp.read(`${imageDirectory}/finaloverlay.png`);
 
         for (let patternIndex = 0; patternIndex < patternIndexLimit; patternIndex++) {
-            let patternImages: { [key in typeof xAtlasTypes[number]]: false | typeof Jimp }[] = []
+            let patternImages: { [key in typeof xAtlasTypes[number]]?: undefined | Jimp }[] = []
             const overallPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, 0);
             for (let patternImageIndex = 0; patternImageIndex < patternInfo.patternimages.length; patternImageIndex++) {
                 const individualPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, patternImageIndex);
                 const patternImageData = patternInfo.patternimages[patternImageIndex];
 
-                let patternImageLayers: { [key in typeof xAtlasTypes[number]]: false | typeof Jimp} = {
-                    "base": false, // This is always overriden with a 'Jimp'
-                    "eyes": false,
-                    "accents": false,
-                    "mouths": false
-                }
+                let patternImageLayers: { [key in typeof xAtlasTypes[number]]?: Jimp | undefined} = {}
 
                 for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImageLayers).length; patternImageLayerIndex++) {
                     const key: keyof typeof patternImageLayers = Object.keys(patternImageLayers)[patternImageLayerIndex] as keyof typeof patternImageLayers;
@@ -115,28 +112,30 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<typ
                                 imageManipulations.push({ apply: "hue", params: [Math.round(individualPatternSeedRNG.hue * 360)] });
                             }
                         }
+                        if (patternImageLayers[key] !== undefined) {
+                            const JimpImg: Jimp = patternImageLayers[key] as Jimp;
+                            // Scale the pattern image
+                            if (patternImageData.seedscale) {
+                                const scale = clampRandomHiLo(patternImageData.seedscalerange[0], patternImageData.seedscalerange[1], individualPatternSeedRNG.scale);
+                                JimpImg.resize(JimpImg.bitmap.width * scale, JimpImg.bitmap.height * scale, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                            }
+                
+                            // Rotate pattern image
+                            if (patternImageData.seedrotate) {
+                                let degrees = Math.floor(individualPatternSeedRNG.rotation * 360);
+                                const imageSizeTarget = Math.sqrt(Math.pow((JimpImg.bitmap.width / 2), 2) + Math.pow((JimpImg.bitmap.height / 2), 2));
+                                JimpImg.rotate(degrees, false)
+                                JimpImg.crop((JimpImg.bitmap.width - imageSizeTarget) / 2, (JimpImg.bitmap.height - imageSizeTarget) / 2, imageSizeTarget, imageSizeTarget);
+                            }
+    
+                            // Create cropped pattern image to the size of the pattern mask, at a random(seeded) position
+                            const cropXPos = Math.floor(individualPatternSeedRNG.cropX * (JimpImg.bitmap.width - baseImage.bitmap.width));
+                            const cropYPos = Math.floor(individualPatternSeedRNG.cropY * (JimpImg.bitmap.height - baseImage.bitmap.height));
+                            JimpImg.crop(cropXPos, cropYPos, baseImage.bitmap.height, baseImage.bitmap.width);
             
-                        // Scale the pattern image
-                        if (patternImageData.seedscale) {
-                            const scale = clampRandomHiLo(patternImageData.seedscalerange[0], patternImageData.seedscalerange[1], individualPatternSeedRNG.scale);
-                            patternImageLayers[key].resize(patternImageLayers[key].bitmap.width * scale, patternImageLayers[key].bitmap.height * scale, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                            // Apply color manimpulatons, if they exist.
+                            if (imageManipulations.length > 0) JimpImg.color(imageManipulations);
                         }
-            
-                        // Rotate pattern image
-                        if (patternImageData.seedrotate) {
-                            let degrees = Math.floor(individualPatternSeedRNG.rotation * 360);
-                            const imageSizeTarget = Math.sqrt(Math.pow((patternImageLayers[key].bitmap.width / 2), 2) + Math.pow((patternImageLayers[key].bitmap.height / 2), 2));
-                            patternImageLayers[key].rotate(degrees, false)
-                            patternImageLayers[key].crop((patternImageLayers[key].bitmap.width - imageSizeTarget) / 2, (patternImageLayers[key].bitmap.height - imageSizeTarget) / 2, imageSizeTarget, imageSizeTarget);
-                        }
-            
-                        // Create cropped pattern image to the size of the pattern mask, at a random(seeded) position
-                        const cropXPos = Math.floor(individualPatternSeedRNG.cropX * (patternImageLayers[key].bitmap.width - baseImage.bitmap.width));
-                        const cropYPos = Math.floor(individualPatternSeedRNG.cropY * (patternImageLayers[key].bitmap.height - baseImage.bitmap.height));
-                        patternImageLayers[key].crop(cropXPos, cropYPos, baseImage.bitmap.height, baseImage.bitmap.width);
-        
-                        // Apply color manimpulatons, if they exist.
-                        if (imageManipulations.length > 0) patternImageLayers[key].color(imageManipulations);
                     }
                 }
 
@@ -152,15 +151,13 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<typ
                 for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImages[maskInfo.patternimage]).length; patternImageLayerIndex++) {
                     const key: keyof typeof patternImages[number] = Object.keys(patternImages[maskInfo.patternimage])[patternImageLayerIndex] as keyof typeof patternImages[number];
                     // Mask the pattern image with the mask image and composite the modified masked image
-                    if (patternImages[maskInfo.patternimage][key] !== false) {
+                    if (patternImages[maskInfo.patternimage][key] !== undefined) {
+                        // @ts-ignore 'key' is a dynamic object property... it's OK!!!
                         const maskedImage = patternImages[maskInfo.patternimage][key].clone().mask(maskImage, 0, 0);
                         if (key === "base") {
                             newBaseImage.composite(maskedImage, 0, 0);
                         } else {
                             const atlasCoordinates = getPatternAtlasCoordinates(iconWidth, iconHeight, patternIndex, key);
-                            // const p = path.resolve(`${__dirname}/../../mask.png`)
-                            // console.log(p)
-                            // await maskedImage.write(`${p}`);
                             newPatternAtlas.composite(maskedImage, atlasCoordinates.x, atlasCoordinates.y);
                         }
                     }
@@ -173,17 +170,187 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<typ
         }
         await newPatternAtlas.writeAsync(patternAtlasFilePath);
         return newPatternAtlas;
-    } else {
-        return await Jimp.read(patternAtlasFilePath);
     }
 }
 
-async function getSeededCubeIconType(cubeID: CCOIcons.patternedCubeID, seed: number, type: typeof xAtlasTypes[number]): Promise<typeof Jimp> {
+async function getSeededCubeIconType(cubeID: CCOIcons.patternedCubeID, seed: number, type: typeof xAtlasTypes[number]): Promise<Jimp> {
     // Load the base cube image from the seeded cube directory, for the width/height
     const baseImage = await Jimp.read(`./sourceicons/seededcubetextures/${cubeID}/base.png`)
     const atlas = await getSeededIconAtlas(cubeID);
     const iconPosition = getPatternAtlasCoordinates((baseImage.bitmap.width + (patternAtlasPadding * 2)), (baseImage.bitmap.height + (patternAtlasPadding * 2)), seed, type);
     return atlas.crop(iconPosition.x, iconPosition.y, baseImage.bitmap.width, baseImage.bitmap.height);
+}
+
+const bSideConfig = {
+    resizeSize: 21,
+    pixelReach: 1,
+    colorGapThereshold: 5
+}
+
+function getBSideCornerCoordinates(pixelX: number, pixelY: number) {
+    let topLeftOfPixel = {x: pixelX * bSideConfig.resizeSize, y: pixelY * bSideConfig.resizeSize};
+    let corners = {
+        topLeft: topLeftOfPixel, // Top-Left
+        topRight: { x: topLeftOfPixel.x + (bSideConfig.resizeSize - 1), y: topLeftOfPixel.y }, // Top-Right
+        bottomRight: { x: topLeftOfPixel.x + (bSideConfig.resizeSize - 1), y: topLeftOfPixel.y + (bSideConfig.resizeSize - 1) }, // Bottom-Right
+        bottomLeft: { x: topLeftOfPixel.x, y: topLeftOfPixel.y + (bSideConfig.resizeSize - 1) },  // Bottom-Left
+        center: { x: topLeftOfPixel.x + Math.floor(bSideConfig.resizeSize / 2), y: topLeftOfPixel.y + Math.floor(bSideConfig.resizeSize / 2) }
+    };
+    return corners;
+}
+
+function rgbaFromNumberLiteral(num: number) {
+    return {
+        red: (num >> 24 & 255),
+        green: (num >> 16 & 255),
+        blue: (num >> 8 & 255),
+        alpha: (num & 255),
+    }
+}
+
+function gracefulPixelRGBA(bitmap: JimpBitmap, idx: number) {
+    return {
+        red: bitmap.data[idx + 0],
+        green: bitmap.data[idx + 1],
+        blue: bitmap.data[idx + 2],
+        alpha: bitmap.data[idx + 3]
+    }
+}
+
+function colorsCloseEnough(color1: { red: number, green: number, blue: number, alpha: number }, color2: { red: number, green: number, blue: number, alpha: number }) {
+    return (
+        Math.abs(color1.red - color2.red) < bSideConfig.colorGapThereshold &&
+        Math.abs(color1.green - color2.green) < bSideConfig.colorGapThereshold &&
+        Math.abs(color1.blue - color2.blue) < bSideConfig.colorGapThereshold &&
+        Math.abs(color1.alpha - color2.alpha) < bSideConfig.colorGapThereshold 
+    );
+}
+
+async function createBSideImage(originalPath: string, newImagePath: string): Promise<void> {
+    console.log(originalPath, newImagePath);
+    const originalIcon = await Jimp.read(originalPath);
+    const newIcon = originalIcon.clone().resize(originalIcon.bitmap.width * bSideConfig.resizeSize, originalIcon.bitmap.height * bSideConfig.resizeSize, Jimp.RESIZE_NEAREST_NEIGHBOR);
+    const trianglesToDraw: {
+        occupying: { x: number, y: number }[],
+        start: { x: number, y: number },
+        end: { x: number, y: number },
+        side: "above" | "below",
+        corners: [string, string],
+        color: number
+    }[] = [];
+
+    originalIcon.scan(0, 0, originalIcon.bitmap.width, originalIcon.bitmap.height, function(x, y, idx) {
+        const cornerPixelCoordinates = getBSideCornerCoordinates(x, y);
+        const centerPixelColor = originalIcon.getPixelColour(x, y);
+        const centerPixelRGBA = rgbaFromNumberLiteral(centerPixelColor);
+        // Check Pixels Vertically
+        if (centerPixelRGBA.alpha > 0) {
+            for (let checkingPixelYOffset = 0; checkingPixelYOffset < (bSideConfig.pixelReach * 2) + 1; checkingPixelYOffset++) {
+                const checkingPixelY = checkingPixelYOffset - 1 + y;
+                if (checkingPixelY !== y && checkingPixelY < originalIcon.bitmap.height && checkingPixelY >= 0) {
+                    for (let checkingPixelXOffset = 0; checkingPixelXOffset < 3; checkingPixelXOffset++) {
+                        const checkingPixelX = checkingPixelXOffset - 1 + x;
+                        const endingPixelCoordinates = getBSideCornerCoordinates(checkingPixelX, checkingPixelY);
+                        if (x !== checkingPixelX && checkingPixelX < originalIcon.bitmap.width && checkingPixelX >= 0 && ((centerPixelColor === originalIcon.getPixelColor(checkingPixelX, checkingPixelY) && centerPixelColor !== originalIcon.getPixelColor(x, checkingPixelY)))) {
+                            let start = {x, y};
+                            let end = {x, y};
+                            let side: "above" | "below" = "above";
+                            let corners: [string, string] = ['', ''];
+                            let occupyingPixels: {x: number, y: number}[] = [];
+                            if (checkingPixelX < x) {
+                                // Pixel is on the left
+                                if (checkingPixelY < y) {
+                                    // Pixel is above-left
+                                    side = "below";
+                                    start = cornerPixelCoordinates.topRight;
+                                    end = endingPixelCoordinates.topRight;
+                                    corners = [`${x} ${y} topRight ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} topRight ${JSON.stringify(end)}`]
+                                } else if (checkingPixelY > y) {
+                                    // Pixel is below-left
+                                    start = cornerPixelCoordinates.bottomRight;
+                                    end = endingPixelCoordinates.bottomRight;
+                                    corners = [`${x} ${y} bottomRight ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} bottomRight ${JSON.stringify(end)}`]
+                                }
+                            } else {
+                                // Pixel is on the right
+                                if (checkingPixelY < y) {
+                                    // Pixel is above-right
+                                    side = "below";
+                                    start = cornerPixelCoordinates.topLeft;
+                                    end = endingPixelCoordinates.topLeft;
+                                    corners = [`${x} ${y} topLeft ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} topLeft ${JSON.stringify(end)}`]
+                                } else if (checkingPixelY > y) {
+                                    // Pixel is below-right
+                                    start = cornerPixelCoordinates.bottomLeft;
+                                    end = endingPixelCoordinates.bottomLeft;
+                                    corners = [`${x} ${y} bottomLeft ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} bottomLeft ${JSON.stringify(end)}`]
+                                }
+                            }
+                            occupyingPixels.push({
+                                x: Math.ceil(start.x / bSideConfig.resizeSize),
+                                y: Math.ceil(start.y / bSideConfig.resizeSize)
+                            })
+                            occupyingPixels.push({
+                                x: Math.ceil(end.x / bSideConfig.resizeSize),
+                                y: Math.ceil(end.y / bSideConfig.resizeSize)
+                            })
+                            const triangleThatMightShareCoordinateIndex = trianglesToDraw.findIndex((triangleData, idx) => {
+                                return triangleData.occupying.find((occupyingPixel) => {
+                                    return occupyingPixels.find((newOccupyingPixel) => {
+                                        return occupyingPixel.x === newOccupyingPixel.x && occupyingPixel.y === newOccupyingPixel.y
+                                    })
+                                })
+                            })
+                            if (triangleThatMightShareCoordinateIndex === -1) {
+                                trianglesToDraw.push({
+                                    occupying: occupyingPixels,
+                                    corners,
+                                    start,
+                                    end,
+                                    side,
+                                    color: centerPixelColor
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
+    console.log(trianglesToDraw.length);
+    trianglesToDraw.forEach((triangleData) => {
+        const slope = (triangleData.start.y - triangleData.end.y) / (triangleData.start.x - triangleData.end.x);
+        const loopTimes = Math.abs(Math.abs(triangleData.start.x) - Math.abs(triangleData.end.x));
+        for (let triangleXIndex = 0; triangleXIndex <= loopTimes; triangleXIndex++) {
+            let lineXPosition = triangleData.start.x + triangleXIndex;
+            let triangleYIndex = Math.round(triangleXIndex * slope);
+            let lineYPosition = triangleData.start.y;
+            // console.log(triangleData.start, triangleData.end, triangleData.corners);
+            if (triangleData.side === "above") {
+                if (triangleYIndex > 0) {
+                    fillRect(newIcon, lineXPosition - 1, lineYPosition, 1, triangleYIndex, triangleData.color);
+                } else {
+                    fillRect(newIcon, lineXPosition - Math.abs(triangleYIndex) - triangleXIndex + 1, lineYPosition, 1, Math.abs(triangleYIndex), triangleData.color);
+                }
+            } else {
+                if (triangleYIndex > 0) {
+                    fillRect(newIcon, lineXPosition - loopTimes, lineYPosition - loopTimes + triangleYIndex, 1, loopTimes - triangleYIndex, triangleData.color);
+                } else {
+                    fillRect(newIcon, lineXPosition, lineYPosition + triangleYIndex, 1, triangleXIndex, triangleData.color);
+                }
+            }
+        }
+        // newIcon.setPixelColor(0xff0000ff, triangleData.start.x, triangleData.start.y);
+        // newIcon.setPixelColor(0x00ff00ff, triangleData.end.x, triangleData.end.y);
+        // newIcon.setPixelColor(0x0000ffff, triangleData.end.x, triangleData.start.y);
+    })
+    await newIcon.writeAsync(newImagePath);
+}
+
+function fillRect(image: Jimp, rectX: number, rectY: number, width: number, height: number, color: number) {
+    image.scan(rectX, rectY, width, height, function(x, y, index) {
+        image.setPixelColor(color, x, y);
+    })
 }
 
 const iconModifiers = {
@@ -252,10 +419,23 @@ const iconModifiers = {
     },
     bSide: {
         directory: '/bside',
-        modificationFunction: async function(modifyingPath, modifyingID, modifyingIcon, data: any) {
+        modificationFunction: async function (modifyingPath, modifyingID, modifyingIcon, data: any) {
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
+            const newImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}/bside`);
+            if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
+            const newIconPath = path.resolve(`${newImagePath}/${modifyingIcon}`);
+            // if (!fs.existsSync(newIconPath)) {
+                   await createBSideImage(originalImagePath, newIconPath);
+            // }
+            return `/bside/`;
+        }
+    },
+    tallying: {
+        directory: '/tallying',
+        modificationFunction: async function (modifyingPath, modifyingID, modifyingIcon, data: {tallies: number}) {
             const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
 
-            return `/bside`;
+            return `/tallying`;
         }
     },
     divine: {
@@ -355,6 +535,12 @@ interface cubeIconGenerationParameters {
         data: {
             size: number
         }
+    },
+    tallying: {
+        use: boolean,
+        data: {
+            tallies: number
+        }
     }
 }
 
@@ -371,10 +557,6 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
         imageDirectories.push(await iconModifiers.prefixes.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.prefixes.data));
     }
     
-    if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
-        imageDirectories.push(await iconModifiers.bSide.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.bSide.data));
-    }
-    
     if (iconAttributes.contraband !== undefined && iconAttributes.contraband.use === true) {
         imageDirectories.push(await iconModifiers.contraband.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.contraband.data));
     }
@@ -386,7 +568,15 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     if (iconAttributes.slated !== undefined && iconAttributes.slated.use === true) {
         imageDirectories.push(await iconModifiers.slated.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.slated.data));
     }
-    
+
+    if (iconAttributes.tallying !== undefined && iconAttributes.tallying.use === true) {
+        imageDirectories.push(await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.tallying.data));
+    }
+
+    if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
+        imageDirectories.push(await iconModifiers.bSide.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.bSide.data));
+    }
+
     if (iconAttributes.size !== undefined && iconAttributes.size.use === true) {
         imageDirectories.push(await iconModifiers.size.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.size.data));
     }
@@ -530,6 +720,12 @@ const route: CCOIcons.documentedRoute = {
                     data: {
                         seed: cubeIconSeed
                     }
+                }
+            }
+            if (req.query.b !== undefined) {
+                cubeIconParams.bSide = {
+                    use: true,
+                    data: {}
                 }
             }
         }
