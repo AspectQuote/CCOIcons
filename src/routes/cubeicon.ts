@@ -182,8 +182,8 @@ async function getSeededCubeIconType(cubeID: CCOIcons.patternedCubeID, seed: num
 }
 
 const bSideConfig = {
-    resizeSize: 21,
-    pixelReach: 1,
+    resizeSize: 30,
+    pixelReach: 2,
     colorGapThereshold: 5
 }
 
@@ -226,119 +226,200 @@ function colorsCloseEnough(color1: { red: number, green: number, blue: number, a
     );
 }
 
+type createdTriangle = { use: boolean, start: { x: number, y: number }, side: "above" | "below", occupying: { x: number, y: number }[], end: { x: number, y: number } };
+function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number }, xAxisDirection: -1 | 1 | 0, yAxisDirection: -1 | 1 | 0): createdTriangle[] {
+    const centerColor = image.getPixelColor(coordinate.x, coordinate.y);
+    const centerBSideCoordinates = getBSideCornerCoordinates(coordinate.x, coordinate.y);
+    let primaryTriangle: createdTriangle = {
+        start: {x: 0, y: 0},
+        end: {x: 0, y: 0},
+        occupying: [structuredClone(coordinate)],
+        side: "above",
+        use: true
+    }
+    let secondaryTriangle: createdTriangle = {
+        start: { x: 0, y: 0 },
+        end: { x: 0, y: 0 },
+        occupying: [structuredClone(coordinate)],
+        side: "below",
+        use: true
+    }
+    let triangleCheckingDirection = {
+        x: yAxisDirection,
+        y: xAxisDirection
+    }
+    let countingPrimary = true;
+    let countingSecondary = true;
+    let checkingPixelCoordinateChange = { x: 1 * triangleCheckingDirection.x, y: 1 * triangleCheckingDirection.y };
+    if (xAxisDirection === 1) {
+        // Checking to the right of the center
+        
+        // Triangle that starts from the bottom right of the pixel |/
+        primaryTriangle.start = structuredClone(centerBSideCoordinates.bottomRight);
+        primaryTriangle.end = structuredClone(centerBSideCoordinates.topRight);
+        primaryTriangle.side = "above";
+
+        // Triangle that starts from the top right of the pixel |\
+        secondaryTriangle.start = structuredClone(centerBSideCoordinates.topRight);
+        secondaryTriangle.end = structuredClone(centerBSideCoordinates.bottomRight);
+        secondaryTriangle.side = "below";
+    } else if (xAxisDirection === -1) {
+        // Checking to the left of the center
+
+        // Triangle that starts from the bottom left of the pixel \|
+        primaryTriangle.start = structuredClone(centerBSideCoordinates.topLeft);
+        primaryTriangle.end = structuredClone(centerBSideCoordinates.bottomLeft);
+        primaryTriangle.side = "below";
+
+        // Triangle that starts from the top left of the pixel /|
+        secondaryTriangle.start = structuredClone(centerBSideCoordinates.bottomLeft);
+        secondaryTriangle.end = structuredClone(centerBSideCoordinates.topLeft);
+        secondaryTriangle.side = "above";
+    } else if (yAxisDirection === 1) {
+        // Checking below the center
+
+        // Triangle that starts from the bottom left of the pixel \-
+        primaryTriangle.start = structuredClone(centerBSideCoordinates.bottomRight);
+        primaryTriangle.end = structuredClone(centerBSideCoordinates.bottomLeft);
+        primaryTriangle.side = "above";
+
+        // Triangle that starts from the bottom right of the pixel -/
+        secondaryTriangle.start = structuredClone(centerBSideCoordinates.bottomLeft);
+        secondaryTriangle.end = structuredClone(centerBSideCoordinates.bottomRight);
+        secondaryTriangle.side = "above";
+    } else if (yAxisDirection === -1) {
+        // Checking above the center
+
+        // Triangle that starts from the bottom left of the pixel _\
+        primaryTriangle.start = structuredClone(centerBSideCoordinates.topLeft);
+        primaryTriangle.end = structuredClone(centerBSideCoordinates.topRight);
+        primaryTriangle.side = "below";
+
+        // Triangle that starts from the bottom right of the pixel /_
+        secondaryTriangle.start = structuredClone(centerBSideCoordinates.topRight);
+        secondaryTriangle.end = structuredClone(centerBSideCoordinates.topLeft);
+        secondaryTriangle.side = "below";
+    }
+
+    for (let axisOffset = 1; axisOffset <= bSideConfig.pixelReach; axisOffset++) {
+        let xAxisOffset = axisOffset * xAxisDirection;
+        let yAxisOffset = axisOffset * yAxisDirection;
+        let adjacentPixelCoordinate = { x: coordinate.x + xAxisOffset, y: coordinate.y + yAxisOffset };
+        let adjacentPixelColor = image.getPixelColor(adjacentPixelCoordinate.x, adjacentPixelCoordinate.y);
+        if (adjacentPixelColor === centerColor) {
+            if (axisOffset === 1) {
+                primaryTriangle.use = false;
+                secondaryTriangle.use = false;
+            }
+            break;
+        } else {
+            let endMovement = bSideConfig.resizeSize - ((axisOffset === 1) ? 1 : 0)
+
+            let primaryCheckingPixelCoordinate = { x: adjacentPixelCoordinate.x + (checkingPixelCoordinateChange.x * -1), y: adjacentPixelCoordinate.y + (checkingPixelCoordinateChange.y * -1) };
+            let primaryCheckingPixelColor = image.getPixelColor(primaryCheckingPixelCoordinate.x, primaryCheckingPixelCoordinate.y);
+            if (primaryCheckingPixelColor === centerColor && countingPrimary === true && primaryCheckingPixelCoordinate.x < image.bitmap.width && primaryCheckingPixelCoordinate.x > 0 && primaryCheckingPixelCoordinate.y < image.bitmap.height && primaryCheckingPixelCoordinate.y > 0) {
+                primaryTriangle.end.x += endMovement * xAxisDirection;
+                primaryTriangle.end.y += endMovement * yAxisDirection;
+                primaryTriangle.occupying.push(structuredClone(adjacentPixelCoordinate));
+            } else {
+                if (axisOffset === 1) primaryTriangle.use = false;
+                countingPrimary = false;
+            }
+
+            let secondaryCheckingPixelCoordinate = { x: adjacentPixelCoordinate.x + (checkingPixelCoordinateChange.x), y: adjacentPixelCoordinate.y + (checkingPixelCoordinateChange.y) };
+            let secondaryCheckingPixelColor = image.getPixelColor(secondaryCheckingPixelCoordinate.x, secondaryCheckingPixelCoordinate.y);
+            if (secondaryCheckingPixelColor === centerColor && countingSecondary === true && secondaryCheckingPixelCoordinate.x < image.bitmap.width && secondaryCheckingPixelCoordinate.x > 0 && secondaryCheckingPixelCoordinate.y < image.bitmap.height && secondaryCheckingPixelCoordinate.y > 0) {
+                secondaryTriangle.end.x += endMovement * xAxisDirection;
+                secondaryTriangle.end.y += endMovement * yAxisDirection;
+                secondaryTriangle.occupying.push(structuredClone(adjacentPixelCoordinate));
+            } else {
+                if (axisOffset === 1) secondaryTriangle.use = false;
+                countingSecondary = false;
+            }
+        }
+    }
+    let outcome: createdTriangle[] = [primaryTriangle, secondaryTriangle];
+
+    return outcome;
+}
+
+type bSideTriangle = {
+    occupying: { x: number, y: number }[],
+    start: { x: number, y: number },
+    end: { x: number, y: number },
+    side: "above" | "below",
+    color: number
+}
+
 async function createBSideImage(originalPath: string, newImagePath: string): Promise<void> {
     console.log(originalPath, newImagePath);
     const originalIcon = await Jimp.read(originalPath);
+    // const newIcon = new Jimp(originalIcon.bitmap.width * bSideConfig.resizeSize, originalIcon.bitmap.height * bSideConfig.resizeSize, 0x00000000) 
     const newIcon = originalIcon.clone().resize(originalIcon.bitmap.width * bSideConfig.resizeSize, originalIcon.bitmap.height * bSideConfig.resizeSize, Jimp.RESIZE_NEAREST_NEIGHBOR);
-    const trianglesToDraw: {
-        occupying: { x: number, y: number }[],
-        start: { x: number, y: number },
-        end: { x: number, y: number },
-        side: "above" | "below",
-        corners: [string, string],
-        color: number
-    }[] = [];
+    const triangleCandidatesList: bSideTriangle[] = [];
+    const trianglesToDraw: bSideTriangle[] = [];
 
     originalIcon.scan(0, 0, originalIcon.bitmap.width, originalIcon.bitmap.height, function(x, y, idx) {
-        const cornerPixelCoordinates = getBSideCornerCoordinates(x, y);
         const centerPixelColor = originalIcon.getPixelColour(x, y);
         const centerPixelRGBA = rgbaFromNumberLiteral(centerPixelColor);
-        // Check Pixels Vertically
-        if (centerPixelRGBA.alpha > 0) {
-            for (let checkingPixelYOffset = 0; checkingPixelYOffset < (bSideConfig.pixelReach * 2) + 1; checkingPixelYOffset++) {
-                const checkingPixelY = checkingPixelYOffset - 1 + y;
-                if (checkingPixelY !== y && checkingPixelY < originalIcon.bitmap.height && checkingPixelY >= 0) {
-                    for (let checkingPixelXOffset = 0; checkingPixelXOffset < 3; checkingPixelXOffset++) {
-                        const checkingPixelX = checkingPixelXOffset - 1 + x;
-                        const endingPixelCoordinates = getBSideCornerCoordinates(checkingPixelX, checkingPixelY);
-                        if (x !== checkingPixelX && checkingPixelX < originalIcon.bitmap.width && checkingPixelX >= 0 && ((centerPixelColor === originalIcon.getPixelColor(checkingPixelX, checkingPixelY) && centerPixelColor !== originalIcon.getPixelColor(x, checkingPixelY)))) {
-                            let start = {x, y};
-                            let end = {x, y};
-                            let side: "above" | "below" = "above";
-                            let corners: [string, string] = ['', ''];
-                            let occupyingPixels: {x: number, y: number}[] = [];
-                            if (checkingPixelX < x) {
-                                // Pixel is on the left
-                                if (checkingPixelY < y) {
-                                    // Pixel is above-left
-                                    side = "below";
-                                    start = cornerPixelCoordinates.topRight;
-                                    end = endingPixelCoordinates.topRight;
-                                    corners = [`${x} ${y} topRight ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} topRight ${JSON.stringify(end)}`]
-                                } else if (checkingPixelY > y) {
-                                    // Pixel is below-left
-                                    start = cornerPixelCoordinates.bottomRight;
-                                    end = endingPixelCoordinates.bottomRight;
-                                    corners = [`${x} ${y} bottomRight ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} bottomRight ${JSON.stringify(end)}`]
-                                }
-                            } else {
-                                // Pixel is on the right
-                                if (checkingPixelY < y) {
-                                    // Pixel is above-right
-                                    side = "below";
-                                    start = cornerPixelCoordinates.topLeft;
-                                    end = endingPixelCoordinates.topLeft;
-                                    corners = [`${x} ${y} topLeft ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} topLeft ${JSON.stringify(end)}`]
-                                } else if (checkingPixelY > y) {
-                                    // Pixel is below-right
-                                    start = cornerPixelCoordinates.bottomLeft;
-                                    end = endingPixelCoordinates.bottomLeft;
-                                    corners = [`${x} ${y} bottomLeft ${JSON.stringify(start)}`, `${checkingPixelX} ${checkingPixelY} bottomLeft ${JSON.stringify(end)}`]
-                                }
-                            }
-                            occupyingPixels.push({
-                                x: Math.ceil(start.x / bSideConfig.resizeSize),
-                                y: Math.ceil(start.y / bSideConfig.resizeSize)
-                            })
-                            occupyingPixels.push({
-                                x: Math.ceil(end.x / bSideConfig.resizeSize),
-                                y: Math.ceil(end.y / bSideConfig.resizeSize)
-                            })
-                            const triangleThatMightShareCoordinateIndex = trianglesToDraw.findIndex((triangleData, idx) => {
-                                return triangleData.occupying.find((occupyingPixel) => {
-                                    return occupyingPixels.find((newOccupyingPixel) => {
-                                        return occupyingPixel.x === newOccupyingPixel.x && occupyingPixel.y === newOccupyingPixel.y
-                                    })
-                                })
-                            })
-                            if (triangleThatMightShareCoordinateIndex === -1) {
-                                trianglesToDraw.push({
-                                    occupying: occupyingPixels,
-                                    corners,
-                                    start,
-                                    end,
-                                    side,
-                                    color: centerPixelColor
-                                })
-                            }
-                        }
+        let adjacentPixelsColor: number[] = [];
+        for (let adjacentPixelXOffset = -1; adjacentPixelXOffset <= 1; adjacentPixelXOffset++) {
+            for (let adjacentPixelYOffset = -1; adjacentPixelYOffset <= 1; adjacentPixelYOffset++) {
+                let adjacentCoordinates = {
+                    x: x + adjacentPixelXOffset,
+                    y: y + adjacentPixelYOffset
+                }
+                if (adjacentCoordinates.x < 0 || adjacentCoordinates.x >= originalIcon.bitmap.width || adjacentCoordinates.y < 0 || adjacentCoordinates.y >= originalIcon.bitmap.height) {
+                    adjacentPixelsColor.push(0)
+                } else {
+                    // adjacentPixelsColor.push(originalIcon.getPixelColour(adjacentCoordinates.x, adjacentCoordinates.y));
+                    if (adjacentCoordinates.x === x || adjacentCoordinates.y === y) {
+                        adjacentPixelsColor.push(originalIcon.getPixelColour(adjacentCoordinates.x, adjacentCoordinates.y));
                     }
                 }
             }
         }
+        
+        const centerDomination = adjacentPixelsColor.filter(color => color === centerPixelColor).length;
+        const centerIsMinority = -1 === adjacentPixelsColor.findIndex(color => adjacentPixelsColor.filter(adjColor => adjColor == color && color !== centerPixelColor).length >= centerDomination);
+
+        if (centerPixelRGBA.alpha > 0 && centerDomination < Math.ceil(adjacentPixelsColor.length / 2)) {
+            const trianglesToTheRight: createdTriangle[] = createBSideTriangles(originalIcon, { x, y }, 1, 0);
+            const trianglesToTheLeft: createdTriangle[] = createBSideTriangles(originalIcon, { x, y }, -1, 0);
+            const trianglesBelow: createdTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, 1);
+            const trianglesAbove: createdTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, -1);
+
+            let newTriangles: typeof trianglesAbove = [];
+            newTriangles = newTriangles.concat(trianglesAbove).concat(trianglesBelow).concat(trianglesToTheLeft).concat(trianglesToTheRight).filter((triangleCandidate => triangleCandidate.use === true));
+
+            newTriangles.forEach((triangleCandidate) => {
+                triangleCandidatesList.push({
+                    start: triangleCandidate.start,
+                    end: triangleCandidate.end,
+                    occupying: triangleCandidate.occupying,
+                    color: centerPixelColor,
+                    side: triangleCandidate.side
+                })
+            })
+        }
     })
-    console.log(trianglesToDraw.length);
-    trianglesToDraw.forEach((triangleData) => {
+    console.log(triangleCandidatesList.length);
+    triangleCandidatesList.forEach((triangleData) => {
         const slope = (triangleData.start.y - triangleData.end.y) / (triangleData.start.x - triangleData.end.x);
         const loopTimes = Math.abs(Math.abs(triangleData.start.x) - Math.abs(triangleData.end.x));
+
+        let startCoordinate = ((triangleData.start.x < triangleData.end.x) ? triangleData.start : triangleData.end);
+        let triangleTopBounds = Math.min(triangleData.start.y, triangleData.end.y);
+        let triangleBottomBounds = Math.max(triangleData.start.y, triangleData.end.y);
         for (let triangleXIndex = 0; triangleXIndex <= loopTimes; triangleXIndex++) {
-            let lineXPosition = triangleData.start.x + triangleXIndex;
-            let triangleYIndex = Math.round(triangleXIndex * slope);
-            let lineYPosition = triangleData.start.y;
-            // console.log(triangleData.start, triangleData.end, triangleData.corners);
-            if (triangleData.side === "above") {
-                if (triangleYIndex > 0) {
-                    fillRect(newIcon, lineXPosition - 1, lineYPosition, 1, triangleYIndex, triangleData.color);
-                } else {
-                    fillRect(newIcon, lineXPosition - Math.abs(triangleYIndex) - triangleXIndex + 1, lineYPosition, 1, Math.abs(triangleYIndex), triangleData.color);
-                }
+            let plotPosition = { y: (slope * triangleXIndex) + startCoordinate.y, x: triangleXIndex + startCoordinate.x};
+            // heh,             y = m      * x               + b <- Look, I used it! The slope-intercept formula!!!!!
+            if (triangleData.side === "below") {
+                fillRect(newIcon, plotPosition.x, plotPosition.y, 1, triangleBottomBounds - plotPosition.y + 1, triangleData.color);
             } else {
-                if (triangleYIndex > 0) {
-                    fillRect(newIcon, lineXPosition - loopTimes, lineYPosition - loopTimes + triangleYIndex, 1, loopTimes - triangleYIndex, triangleData.color);
-                } else {
-                    fillRect(newIcon, lineXPosition, lineYPosition + triangleYIndex, 1, triangleXIndex, triangleData.color);
-                }
+                fillRect(newIcon, plotPosition.x, triangleTopBounds, 1, plotPosition.y - triangleTopBounds + 1, triangleData.color);
             }
+            // fillRect(newIcon, plotPosition.x, plotPosition.y, 1, 1, triangleData.color);
         }
         // newIcon.setPixelColor(0xff0000ff, triangleData.start.x, triangleData.start.y);
         // newIcon.setPixelColor(0x00ff00ff, triangleData.end.x, triangleData.end.y);
