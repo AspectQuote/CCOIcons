@@ -145,13 +145,13 @@ siteApp.component('documentationcontent', {
             <div class='doctitle'>{{docData.title}} - <span class='doctitleendpoint'>{{route.replace("/docs", "")}}</span></div>
             <div class='docsubtitle'>{{docData.subtitle}} <span class='docsubtitleresolution'>{{docData.resolves}}</span></div>
             <div class='doccontent'>{{docData.description}}<span class='docdescriptionauthor'>- Written By {{docData.author}}</span></div>
-            <div v-if='docData.parameterDocs' class='documentationrequestmodifiertitle'>Endpoint Parameters</div>
-            <parametersdocumentation v-if='docData.parameterDocs' :parameters='docData.parameterDocs' :resolutiontype='docData.resolves'></parametersdocumentation>
-            <div class='documentationrequestmodifiertitle' v-if='docData.queryDocs'>Endpoint Query Modifiers</div>
-            <querymodifiersdocumentation v-if='docData.queryDocs' :querymods='docData.queryDocs' :resolutiontype='docData.resolves'></querymodifiersdocumentation>
+            <div v-if='docData.parameterDocs?.length > 0' class='documentationrequestmodifiertitle'>Endpoint Parameters</div>
+            <parametersdocumentation v-if='docData.parameterDocs?.length > 0' :parameters='docData.parameterDocs' :resolutiontype='docData.resolves'></parametersdocumentation>
+            <div class='documentationrequestmodifiertitle' v-if='docData.queryDocs?.length > 0'>Endpoint Query Modifiers</div>
+            <querymodifiersdocumentation v-if='docData.queryDocs?.length > 0' :querymods='docData.queryDocs' :resolutiontype='docData.resolves'></querymodifiersdocumentation>
             <div class='documentationrequestmodifiertitle'>Request Examples</div>
             <requestmodifierexample v-for='example in docData.examples' :exampledata='example' :resolutiontype='docData.resolves'></requestmodifierexample>
-            <div class='documentationrequestmodifiertitle'>Request Builder</div>
+            <div class='documentationrequestmodifiertitle' v-if='docData.queryDocs?.length > 0 || docData.parameterDocs?.length > 0'>Request Builder</div>
         </div>
         <div class='documentationloading' v-else>Loading Documentation...</div>
     </div>`

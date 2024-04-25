@@ -4,6 +4,7 @@ import * as path from 'path';
 import Jimp from 'jimp';
 import { JimpBitmap } from 'gifwrap';
 import { createBSideImage } from './../modules/bside';
+import { loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
 let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
@@ -15,6 +16,9 @@ const patternedCubeIDs: CCOIcons.patternedCubeID[] = Object.keys(patternSchema) 
 const patternIndexLimit = 1000;
 const patternAtlasRoot = Math.ceil(Math.sqrt(patternIndexLimit));
 const patternAtlasPadding = 1;
+
+const resizeMax = 512;
+const resizeMin = 16;
 
 const relativeRootDirectory = `${__dirname}/../../..`;
 const sourceImagesDirectory = './sourceicons/cubes/';
@@ -187,120 +191,152 @@ async function getSeededCubeIconType(cubeID: CCOIcons.patternedCubeID, seed: num
 const iconModifiers = {
     baseIcon: {
         directory: '/ccicons',
-        modificationFunction: async function (modifyingPath, modifyingID, modifyingIcon, data: { seed: number }) {
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { seed: number }) {
             // Get the path of the output of the previous modification 
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
             // Create the directory path of the outcome of this modification
             const outcomePath = path.resolve(`${relativeRootDirectory}/ccicons`);
             // If the path to the directory doesn't exist, create it.
             if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
 
+            let fileNameOverride: `${string}.png` = `${modifyingID}.png`;
+
             // If the cube is seeded,
             if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === modifyingID) !== undefined) {
                 const cubeSeed = data.seed;
                 // Create the outcome path of the file
-                const outcomeFile = `${outcomePath}/${modifyingID}${cubeSeed}.png`;
-                getSeededIconAtlas(modifyingID as CCOIcons.patternedCubeID);
+                fileNameOverride = `${modifyingID}${cubeSeed}.png`;
+                const outcomeFile = `${outcomePath}/${fileNameOverride}`;
+                // getSeededIconAtlas(modifyingID as CCOIcons.patternedCubeID);
                 if (!fs.existsSync(outcomeFile)) {
                     let iconFile = await getSeededCubeIconType(modifyingID as CCOIcons.patternedCubeID, cubeSeed, "base");
-                    await iconFile.writeAsync(outcomeFile);
+                    await saveAnimatedCubeIcon([iconFile], fileNameOverride, `${outcomePath}/`);
                 }
             } else {
                 // Create the outcome path of the file
                 const outcomeFile = `${outcomePath}/${modifyingID}.png`;
                 // If the icon hasn't been generated yet, then generate it (in this case, it's copying it to the generated icons directory to make sure the original image isn't accidentally modified)
-                if (!fs.existsSync(outcomeFile)) fs.copyFileSync(originalImagePath, outcomeFile);
+                if (!fs.existsSync(outcomeFile)) {
+                    let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                    let savedIcon = await saveAnimatedCubeIcon(iconFrames, fileNameOverride, `${outcomePath}/`);
+                    if (savedIcon !== true) {
+                        console.log('Failed to save icon!');
+                    }
+                }
             }
             // Return the directory to add to the icon generation function.
-            return `/ccicons/`;
+            return {
+                directoryAddition: `/ccicons/`,
+                newFileName: fileNameOverride
+            };
         }
     },
     contraband: {
         directory: '/contraband',
-        modificationFunction: async function(modifyingPath, modifyingID, modifyingIcon, data: { seed: number }) {
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
+        modificationFunction: async function(modifyingPath, modifyingID, fileName, data: { seed: number }) {
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
             // Create the directory path of the outcome of this modification
             const outcomePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}/contraband`);
             // Create the outcome path of the file
-            const outcomeFile = `${outcomePath}/${modifyingIcon}`;
+            const outcomeFile = `${outcomePath}/${fileName}`;
             // If the path to the directory doesn't exist, create it.
             if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
             // If the icon hasn't been generated yet, then generate it (in this case, it's masking the accent image with a 'contraband' image, then compositing the original image with the masked accent image.)
             if (!fs.existsSync(outcomeFile)) {
-                let maskImage;
+                let iconFrames: Jimp[] = [];
+                let frameMasks: Jimp[] = [];
                 if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === modifyingID) !== undefined) {
-                    maskImage = await getSeededCubeIconType(modifyingID as CCOIcons.patternedCubeID, data.seed, "accents");
+                    frameMasks = [await getSeededCubeIconType(modifyingID as CCOIcons.patternedCubeID, data.seed, "accents")];
                 } else {
                     const customMaskImagePath = `${sourceImagesDirectory}${modifyingID}/accents.png`;
-                    maskImage = await Jimp.read((!fs.existsSync(customMaskImagePath)) ? `${sourceImagesDirectory}_DEFAULT_/accents.png` : customMaskImagePath);
+                    frameMasks = await loadAnimatedCubeIcon((!fs.existsSync(customMaskImagePath)) ? `${sourceImagesDirectory}_DEFAULT_/accents.png` : customMaskImagePath);
                 }
-                const baseImage = await Jimp.read(`${originalImagePath}`);
+                iconFrames = await loadAnimatedCubeIcon(`${originalImagePath}`);
                 const contrabandEffectImage = await Jimp.read(`./sourceicons/attributeeffects/contraband.png`);
                 var patternRNG = new seedrandom(`${modifyingID}`);
-
-                const cropX = Math.round(patternRNG() * (contrabandEffectImage.bitmap.width - baseImage.bitmap.width));
-                const cropY = Math.round(patternRNG() * (contrabandEffectImage.bitmap.height - baseImage.bitmap.height));
-                contrabandEffectImage.crop(cropX, cropY, baseImage.bitmap.width, baseImage.bitmap.height);
-                contrabandEffectImage.mask(maskImage, 0, 0);
-                baseImage.composite(contrabandEffectImage, 0, 0);
-                await baseImage.writeAsync(outcomeFile);
+                const cropX = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.width - iconFrames[0].bitmap.width));
+                const cropY = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.height - iconFrames[0].bitmap.height));
+                contrabandEffectImage.crop(cropX, cropY, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    let contrabandEffectClone = contrabandEffectImage.clone();
+                    contrabandEffectClone.mask(frameMasks[frameIndex % frameMasks.length], 0, 0);
+                    strokeImage(contrabandEffectClone, 0x000000ff)
+                    iconFrames[frameIndex].composite(contrabandEffectClone, 0, 0);
+                }
+                await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`);
             }
-            return `/contraband/`;
+            return {
+                directoryAddition: `/contraband/`
+            };
         }
     },
     bSide: {
         directory: '/bside',
-        modificationFunction: async function (modifyingPath, modifyingID, modifyingIcon, data: any) {
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: any) {
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
             const newImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}/bside`);
             if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
-            const newIconPath = path.resolve(`${newImagePath}/${modifyingIcon}`);
+            const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
             if (!fs.existsSync(newIconPath)) {
-                   await createBSideImage(originalImagePath, newIconPath);
+                    let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                    for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                        iconFrames[frameIndex] = await createBSideImage(iconFrames[frameIndex]);
+                    }
+                    await saveAnimatedCubeIcon(iconFrames, fileName, `${newImagePath}/`);
             }
-            return `/bside/`;
+            return {
+                directoryAddition: `/bside/`
+            };
         }
     },
     tallying: {
         directory: '/tallying',
-        modificationFunction: async function (modifyingPath, modifyingID, modifyingIcon, data: {tallies: number}) {
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: {tallies: number}) {
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
 
-            return `/tallying`;
+            return {
+                directoryAddition: `/tallying`
+            };
         }
     },
     divine: {
         directory: '/divine',
-        modificationFunction: async function(modifyingPath, modifyingID, modifyingIcon, data: any) {
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
-            
-            return `/divine`;
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: any) {
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+
+            return {
+                directoryAddition: `/divine`
+            };
         }
     },
     slated: {
         directory: '/slated',
-        modificationFunction: async function(modifyingPath, modifyingID, modifyingIcon, data: any) {
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
-            
-            return `/slated`;
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: any) {
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+
+            return {
+                directoryAddition: `/slated`
+            };
         }
     },
     prefixes: {
         directory: '/prefix',
-        modificationFunction: async function (modifyingPath, modifyingID, modifyingIcon, data: { prefixes: string[], seed: number }) {
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { prefixes: string[], seed: number }) {
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
 
-            return `/prefix`;
+            return {
+                directoryAddition: `/prefix`
+            };
         }
     },
     size: {
         directory: '/size',
-        modificationFunction: async function (modifyingPath, modifyingID, modifyingIcon, data: { size: number }) {
-            // Check if the size is a power of 2, within the bounds of 16-2048. If not, don't resize and don't return a new nested directory
-            if (Number.isNaN(data.size) || data.size > 2048 || data.size < 16 || (Math.log(data.size) / Math.log(2)) % 1 !== 0) return '';
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { size: number }) {
+            // Check if the size is a power of 2, within the bounds of set above. If not, don't resize and don't return a new nested directory
+            if (Number.isNaN(data.size) || data.size > resizeMax || data.size < resizeMin || (Math.log(data.size) / Math.log(2)) % 1 !== 0) return {directoryAddition: ''};
 
             // Get the path of the output of the previous modification
-            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${modifyingIcon}`);
+            const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
 
             // Sizes can be in many forms, so let's create a separate directory for each size.
             const resizeDirectory = `/sizex${data.size}/`;
@@ -309,7 +345,7 @@ const iconModifiers = {
             const outcomeDirectory = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${resizeDirectory}`);
 
             // Create the outcome path of the file
-            const outcomeFile = `${outcomeDirectory}/${modifyingIcon}`;
+            const outcomeFile = `${outcomeDirectory}/${fileName}`;
 
             // If the path to the directory doesn't exist, create it.
             if (!fs.pathExistsSync(outcomeDirectory)) fs.mkdirSync(outcomeDirectory, { recursive: true });
@@ -317,22 +353,26 @@ const iconModifiers = {
             // If the icon hasn't been generated yet, then generate it (in this case, it's simply reading the original image then resizing it.)
             if (!fs.existsSync(outcomeFile)) {
                 // Read the original icon
-                let cubeIcon = await Jimp.read(originalImagePath)
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath)
 
-                // Resize the icon
-                cubeIcon.resize(data.size, data.size, Jimp.RESIZE_NEAREST_NEIGHBOR)
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    // Resize the icon
+                    iconFrames[frameIndex].resize(data.size, data.size, Jimp.RESIZE_NEAREST_NEIGHBOR)
+                }
                 
                 // Write the icon
-                await cubeIcon.writeAsync(outcomeFile);
+                await saveAnimatedCubeIcon(iconFrames, fileName, outcomeDirectory);
             }
 
             // Return the directory to add to the icon generation function.
-            return resizeDirectory;
+            return {
+                directoryAddition: resizeDirectory
+            };
         }
     }
 } satisfies {[key: string]: {
     directory: string,
-    modificationFunction: (modifyingPath: string[], modifyingID: CCOIcons.cubeID, modifyingIcon: string, data: any) => Promise<string>
+    modificationFunction: (modifyingPath: string[], modifyingID: CCOIcons.cubeID, modifyingFileName: `${string}.png`, data: any) => Promise<{directoryAddition: string, newFileName?: string}>
 }}
 
 interface cubeIconGenerationParameters {
@@ -375,47 +415,49 @@ interface cubeIconGenerationParameters {
     }
 }
 
-async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParameters>, cubeID: CCOIcons.cubeID, iconSeed: number): Promise<string> {
-    let startIconGeneration = performance.now();
+async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParameters>, cubeID: CCOIcons.cubeID, iconSeed: number, returnSpriteSheet: boolean): Promise<string> {
     let imageDirectories: string[] = [];
-    let imageFileName = 'cube.png';
-    const baseDirectory = await iconModifiers.baseIcon.modificationFunction([`/CCOIcons/sourceicons/cubes/${cubeID}/`], cubeID, imageFileName, { seed: iconSeed });
-    imageFileName = `${cubeID}${(patternedCubeIDs.find(patternedCubeID => patternedCubeID === cubeID) !== undefined) ? iconSeed : ''}.png`;
-    imageDirectories.push(baseDirectory);
+    let fileName: `${string}.png` = `${'cube'}.png`;
+    const copyModification = await iconModifiers.baseIcon.modificationFunction([`/CCOIcons/sourceicons/cubes/${cubeID}/`], cubeID, fileName, { seed: iconSeed });
+    fileName = copyModification.newFileName;
+    imageDirectories.push(copyModification.directoryAddition);
 
     // These IF..ELSE statements are set up in this order to enforce the image application filter order... obviously we don't want 'b-side' to be applied after 'size' and stuff like that... it wouldn't look quite right
 
     if (iconAttributes.prefixes !== undefined && iconAttributes.prefixes.use === true) {
-        imageDirectories.push(await iconModifiers.prefixes.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.prefixes.data));
+        imageDirectories.push((await iconModifiers.prefixes.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.prefixes.data)).directoryAddition);
     }
     
     if (iconAttributes.contraband !== undefined && iconAttributes.contraband.use === true) {
-        imageDirectories.push(await iconModifiers.contraband.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.contraband.data));
+        imageDirectories.push((await iconModifiers.contraband.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.contraband.data)).directoryAddition);
     }
     
     if (iconAttributes.divine !== undefined && iconAttributes.divine.use === true) {
-        imageDirectories.push(await iconModifiers.divine.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.divine.data));
+        imageDirectories.push((await iconModifiers.divine.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.divine.data)).directoryAddition);
     }
     
     if (iconAttributes.slated !== undefined && iconAttributes.slated.use === true) {
-        imageDirectories.push(await iconModifiers.slated.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.slated.data));
+        imageDirectories.push((await iconModifiers.slated.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.slated.data)).directoryAddition);
     }
 
     if (iconAttributes.tallying !== undefined && iconAttributes.tallying.use === true) {
-        imageDirectories.push(await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.tallying.data));
+        imageDirectories.push((await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.tallying.data)).directoryAddition);
     }
 
     if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
-        imageDirectories.push(await iconModifiers.bSide.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.bSide.data));
+        imageDirectories.push((await iconModifiers.bSide.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.bSide.data)).directoryAddition);
     }
 
     if (iconAttributes.size !== undefined && iconAttributes.size.use === true) {
-        imageDirectories.push(await iconModifiers.size.modificationFunction(imageDirectories, cubeID, imageFileName, iconAttributes.size.data));
+        imageDirectories.push((await iconModifiers.size.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.size.data)).directoryAddition);
     }
 
-    let endIconGeneration = performance.now();
-    console.log(`Icon generation took ${endIconGeneration-startIconGeneration}ms.`)
-    return path.resolve(`${relativeRootDirectory}${imageDirectories.join('')}${imageFileName}`);
+    if (!returnSpriteSheet && fs.existsSync(`${relativeRootDirectory}${imageDirectories.join('')}${fileName.replace('.png', '.gif')}`)) {
+        // @ts-ignore An override for a .gif, should be OK.
+        fileName = fileName.replace('.png', '.gif');
+    }
+
+    return path.resolve(`${relativeRootDirectory}${imageDirectories.join('')}${fileName}`);
 }
 
 const route: CCOIcons.documentedRoute = {
@@ -458,7 +500,7 @@ const route: CCOIcons.documentedRoute = {
                 query: 's',
                 name: "Icon Size",
                 subtitle: "The desired size.",
-                description: "The desired size of the requested icon in pixels. Must be a power of 2, with the minimum being 16, and the maximum being 2048.",
+                description: `The desired size of the requested icon in pixels. Must be a power of 2, with the minimum being ${resizeMin}, and the maximum being ${resizeMax}.`,
                 examples: [
                     {
                         name: "512x512 Cube Icon",
@@ -469,6 +511,24 @@ const route: CCOIcons.documentedRoute = {
                         name: "16x16 Cardboard Box Cube Icon",
                         example: "/cubeicon/cardboardbox?s=16",
                         description: "Will return the cardboard box icon at a size of 16x16px. Note: This is the smallest version of any icon you can request."
+                    }
+                ]
+            },
+            {
+                query: 'b',
+                name: "B-Side Icon",
+                subtitle: "Whether or not you want the B-Side attribute modification to be applied.",
+                description: "You don't have to include anything as part of this parameter, simply including 'b' as a query modifier in the URL is enough.",
+                examples: [
+                    {
+                        name: "B-Side Brimstone Cube Icon",
+                        example: "/cubeicon/brimstone?b",
+                        description: "Will return the 'brimstone' icon with the B-Side attribute modifier applied."
+                    },
+                    {
+                        name: "B-Side Perfect Eclipse Cube Icon",
+                        example: "/cubeicon/eclipse?b&pattern=45",
+                        description: "Will return the 'eclipse' icon, with pattern ID 45, along with the B-Side attribute modifier applied."
                     }
                 ]
             },
@@ -491,10 +551,28 @@ const route: CCOIcons.documentedRoute = {
                 ]
             },
             {
+                query: 'spritesheet',
+                name: "Spritesheet",
+                subtitle: "Whether or not you want the server to send you the spritesheet of an animated icon.",
+                description: "You don't have to include anything as part of this parameter, simply including 'spritesheet' as a query modifier in the URL is enough. Providing this with an icon that isn't animated will do nothing.",
+                examples: [
+                    {
+                        name: "Sublime Cube Spritesheet",
+                        example: "/cubeicon/sublime?spritesheet",
+                        description: "Will return the 'sublime' cubeID's spritesheet image."
+                    },
+                    {
+                        name: "Contraband Sublime Cube Spritesheet",
+                        example: "/cubeicon/sublime?c&spritesheet",
+                        description: "Will return the 'sublime' cubeID's contraband variant spritesheet image."
+                    }
+                ]
+            },
+            {
                 query: 'pattern',
                 name: "Pattern Attribute",
                 subtitle: "Request a specific pattern index from a cube.",
-                description: `The pattern can be any number from 0 to ${patternIndexLimit - 1}. This only affects cubes with seeded patterns, or have a seeded prefix. Supplying a number greater than ${patternIndexLimit - 1} will simply have the modulus of ${patternIndexLimit - 1} taken from that number. Supplying a number less than 0 will simply have its absolute value taken. Supplying 'random' as the parameter will simply make the server take a random seed. NOTE: If no 'pattern' is supplied then the server will default to pattern ID 1.`,
+                description: `The pattern can be any number from 0 to ${patternIndexLimit - 1}. This only affects cubes with seeded patterns, or have a seeded prefix. Supplying a number greater than ${patternIndexLimit - 1} will simply have the modulus of ${patternIndexLimit - 1} taken from that number. Supplying a number less than 0 will have its absolute value taken. Supplying 'random' as the parameter will make the server take a random seed. NOTE: If no 'pattern' is supplied then the server will default to pattern ID 1.`,
                 examples: [
                     {
                         name: "Perfect Eclipse Cube Icon",
@@ -511,6 +589,7 @@ const route: CCOIcons.documentedRoute = {
         ]
     },
     responseFunction: async (req, res) => {
+        let startIconGeneration = performance.now();
         // Set requested cube ID variable
         let requestedCubeID: CCOIcons.cubeID;
         if (cubes[req.params.cubeid as CCOIcons.cubeID] !== undefined) {
@@ -518,10 +597,11 @@ const route: CCOIcons.documentedRoute = {
         } else {
             requestedCubeID = 'green';
         }
-        console.log(requestedCubeID)
+        console.log(requestedCubeID);
         // Cube icon generation parameters storer
         const cubeIconParams: Partial<cubeIconGenerationParameters> = {};
         let cubeIconSeed = 1;
+        let returnSpriteSheet = false;
         if (Object.keys(req.query).length > 0) {
             if (typeof req.query.s === "string") { // Cube Icon Size query modifier
                 cubeIconParams.size = {
@@ -562,11 +642,14 @@ const route: CCOIcons.documentedRoute = {
                     data: {}
                 }
             }
+            if (req.query.spritesheet !== undefined) {
+                returnSpriteSheet = true;
+            }
         }
         let imagePath = '';
         try {
             // Create the image (if needed) and get its path
-            imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed);
+            imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);
         } catch (e) {
             console.log(e);
             res.status(403);
@@ -574,6 +657,13 @@ const route: CCOIcons.documentedRoute = {
         }
         // Finally, send the file.
         console.log(imagePath);
+        let endIconGeneration = performance.now();
+        console.log(`Icon generation took ${endIconGeneration - startIconGeneration}ms.`)
+        let imageStats = fs.statSync(imagePath);
+        res.set('cubeiconattributes', JSON.stringify({
+            size: imageStats.size,
+            generationTime: endIconGeneration - startIconGeneration
+        }))
         res.sendFile(imagePath);
         return;
     }

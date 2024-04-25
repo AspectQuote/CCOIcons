@@ -240,13 +240,12 @@ function createBSideTriangles(image: Jimp, bitmapIndex: number, coordinate: { x:
 }
 
 /**
- * Creates a B-Side image from an input image
- * @param originalPath The absolute path to the image that you want to turn B-Side
- * @param newImagePath The absolute path to the new image you want to write to disk
+ * Creates a B-Side image from an input image, returns the new image
+ * @param originalJimp The Jimp image you want to be turned B-Side. This won't be modified, instead, the function will return a new image with the algorithm applied.
  */
-async function createBSideImage(originalPath: string, newImagePath: string): Promise<void> {
+async function createBSideImage(originalJimp: Jimp): Promise<Jimp> {
     // Read the original icon
-    const originalIcon = await Jimp.read(originalPath);
+    const originalIcon = originalJimp;
 
     // Create the new icon, using the resize size and the original icon's size.
     const newIcon = new Jimp(originalIcon.bitmap.width * bSideConfig.resizeSize, originalIcon.bitmap.height * bSideConfig.resizeSize, 0x00000000);
@@ -353,8 +352,8 @@ async function createBSideImage(originalPath: string, newImagePath: string): Pro
         })
     })
 
-    // Write the icon to disc.
-    await newIcon.writeAsync(newImagePath);
+    // Return the Icon
+    return newIcon;
 }
 
 export {
