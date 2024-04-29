@@ -2,7 +2,7 @@ import * as CCOIcons from './../typedefs';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import Jimp from 'jimp';
-import { JimpBitmap } from 'gifwrap';
+import * as gifwrap from 'gifwrap';
 import { createBSideImage } from './../modules/bside';
 import { loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
 let seedrandom = require('seedrandom');
@@ -201,8 +201,31 @@ const iconModifiers = {
 
             let fileNameOverride: `${string}.png` = `${modifyingID}.png`;
 
-            // If the cube is seeded,
-            if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === modifyingID) !== undefined) {
+            if (modifyingID === "badass") {
+                // Create the outcome path of the file
+                const outcomeFile = `${outcomePath}/${modifyingID}.png`;
+                if (!fs.existsSync(outcomeFile)) {
+                    let badassFrameCount = 100;
+                    let badassRNG = new seedrandom(`badass`);
+                    let usedIDs: CCOIcons.cubeID[] = [];
+                    let allBadassFrames: Jimp[] = [];
+                    while (usedIDs.length < badassFrameCount) {
+                        let newID: CCOIcons.cubeID = Object.keys(cubes)[Math.round(badassRNG() * Object.keys(cubes).length)] as CCOIcons.cubeID;
+                        if (!usedIDs.includes(newID) && !patternedCubeIDs.includes(newID as CCOIcons.patternedCubeID)) {
+                            usedIDs.push(newID)
+                        }
+                    }
+                    for (let badassFrameIndex = 0; badassFrameIndex < usedIDs.length; badassFrameIndex++) {
+                        const newCubeID = usedIDs[badassFrameIndex];
+                        const cubeDirectory = `${relativeRootDirectory}/CCOIcons/sourceicons/cubes/${newCubeID}`;
+                        if (fs.existsSync(cubeDirectory)) {
+                            let newCubeFrame = await loadAnimatedCubeIcon(`${cubeDirectory}/cube.png`);
+                            allBadassFrames.push(newCubeFrame[Math.ceil(newCubeFrame.length * badassRNG()) - 1].resize(32, 32, Jimp.RESIZE_NEAREST_NEIGHBOR));
+                        }
+                    }
+                    await saveAnimatedCubeIcon(allBadassFrames, `badass`, outcomePath, 0.1);
+                }
+            } else if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === modifyingID) !== undefined) {
                 const cubeSeed = data.seed;
                 // Create the outcome path of the file
                 fileNameOverride = `${modifyingID}${cubeSeed}.png`;

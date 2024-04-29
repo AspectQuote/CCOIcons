@@ -48,14 +48,14 @@ async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
     return cubeFrames;
 }
 
-async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string): Promise<boolean> {
+async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string, delayCentisecs: number = 1): Promise<boolean> {
     return new Promise(async (res, rej) => {
         iconFileName = iconFileName.split('.')[0];
         if (frames.length === 1) {
             await frames[0].writeAsync(path.resolve(`${iconPath}/${iconFileName}.png`))
             res(true)
         } else {
-            await gifwrap.GifUtil.write(path.resolve(`${iconPath}/${iconFileName}.gif`), frames.map(frame => new gifwrap.GifFrame(frame.bitmap)));
+            await gifwrap.GifUtil.write(path.resolve(`${iconPath}/${iconFileName}.gif`), frames.map(frame => new gifwrap.GifFrame(frame.bitmap, {delayCentisecs})));
             let imageSpriteSheet = new Jimp(frames[0].bitmap.width, frames[0].bitmap.height * frames.length, 0x00000000);
             frames.forEach((frame, idx) => {
                 imageSpriteSheet.composite(frame, 0, idx * frames[0].bitmap.height)
