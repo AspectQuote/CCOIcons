@@ -3,8 +3,14 @@ import * as fs from 'fs-extra';
 import path from 'path';
 import * as gifwrap from 'gifwrap';
 
+/**
+ * Get the RGBA representation of a hex literal
+ * @param num Number hex literal, including alpha value (0xffffffff)
+ * @returns An object representing the RGB of that hex literal
+ */
 function rgbaFromNumberLiteral(num: number) {
     return {
+        // Just bit shifts. Nothing fancy.
         red: (num >> 24 & 255),
         green: (num >> 16 & 255),
         blue: (num >> 8 & 255),
@@ -12,12 +18,26 @@ function rgbaFromNumberLiteral(num: number) {
     }
 }
 
+/**
+ * Place a rectangle onto a Jimp image
+ * @param image Jimp image which you want to paste a rectangle onto
+ * @param rectX The X position of the rectangle (leftmost pixel of the rectangle)
+ * @param rectY The Y position of the rectangle (topmost pixel of the rectangle)
+ * @param width The width of the rectangle
+ * @param height The height of the rectangle
+ * @param color The color of the rectangle
+ */
 function fillRect(image: Jimp, rectX: number, rectY: number, width: number, height: number, color: number) {
     image.scan(rectX, rectY, width, height, function (x, y, index) {
         image.setPixelColor(color, x, y);
     })
 }
 
+/**
+ * Load an icon spritesheet
+ * @param iconPath Path to the icon you want to load
+ * @returns An array of Jimp images
+ */
 async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
     let cubeFrames: Jimp[] = [];
     if (!fs.existsSync(iconPath)) {
@@ -48,6 +68,14 @@ async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
     return cubeFrames;
 }
 
+/**
+ * Save an animated icon, will save two files if there's more than one frame: a .gif and a .png spritesheet.
+ * @param frames An array of Jimp images
+ * @param iconFileName The name of the icon, do not include the image extension
+ * @param iconPath The path to the directory where the icon should be saved
+ * @param delayCentisecs The duration of each frame in an animated icon's .gif file
+ * @returns A boolean that describes whether or not the save was successful.
+ */
 async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string, delayCentisecs: number = 1): Promise<boolean> {
     return new Promise(async (res, rej) => {
         iconFileName = iconFileName.split('.')[0];
@@ -66,22 +94,28 @@ async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPa
     })
 }
 
-function strokeImage(image: Jimp, color: number) {
+/**
+ * Add stroke to an image (an outline)
+ * @param image The image you want to add stroke to
+ * @param color The color of the stroke you want to add
+ */
+function strokeImage(image: Jimp, color: number): Jimp {
     let outlineCoords: { x: number, y: number }[] = [];
-    image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
-        if (image.bitmap.data[idx + 3] === 0) {
+    let newImage = (new Jimp(image.bitmap.width + 2, image.bitmap.height + 2, 0x00000000)).composite(image, 1, 1);
+    newImage.scan(0, 0, newImage.bitmap.width, newImage.bitmap.height, (x, y, idx) => {
+        if (newImage.bitmap.data[idx + 3] === 0) {
             let pixelIsOutline = false;
             for (let yOffset = -1; yOffset <= 1 && !pixelIsOutline; yOffset++) {
                 let yPos = y + yOffset
-                let adjacentPixelIndex = image.getPixelIndex(x, yPos);
-                if (image.bitmap.data[adjacentPixelIndex + 3] > 0) {
+                let adjacentPixelIndex = newImage.getPixelIndex(x, yPos);
+                if (newImage.bitmap.data[adjacentPixelIndex + 3] > 0) {
                     pixelIsOutline = true;
                 }
             }
             for (let xOffset = -1; xOffset <= 1 && !pixelIsOutline; xOffset++) {
                 let xPos = x + xOffset;
-                let adjacentPixelIndex = image.getPixelIndex(xPos, y);
-                if (image.bitmap.data[adjacentPixelIndex + 3] > 0) {
+                let adjacentPixelIndex = newImage.getPixelIndex(xPos, y);
+                if (newImage.bitmap.data[adjacentPixelIndex + 3] > 0) {
                     pixelIsOutline = true;
                 }
             }
@@ -90,7 +124,8 @@ function strokeImage(image: Jimp, color: number) {
             }
         }
     })
-    outlineCoords.forEach(coordinate => image.setPixelColor(color, coordinate.x, coordinate.y));
+    outlineCoords.forEach(coordinate => newImage.setPixelColor(color, coordinate.x, coordinate.y));
+    return newImage;
 }
 
 export {

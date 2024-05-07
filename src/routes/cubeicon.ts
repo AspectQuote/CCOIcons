@@ -20,8 +20,37 @@ const patternAtlasPadding = 1;
 const resizeMax = 512;
 const resizeMin = 16;
 
+const divineFrames = 15;
+const divineColor = 0xffffffff;
+const divineIconName = `divine`;
+const alwaysRegenerateDivineAnimation = true;
+const divineDelayCentisecs = 0.5;
+
 const relativeRootDirectory = `${__dirname}/../../..`;
 const sourceImagesDirectory = './sourceicons/cubes/';
+
+if (!fs.existsSync(`${relativeRootDirectory}/ccicons/`)) fs.mkdirSync(`${relativeRootDirectory}/ccicons/`);
+if (!fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets`)) fs.mkdirSync(`${relativeRootDirectory}/ccicons/attributespritesheets`);
+
+if (alwaysRegenerateDivineAnimation || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/divine.png`)) {
+    (async () => {
+        let divineFlashMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/divine/flash.png`);
+        let divinePatternMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/divine/pattern.png`)
+        const baseDivineResolution = divineFlashMask.bitmap.width;
+        let divineBaseImage = new Jimp(baseDivineResolution, baseDivineResolution, divineColor).mask(divineFlashMask, 0, 0);
+        divineBaseImage._background = 0x00000000;
+        let generatedDivineFrames: Jimp[] = [];
+    
+        let rotationIncrement = 90/divineFrames;
+        for (let frameIndex = 0; frameIndex < divineFrames; frameIndex++) {
+            let newDivineFrame = divineBaseImage.clone().rotate((rotationIncrement * frameIndex) + 1, false);
+            newDivineFrame.composite(divineBaseImage.clone().rotate(-(rotationIncrement * frameIndex), false), 0, 0);
+            generatedDivineFrames.push(newDivineFrame.mask(divinePatternMask, 0, 0));
+        }
+    
+        saveAnimatedCubeIcon(generatedDivineFrames, divineIconName, `${relativeRootDirectory}/ccicons/attributespritesheets`, divineDelayCentisecs);
+    })()
+}
 
 function clampRandomHiLo(low: number, high: number, seed: any) {
     return ((high - low) * seed) + low;
@@ -283,7 +312,8 @@ const iconModifiers = {
                 for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
                     let contrabandEffectClone = contrabandEffectImage.clone();
                     contrabandEffectClone.mask(frameMasks[frameIndex % frameMasks.length], 0, 0);
-                    strokeImage(contrabandEffectClone, 0x000000ff)
+                    contrabandEffectClone = strokeImage(contrabandEffectClone, 0x000000ff);
+                    contrabandEffectClone.crop(1, 1, contrabandEffectClone.bitmap.width-1, contrabandEffectClone.bitmap.height-1);
                     iconFrames[frameIndex].composite(contrabandEffectClone, 0, 0);
                 }
                 await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`);
@@ -326,9 +356,30 @@ const iconModifiers = {
         directory: '/divine',
         modificationFunction: async function (modifyingPath, modifyingID, fileName, data: any) {
             const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
-
+            const newImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}/divine`);
+            if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
+            const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
+            if (!fs.existsSync(newIconPath)) {
+                let divineFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/divine.png`);
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                iconFrames.forEach((frame, index) => {
+                    iconFrames[index] = strokeImage(frame, divineColor);
+                })
+                let neededIconFrames = divineFrames * iconFrames.length;
+                let newIconFrames: Jimp[] = [];
+                for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
+                    let divineFrameBaseIndex = frameIndex % divineFrameBase.length;
+                    let iconFrameIndex = frameIndex % iconFrames.length;
+                    if (divineFrameBase[divineFrameBaseIndex].bitmap.width !== (iconFrames[iconFrameIndex].bitmap.width * 2)) {
+                        divineFrameBase[divineFrameBaseIndex].resize(iconFrames[iconFrameIndex].bitmap.width * 2, iconFrames[0].bitmap.height * 2, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                    }
+                    let iconFramePosition = (divineFrameBase[divineFrameBaseIndex].bitmap.width / 2) - (iconFrames[iconFrameIndex].bitmap.width / 2);
+                    newIconFrames.push(divineFrameBase[divineFrameBaseIndex].clone().composite(iconFrames[iconFrameIndex], iconFramePosition, iconFramePosition));
+                }
+                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`);
+            }
             return {
-                directoryAddition: `/divine`
+                directoryAddition: `/divine/`
             };
         }
     },
@@ -661,6 +712,12 @@ const route: CCOIcons.documentedRoute = {
             }
             if (req.query.b !== undefined) {
                 cubeIconParams.bSide = {
+                    use: true,
+                    data: {}
+                }
+            }
+            if (req.query.d !== undefined) {
+                cubeIconParams.divine = {
                     use: true,
                     data: {}
                 }
