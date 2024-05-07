@@ -4,7 +4,7 @@ import * as path from 'path';
 import Jimp from 'jimp';
 import * as gifwrap from 'gifwrap';
 import { createBSideImage } from './../modules/bside';
-import { loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
+import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
 let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
@@ -23,8 +23,14 @@ const resizeMin = 16;
 const divineFrames = 15;
 const divineColor = 0xffffffff;
 const divineIconName = `divine`;
-const alwaysRegenerateDivineAnimation = true;
 const divineDelayCentisecs = 0.5;
+const alwaysRegenerateDivineAnimation = false;
+
+const slatedFrames = 15;
+const slatedColor = 0x213047ff;
+const slatedIconName = `slated`;
+const slatedDelayCentisecs = 0.5;
+const alwaysRegenerateSlatedAnimation = false;
 
 const relativeRootDirectory = `${__dirname}/../../..`;
 const sourceImagesDirectory = './sourceicons/cubes/';
@@ -32,23 +38,114 @@ const sourceImagesDirectory = './sourceicons/cubes/';
 if (!fs.existsSync(`${relativeRootDirectory}/ccicons/`)) fs.mkdirSync(`${relativeRootDirectory}/ccicons/`);
 if (!fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets`)) fs.mkdirSync(`${relativeRootDirectory}/ccicons/attributespritesheets`);
 
-if (alwaysRegenerateDivineAnimation || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/divine.png`)) {
+if (alwaysRegenerateDivineAnimation || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/${divineIconName}.png`)) {
     (async () => {
         let divineFlashMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/divine/flash.png`);
-        let divinePatternMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/divine/pattern.png`)
+        let divinePatternMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/divine/pattern.png`);
         const baseDivineResolution = divineFlashMask.bitmap.width;
         let divineBaseImage = new Jimp(baseDivineResolution, baseDivineResolution, divineColor).mask(divineFlashMask, 0, 0);
         divineBaseImage._background = 0x00000000;
         let generatedDivineFrames: Jimp[] = [];
-    
-        let rotationIncrement = 90/divineFrames;
+
+        let rotationIncrement = 90 / divineFrames;
         for (let frameIndex = 0; frameIndex < divineFrames; frameIndex++) {
             let newDivineFrame = divineBaseImage.clone().rotate((rotationIncrement * frameIndex) + 1, false);
             newDivineFrame.composite(divineBaseImage.clone().rotate(-(rotationIncrement * frameIndex), false), 0, 0);
             generatedDivineFrames.push(newDivineFrame.mask(divinePatternMask, 0, 0));
         }
-    
+
         saveAnimatedCubeIcon(generatedDivineFrames, divineIconName, `${relativeRootDirectory}/ccicons/attributespritesheets`, divineDelayCentisecs);
+    })()
+}
+
+if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/${slatedIconName}.png`)) {
+    (async () => {
+        let slatedBaseShape = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/slated/round.png`);
+        let slatedBaseSquareSize = slatedBaseShape.bitmap.width;
+        let slatedPadding = 15;
+        let generatedSlatedFrames: Jimp[] = [];
+        let slatedRNG = new seedrandom(`slatedseedaaalmaoidk`);
+        let slatedPatternMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/slated/pattern.png`);
+
+        function areaCoveredByRectangles(rectArray: typeof topRectangles) {
+            return rectArray.reduce((prev, curr) => {
+                return prev + curr.offset + curr.width;
+            }, 0)
+        }
+
+        function populateSlatedRectangleArray(): { width: number, size: number, maxSize: number, minSize: number, offset: number, direction: boolean }[] {
+            let rectangleArray: typeof topRectangles = [];
+            while (areaCoveredByRectangles(rectangleArray) < slatedBaseSquareSize - 2) {
+                let size = Math.ceil(slatedRNG() * (slatedPadding / 2));
+
+                let maxSize = size + Math.round(slatedFrames / 2) - 1;
+                let minSize = size - Math.round(slatedFrames / 2) + 1;
+
+                rectangleArray.push({
+                    width: Math.ceil(slatedRNG() * 2),
+                    size,
+                    maxSize,
+                    minSize,
+                    offset: Math.ceil(slatedRNG() * 2),
+                    direction: (slatedRNG() > 0.5) ? true : false
+                })
+            }
+            return rectangleArray;
+        }
+
+        let topRectangles = populateSlatedRectangleArray();
+        let topUniversalRectangleOffset = Math.floor((slatedBaseSquareSize + 2 - areaCoveredByRectangles(topRectangles)) / 2);
+
+        let leftRectangles = populateSlatedRectangleArray();
+        let leftUniversalRectangleOffset = Math.floor((slatedBaseSquareSize + 2 - areaCoveredByRectangles(leftRectangles)) / 2);
+
+        let bottomRectangles = populateSlatedRectangleArray();
+        let bottomUniversalRectangleOffset = Math.floor((slatedBaseSquareSize + 2 - areaCoveredByRectangles(bottomRectangles)) / 2);
+
+        let rightRectangles = populateSlatedRectangleArray();
+        let rightUniversalRectangleOffset = Math.floor((slatedBaseSquareSize + 2 - areaCoveredByRectangles(rightRectangles)) / 2);
+
+        for (let slatedFrameIndex = 0; slatedFrameIndex < slatedFrames; slatedFrameIndex++) {
+            let newSlatedFrame = new Jimp(slatedBaseSquareSize + slatedPadding * 2, slatedBaseSquareSize + slatedPadding * 2, 0x00000000);
+
+            fillRect(newSlatedFrame, slatedPadding, slatedPadding, slatedBaseSquareSize, slatedBaseSquareSize, slatedColor);
+            newSlatedFrame.mask(slatedBaseShape, slatedPadding, slatedPadding)
+
+            let topXPos = slatedPadding;
+            topRectangles.forEach(rectangle => {
+                fillRect(newSlatedFrame, topXPos + topUniversalRectangleOffset, slatedPadding - rectangle.size, rectangle.width, rectangle.size + (slatedBaseSquareSize/2), slatedColor);
+                topXPos += rectangle.width + rectangle.offset;
+                rectangle.size += rectangle.direction ? 1 : -1;
+                if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
+            })
+
+            let bottomXPos = slatedPadding;
+            bottomRectangles.forEach(rectangle => {
+                fillRect(newSlatedFrame, bottomXPos + bottomUniversalRectangleOffset, slatedPadding + slatedBaseSquareSize - (slatedBaseSquareSize / 2), rectangle.width, rectangle.size + (slatedBaseSquareSize / 2), slatedColor);
+                bottomXPos += rectangle.width + rectangle.offset;
+                rectangle.size += rectangle.direction ? 1 : -1;
+                if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
+            })
+
+            let leftYPos = slatedPadding;
+            leftRectangles.forEach(rectangle => {
+                fillRect(newSlatedFrame, slatedPadding - rectangle.size, leftYPos + leftUniversalRectangleOffset, rectangle.size + (slatedBaseSquareSize / 2), rectangle.width, slatedColor);
+                leftYPos += rectangle.width + rectangle.offset;
+                rectangle.size += rectangle.direction ? 1 : -1;
+                if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
+            })
+
+            let rightYPos = slatedPadding;
+            rightRectangles.forEach(rectangle => {
+                fillRect(newSlatedFrame, slatedPadding + slatedBaseSquareSize - (slatedBaseSquareSize / 2), rightYPos + rightUniversalRectangleOffset, rectangle.size + (slatedBaseSquareSize / 2), rectangle.width, slatedColor);
+                rightYPos += rectangle.width + rectangle.offset;
+                rectangle.size += rectangle.direction ? 1 : -1;
+                if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
+            })
+
+            generatedSlatedFrames.push(newSlatedFrame.mask(slatedPatternMask, 0, 0));
+        }
+        saveAnimatedCubeIcon(generatedSlatedFrames, slatedIconName, `${relativeRootDirectory}/ccicons/attributespritesheets`, slatedDelayCentisecs);
     })()
 }
 
@@ -360,12 +457,17 @@ const iconModifiers = {
             if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
             const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
             if (!fs.existsSync(newIconPath)) {
-                let divineFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/divine.png`);
+                let divineFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/${divineIconName}.png`);
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
                 iconFrames.forEach((frame, index) => {
                     iconFrames[index] = strokeImage(frame, divineColor);
                 })
-                let neededIconFrames = divineFrames * iconFrames.length;
+                let neededIconFrames = 0;
+                if (divineFrames % iconFrames.length === 0 || iconFrames.length % divineFrames === 0) {
+                    neededIconFrames = Math.max(divineFrames, iconFrames.length);
+                } else {
+                    neededIconFrames = divineFrames * iconFrames.length;
+                }
                 let newIconFrames: Jimp[] = [];
                 for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
                     let divineFrameBaseIndex = frameIndex % divineFrameBase.length;
@@ -387,7 +489,36 @@ const iconModifiers = {
         directory: '/slated',
         modificationFunction: async function (modifyingPath, modifyingID, fileName, data: any) {
             const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
-
+            const newImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}/slated`);
+            if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
+            const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
+            if (!fs.existsSync(newIconPath)) {
+                let slatedFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/${slatedIconName}.png`);
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                iconFrames.forEach((frame, index) => {
+                    iconFrames[index] = strokeImage(frame, slatedColor);
+                })
+                let neededIconFrames = 0;
+                if (slatedFrames % iconFrames.length === 0 || iconFrames.length % slatedFrames === 0) {
+                    neededIconFrames = Math.max(slatedFrames, iconFrames.length);
+                } else {
+                    neededIconFrames = slatedFrames * iconFrames.length;
+                }
+                let newIconFrames: Jimp[] = [];
+                for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
+                    let slatedFrameBaseIndex = frameIndex % slatedFrameBase.length;
+                    let iconFrameIndex = frameIndex % iconFrames.length;
+                    if (slatedFrameBase[slatedFrameBaseIndex].bitmap.width !== (iconFrames[iconFrameIndex].bitmap.width * 2)) {
+                        slatedFrameBase[slatedFrameBaseIndex].resize(iconFrames[iconFrameIndex].bitmap.width * 2, iconFrames[0].bitmap.height * 2, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                    }
+                    let iconFramePosition = (slatedFrameBase[slatedFrameBaseIndex].bitmap.width / 2) - (iconFrames[iconFrameIndex].bitmap.width / 2);
+                    newIconFrames.push(slatedFrameBase[slatedFrameBaseIndex].clone().composite(iconFrames[iconFrameIndex], iconFramePosition, iconFramePosition));
+                }
+                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`);
+            }
+            return {
+                directoryAddition: `/slated/`
+            };
             return {
                 directoryAddition: `/slated`
             };
@@ -544,7 +675,7 @@ const route: CCOIcons.documentedRoute = {
         description: "Blurb about icons and what this does",
         examples: [{
             name: "Large Green Cube Icon",
-            example: "/cubeicon/green?s=512",
+            example: "/cubeicon/green?size=512",
             description: "Will resolve into a 512x512 version of the Green Cube icon."
         }],
         parameterDocs: [
@@ -571,56 +702,92 @@ const route: CCOIcons.documentedRoute = {
         ],
         queryDocs: [
             {
-                query: 's',
+                query: 'size',
                 name: "Icon Size",
                 subtitle: "The desired size.",
                 description: `The desired size of the requested icon in pixels. Must be a power of 2, with the minimum being ${resizeMin}, and the maximum being ${resizeMax}.`,
                 examples: [
                     {
                         name: "512x512 Cube Icon",
-                        example: "/cubeicon?s=512",
+                        example: "/cubeicon?size=512",
                         description: "Will return the 'green' cubeID icon at a size of 512x512px."
                     },
                     {
                         name: "16x16 Cardboard Box Cube Icon",
-                        example: "/cubeicon/cardboardbox?s=16",
+                        example: "/cubeicon/cardboardbox?size=16",
                         description: "Will return the cardboard box icon at a size of 16x16px. Note: This is the smallest version of any icon you can request."
                     }
                 ]
             },
             {
-                query: 'b',
+                query: 'bside',
                 name: "B-Side Icon",
                 subtitle: "Whether or not you want the B-Side attribute modification to be applied.",
-                description: "You don't have to include anything as part of this parameter, simply including 'b' as a query modifier in the URL is enough.",
+                description: "You don't have to include anything as part of this parameter, simply including 'bside' as a query modifier in the URL is enough.",
                 examples: [
                     {
                         name: "B-Side Brimstone Cube Icon",
-                        example: "/cubeicon/brimstone?b",
+                        example: "/cubeicon/brimstone?bside",
                         description: "Will return the 'brimstone' icon with the B-Side attribute modifier applied."
                     },
                     {
                         name: "B-Side Perfect Eclipse Cube Icon",
-                        example: "/cubeicon/eclipse?b&pattern=45",
+                        example: "/cubeicon/eclipse?bside&pattern=45",
                         description: "Will return the 'eclipse' icon, with pattern ID 45, along with the B-Side attribute modifier applied."
                     }
                 ]
             },
             {
-                query: 'c',
+                query: 'contraband',
                 name: "Contraband Attribute",
                 subtitle: "Whether or not you want the contraband attribute modification to be applied.",
-                description: "You don't have to include anything as part of this parameter, simply including 'c' as a query modifier in the URL is enough.",
+                description: "You don't have to include anything as part of this parameter, simply including 'contraband' as a query modifier in the URL is enough.",
                 examples: [
                     {
                         name: "Contraband Green Cube Icon",
-                        example: "/cubeicon?c",
+                        example: "/cubeicon?contraband",
                         description: "Will return the 'green' cubeID icon in its contraband variant."
                     },
                     {
                         name: "512x512 Contraband Red Cube Icon",
-                        example: "/cubeicon/red?c&s=512",
-                        description: "Will return the contraband red cube icon at a size of 512x512px. Note: 'c' is simply provided without any value in the URL."
+                        example: "/cubeicon/red?contraband&size=512",
+                        description: "Will return the contraband red cube icon at a size of 512x512px. Note: 'contraband' is simply provided without any value in the URL."
+                    }
+                ]
+            },
+            {
+                query: 'divine',
+                name: "Divine Attribute",
+                subtitle: "Whether or not you want the divine attribute modification to be applied.",
+                description: "You don't have to include anything as part of this parameter, simply including 'divine' as a query modifier in the URL is enough.",
+                examples: [
+                    {
+                        name: "Divine Cardboard Box Cube Icon",
+                        example: "/cubeicon/cardboardbox?divine",
+                        description: "Will return the 'cardboardbox' cubeID icon in its divine variant."
+                    },
+                    {
+                        name: "512x512 Divine B-Side Red Cube Icon",
+                        example: "/cubeicon/red?divine&bside",
+                        description: "Will return the divine b-side red cube icon. Note: 'divine' is simply provided without any value in the URL."
+                    }
+                ]
+            },
+            {
+                query: 'slated',
+                name: "Slated Attribute",
+                subtitle: "Whether or not you want the slated attribute modification to be applied.",
+                description: "You don't have to include anything as part of this parameter, simply including 'slated' as a query modifier in the URL is enough.",
+                examples: [
+                    {
+                        name: "Slated Medusa Cube Icon",
+                        example: "/cubeicon/medusa?slated",
+                        description: "Will return the 'medusa' cubeID icon in its slated variant."
+                    },
+                    {
+                        name: "512x512 Slated B-Side Orange Cube Icon",
+                        example: "/cubeicon/orange?slated&bside",
+                        description: "Will return the slated b-side orange cube icon. Note: 'slated' is simply provided without any value in the URL."
                     }
                 ]
             },
@@ -637,7 +804,7 @@ const route: CCOIcons.documentedRoute = {
                     },
                     {
                         name: "Contraband Sublime Cube Spritesheet",
-                        example: "/cubeicon/sublime?c&spritesheet",
+                        example: "/cubeicon/sublime?contraband&spritesheet",
                         description: "Will return the 'sublime' cubeID's contraband variant spritesheet image."
                     }
                 ]
@@ -702,7 +869,7 @@ const route: CCOIcons.documentedRoute = {
                     cubeIconSeed = possibleIconSeed;
                 }
             }
-            if (req.query.c !== undefined) {
+            if (req.query.contraband !== undefined) {
                 cubeIconParams.contraband = {
                     use: true,
                     data: {
@@ -710,14 +877,20 @@ const route: CCOIcons.documentedRoute = {
                     }
                 }
             }
-            if (req.query.b !== undefined) {
+            if (req.query.bside !== undefined) {
                 cubeIconParams.bSide = {
                     use: true,
                     data: {}
                 }
             }
-            if (req.query.d !== undefined) {
+            if (req.query.divine !== undefined) {
                 cubeIconParams.divine = {
+                    use: true,
+                    data: {}
+                }
+            }
+            if (req.query.slated !== undefined) {
+                cubeIconParams.slated = {
                     use: true,
                     data: {}
                 }

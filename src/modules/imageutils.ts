@@ -98,10 +98,12 @@ async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPa
  * Add stroke to an image (an outline)
  * @param image The image you want to add stroke to
  * @param color The color of the stroke you want to add
+ * @returns The image after the stroke is applied
  */
-function strokeImage(image: Jimp, color: number): Jimp {
+function strokeImage(image: Jimp, color: number, strokeOnly: boolean = false): Jimp {
     let outlineCoords: { x: number, y: number }[] = [];
-    let newImage = (new Jimp(image.bitmap.width + 2, image.bitmap.height + 2, 0x00000000)).composite(image, 1, 1);
+    let newImage = new Jimp(image.bitmap.width + 2, image.bitmap.height + 2, 0x00000000)
+    if (!strokeOnly) newImage.composite(image, 1, 1);
     newImage.scan(0, 0, newImage.bitmap.width, newImage.bitmap.height, (x, y, idx) => {
         if (newImage.bitmap.data[idx + 3] === 0) {
             let pixelIsOutline = false;
