@@ -76,14 +76,15 @@ async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
  * @param delayCentisecs The duration of each frame in an animated icon's .gif file
  * @returns A boolean that describes whether or not the save was successful.
  */
-async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string, delayCentisecs: number = 1): Promise<boolean> {
+async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string, delayCentisecs: number): Promise<boolean> {
+    console.log(delayCentisecs)
     return new Promise(async (res, rej) => {
         iconFileName = iconFileName.split('.')[0];
         if (frames.length === 1) {
             await frames[0].writeAsync(path.resolve(`${iconPath}/${iconFileName}.png`))
             res(true)
         } else {
-            await gifwrap.GifUtil.write(path.resolve(`${iconPath}/${iconFileName}.gif`), frames.map(frame => new gifwrap.GifFrame(frame.bitmap, {delayCentisecs})));
+            await gifwrap.GifUtil.write(path.resolve(`${iconPath}/${iconFileName}.gif`), frames.map(frame => new gifwrap.GifFrame(frame.bitmap, {delayCentisecs: delayCentisecs})));
             let imageSpriteSheet = new Jimp(frames[0].bitmap.width, frames[0].bitmap.height * frames.length, 0x00000000);
             frames.forEach((frame, idx) => {
                 imageSpriteSheet.composite(frame, 0, idx * frames[0].bitmap.height)
@@ -98,35 +99,58 @@ async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPa
  * Add stroke to an image (an outline)
  * @param image The image you want to add stroke to
  * @param color The color of the stroke you want to add
+ * @param thickness How thick the stroke should be.
+ * @param strokeOnly Only return an image with the stroke, not the original image
  * @returns The image after the stroke is applied
  */
-function strokeImage(image: Jimp, color: number, strokeOnly: boolean = false): Jimp {
+function strokeImage(image: Jimp, color: number, thickness: number, strokeOnly: boolean = false): Jimp {
     let outlineCoords: { x: number, y: number }[] = [];
-    let newImage = new Jimp(image.bitmap.width + 2, image.bitmap.height + 2, 0x00000000)
-    if (!strokeOnly) newImage.composite(image, 1, 1);
-    newImage.scan(0, 0, newImage.bitmap.width, newImage.bitmap.height, (x, y, idx) => {
-        if (newImage.bitmap.data[idx + 3] === 0) {
-            let pixelIsOutline = false;
-            for (let yOffset = -1; yOffset <= 1 && !pixelIsOutline; yOffset++) {
-                let yPos = y + yOffset
-                let adjacentPixelIndex = newImage.getPixelIndex(x, yPos);
-                if (newImage.bitmap.data[adjacentPixelIndex + 3] > 0) {
-                    pixelIsOutline = true;
-                }
-            }
-            for (let xOffset = -1; xOffset <= 1 && !pixelIsOutline; xOffset++) {
-                let xPos = x + xOffset;
-                let adjacentPixelIndex = newImage.getPixelIndex(xPos, y);
-                if (newImage.bitmap.data[adjacentPixelIndex + 3] > 0) {
-                    pixelIsOutline = true;
-                }
-            }
-            if (pixelIsOutline) {
-                outlineCoords.push({ x, y });
+    let strokeWidth = Math.max(thickness, 1);
+    let newImage = new Jimp(image.bitmap.width + (strokeWidth * 2), image.bitmap.height + (strokeWidth * 2), 0x00000000);
+    if (!strokeOnly) newImage.composite(image, strokeWidth, strokeWidth);
+
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(x, y, idx) {
+        if (this.bitmap.data[idx + 3] != 0) {
+            for (let pixelXOffset = -1; pixelXOffset <= 1; pixelXOffset++) {
+                let checkingCoords: { x: number, y: number }[] = [
+                    { x: x - 1, y: y },
+                    { x: x + 1, y: y },
+                    { x: x, y: y - 1 },
+                    { x: x, y: y + 1 }
+                ];
+
+                checkingCoords.forEach(coord => {
+                    if (coord.x < 0 || coord.y < 0 || coord.x >= this.bitmap.width || coord.y >= this.bitmap.height || this.bitmap.data[this.getPixelIndex(coord.x, coord.y) + 3] === 0) {
+                        outlineCoords.push({x: coord.x + strokeWidth, y: coord.y + strokeWidth});
+                    }
+                })
             }
         }
     })
+
     outlineCoords.forEach(coordinate => newImage.setPixelColor(color, coordinate.x, coordinate.y));
+
+    for (let strokeIndex = 0; strokeIndex < strokeWidth-1; strokeIndex++) {
+        let newOutlineCoords: typeof outlineCoords = [];
+        outlineCoords.forEach(coord => {
+            let checkingCoords: { x: number, y: number }[] = [
+                { x: coord.x - 1, y: coord.y },
+                { x: coord.x + 1, y: coord.y },
+                { x: coord.x, y: coord.y - 1 },
+                { x: coord.x, y: coord.y + 1 }
+            ];
+
+            checkingCoords.forEach(newCoord => {
+                if (newCoord.x < 0 || newCoord.y < 0 || newCoord.x >= newImage.bitmap.width || newCoord.y >= newImage.bitmap.height || newImage.bitmap.data[newImage.getPixelIndex(newCoord.x, newCoord.y) + 3] === 0) {
+                    newOutlineCoords.push({ x: newCoord.x, y: newCoord.y });
+                }
+            })
+        })
+
+        outlineCoords = newOutlineCoords;
+        outlineCoords.forEach(coordinate => newImage.setPixelColor(color, coordinate.x, coordinate.y));
+    }
+
     return newImage;
 }
 

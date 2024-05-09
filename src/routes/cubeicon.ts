@@ -13,52 +13,142 @@ const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = 
 const patternSchema: { [key in CCOIcons.patternedCubeID]: CCOIcons.patternedCubeDefinition } = fs.readJSONSync('./config/patterneditems.json');
 const patternedCubeIDs: CCOIcons.patternedCubeID[] = Object.keys(patternSchema) as CCOIcons.patternedCubeID[];
 
+/**
+ * Controls how many pattern indices there can be, it's pretty arbitrary, but does scale.
+ */
 const patternIndexLimit = 1000;
+
+/**
+ * The square root of the pattern index, this is used to generate pattern atlases, controls how many columns/rows there are in each atlas.
+ */
 const patternAtlasRoot = Math.ceil(Math.sqrt(patternIndexLimit));
+
+/**
+ * How much padding is in-between the images in the pattern atlas
+ */
 const patternAtlasPadding = 1;
 
+/**
+ * How large cubes can be resized to with the ?size= URL parameter
+ */
 const resizeMax = 512;
+
+/**
+ * How small cubes can be resized to with the ?size= URL parameter
+ */
 const resizeMin = 16;
 
-const divineFrames = 15;
-const divineColor = 0xffffffff;
-const divineIconName = `divine`;
-const divineDelayCentisecs = 0.5;
-const alwaysRegenerateDivineAnimation = false;
+/**
+ * Divine icon generation configuration object
+ */
+const divineConfig = {
+    /**
+     * How many frames are in the divine animation. Increasing this will improve the smoothness of the divine animation, but will increase the size of the files on disk, and will increase the amount of time it takes to generate a divine icon.
+     */
+    frames: 15,
 
-const slatedFrames = 15;
-const slatedColor = 0x213047ff;
-const slatedIconName = `slated`;
-const slatedDelayCentisecs = 0.5;
-const alwaysRegenerateSlatedAnimation = false;
+    /**
+     * What color the divine outline and spinning flashes should be
+     */
+    color: 0xffffffff,
 
+    /**
+     * What the name of the divine icon should be (what the filename is, e.g. divine.png, divine.gif)
+     */
+    iconName: `divine`,
+
+    /**
+     * How fast the divine animation is, in 10ms increments.
+     */
+    delayCentisecs: 0.5,
+
+    /**
+     * Whether or not to regenerate the divine animation every time the server restarts. Useful when modifying the animation.
+     */
+    alwaysRegenerate: false
+}
+
+/**
+ * Slated icon generation configuration object
+ */
+const slatedConfig = {
+    /**
+     * How many frames are in the slated animation. Increasing this will increase how much the tendrils on the animation move, but will increase file size and how long it takes to generate a slated icon.
+     */
+    frames: 15,
+
+    /**
+     * The color of the slated outline and the tendrils.
+     */
+    color: 0x213047ff,
+
+    /**
+     * What the name of the slated icon should be (what the filename is, e.g. slated.png, slated.gif)
+     */
+    iconName: `slated`,
+
+    /**
+     * How fast the slated animation is, in 10ms increments.
+     */
+    delayCentisecs: 0.5,
+
+    /**
+     * Whether or not to regenerate the slated animation every time the server restarts. Useful when modifying the animation.
+     */
+    alwaysRegenerate: false
+}
+
+/**
+ * Object that stores the delay overrides for certain animated cubes, some need faster/slower animations.
+ */
+const cubeAnimationDurationOverrides: {[key in CCOIcons.cubeID]?: number} = {
+    badass: 0.1,
+    millennium: 6,
+    mangospolluted: 17,
+    ooshersglitched: 13,
+    linksboil: 14
+}
+function getCubeAnimationDelay(cubeID: CCOIcons.cubeID): number {
+    return cubeAnimationDurationOverrides[cubeID] ?? 1;
+}
+
+/**
+ * Changes where the root directory is, you can modify this if you want the icon output to be elsewhere.
+ */
 const relativeRootDirectory = `${__dirname}/../../..`;
+
+/**
+ * Changes where the source image directory for cubes is, you can modify this if you want to separate your own cubes from the other ones.
+ */
 const sourceImagesDirectory = './sourceicons/cubes/';
 
+// Create storage directories if they don't exist yet
 if (!fs.existsSync(`${relativeRootDirectory}/ccicons/`)) fs.mkdirSync(`${relativeRootDirectory}/ccicons/`);
 if (!fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets`)) fs.mkdirSync(`${relativeRootDirectory}/ccicons/attributespritesheets`);
 
-if (alwaysRegenerateDivineAnimation || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/${divineIconName}.png`)) {
+// Generate the divine animation
+if (divineConfig.alwaysRegenerate || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/${divineConfig.iconName}.png`)) {
     (async () => {
         let divineFlashMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/divine/flash.png`);
         let divinePatternMask = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/divine/pattern.png`);
         const baseDivineResolution = divineFlashMask.bitmap.width;
-        let divineBaseImage = new Jimp(baseDivineResolution, baseDivineResolution, divineColor).mask(divineFlashMask, 0, 0);
+        let divineBaseImage = new Jimp(baseDivineResolution, baseDivineResolution, divineConfig.color).mask(divineFlashMask, 0, 0);
         divineBaseImage._background = 0x00000000;
         let generatedDivineFrames: Jimp[] = [];
 
-        let rotationIncrement = 90 / divineFrames;
-        for (let frameIndex = 0; frameIndex < divineFrames; frameIndex++) {
+        let rotationIncrement = 90 / divineConfig.frames;
+        for (let frameIndex = 0; frameIndex < divineConfig.frames; frameIndex++) {
             let newDivineFrame = divineBaseImage.clone().rotate((rotationIncrement * frameIndex) + 1, false);
             newDivineFrame.composite(divineBaseImage.clone().rotate(-(rotationIncrement * frameIndex), false), 0, 0);
             generatedDivineFrames.push(newDivineFrame.mask(divinePatternMask, 0, 0));
         }
 
-        saveAnimatedCubeIcon(generatedDivineFrames, divineIconName, `${relativeRootDirectory}/ccicons/attributespritesheets`, divineDelayCentisecs);
+        saveAnimatedCubeIcon(generatedDivineFrames, divineConfig.iconName, `${relativeRootDirectory}/ccicons/attributespritesheets`, divineConfig.delayCentisecs);
     })()
 }
 
-if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/${slatedIconName}.png`)) {
+// Generate the slated animation
+if (slatedConfig.alwaysRegenerate || !fs.existsSync(`${relativeRootDirectory}/ccicons/attributespritesheets/${slatedConfig.iconName}.png`)) {
     (async () => {
         let slatedBaseShape = await Jimp.read(`${sourceImagesDirectory}/../attributeeffects/slated/round.png`);
         let slatedBaseSquareSize = slatedBaseShape.bitmap.width;
@@ -78,8 +168,8 @@ if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/
             while (areaCoveredByRectangles(rectangleArray) < slatedBaseSquareSize - 2) {
                 let size = Math.ceil(slatedRNG() * (slatedPadding / 2));
 
-                let maxSize = size + Math.round(slatedFrames / 2) - 1;
-                let minSize = size - Math.round(slatedFrames / 2) + 1;
+                let maxSize = size + Math.round(slatedConfig.frames / 2) - 1;
+                let minSize = size - Math.round(slatedConfig.frames / 2) + 1;
 
                 rectangleArray.push({
                     width: Math.ceil(slatedRNG() * 2),
@@ -105,15 +195,15 @@ if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/
         let rightRectangles = populateSlatedRectangleArray();
         let rightUniversalRectangleOffset = Math.floor((slatedBaseSquareSize + 2 - areaCoveredByRectangles(rightRectangles)) / 2);
 
-        for (let slatedFrameIndex = 0; slatedFrameIndex < slatedFrames; slatedFrameIndex++) {
+        for (let slatedFrameIndex = 0; slatedFrameIndex < slatedConfig.frames; slatedFrameIndex++) {
             let newSlatedFrame = new Jimp(slatedBaseSquareSize + slatedPadding * 2, slatedBaseSquareSize + slatedPadding * 2, 0x00000000);
 
-            fillRect(newSlatedFrame, slatedPadding, slatedPadding, slatedBaseSquareSize, slatedBaseSquareSize, slatedColor);
+            fillRect(newSlatedFrame, slatedPadding, slatedPadding, slatedBaseSquareSize, slatedBaseSquareSize, slatedConfig.color);
             newSlatedFrame.mask(slatedBaseShape, slatedPadding, slatedPadding)
 
             let topXPos = slatedPadding;
             topRectangles.forEach(rectangle => {
-                fillRect(newSlatedFrame, topXPos + topUniversalRectangleOffset, slatedPadding - rectangle.size, rectangle.width, rectangle.size + (slatedBaseSquareSize/2), slatedColor);
+                fillRect(newSlatedFrame, topXPos + topUniversalRectangleOffset, slatedPadding - rectangle.size, rectangle.width, rectangle.size + (slatedBaseSquareSize/2), slatedConfig.color);
                 topXPos += rectangle.width + rectangle.offset;
                 rectangle.size += rectangle.direction ? 1 : -1;
                 if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
@@ -121,7 +211,7 @@ if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/
 
             let bottomXPos = slatedPadding;
             bottomRectangles.forEach(rectangle => {
-                fillRect(newSlatedFrame, bottomXPos + bottomUniversalRectangleOffset, slatedPadding + slatedBaseSquareSize - (slatedBaseSquareSize / 2), rectangle.width, rectangle.size + (slatedBaseSquareSize / 2), slatedColor);
+                fillRect(newSlatedFrame, bottomXPos + bottomUniversalRectangleOffset, slatedPadding + slatedBaseSquareSize - (slatedBaseSquareSize / 2), rectangle.width, rectangle.size + (slatedBaseSquareSize / 2), slatedConfig.color);
                 bottomXPos += rectangle.width + rectangle.offset;
                 rectangle.size += rectangle.direction ? 1 : -1;
                 if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
@@ -129,7 +219,7 @@ if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/
 
             let leftYPos = slatedPadding;
             leftRectangles.forEach(rectangle => {
-                fillRect(newSlatedFrame, slatedPadding - rectangle.size, leftYPos + leftUniversalRectangleOffset, rectangle.size + (slatedBaseSquareSize / 2), rectangle.width, slatedColor);
+                fillRect(newSlatedFrame, slatedPadding - rectangle.size, leftYPos + leftUniversalRectangleOffset, rectangle.size + (slatedBaseSquareSize / 2), rectangle.width, slatedConfig.color);
                 leftYPos += rectangle.width + rectangle.offset;
                 rectangle.size += rectangle.direction ? 1 : -1;
                 if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
@@ -137,7 +227,7 @@ if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/
 
             let rightYPos = slatedPadding;
             rightRectangles.forEach(rectangle => {
-                fillRect(newSlatedFrame, slatedPadding + slatedBaseSquareSize - (slatedBaseSquareSize / 2), rightYPos + rightUniversalRectangleOffset, rectangle.size + (slatedBaseSquareSize / 2), rectangle.width, slatedColor);
+                fillRect(newSlatedFrame, slatedPadding + slatedBaseSquareSize - (slatedBaseSquareSize / 2), rightYPos + rightUniversalRectangleOffset, rectangle.size + (slatedBaseSquareSize / 2), rectangle.width, slatedConfig.color);
                 rightYPos += rectangle.width + rectangle.offset;
                 rectangle.size += rectangle.direction ? 1 : -1;
                 if (rectangle.size == rectangle.maxSize || rectangle.size == rectangle.minSize) rectangle.direction = !rectangle.direction;
@@ -145,7 +235,7 @@ if (alwaysRegenerateSlatedAnimation || !fs.existsSync(`${relativeRootDirectory}/
 
             generatedSlatedFrames.push(newSlatedFrame.mask(slatedPatternMask, 0, 0));
         }
-        saveAnimatedCubeIcon(generatedSlatedFrames, slatedIconName, `${relativeRootDirectory}/ccicons/attributespritesheets`, slatedDelayCentisecs);
+        saveAnimatedCubeIcon(generatedSlatedFrames, slatedConfig.iconName, `${relativeRootDirectory}/ccicons/attributespritesheets`, slatedConfig.delayCentisecs);
     })()
 }
 
@@ -178,7 +268,7 @@ function getSeededIconRNGValues(cubeID: CCOIcons.patternedCubeID, seed: number, 
     return seedValuesObj;
 }
 
-const xAtlasTypes = ["base", "accents", "eyes", "mouths"] as const;
+const xAtlasTypes = ["base", "accents", "eyes", "heads", "mouths"] as const;
 function getPatternAtlasCoordinates(iconWidth: number, iconHeight: number, patternIndex: number, type: typeof xAtlasTypes[number]): {x: number, y: number} {
     const xPatternTypeCoordinateAddition = xAtlasTypes.indexOf(type) * iconWidth * patternAtlasRoot;
     const x = xPatternTypeCoordinateAddition + (iconWidth * (patternIndex % patternAtlasRoot));
@@ -206,6 +296,23 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jim
         // Read mask overlay image and put that over the composite later
         const overlayImage = await Jimp.read(`${imageDirectory}/finaloverlay.png`);
 
+        let staticPatternImageLayers: { [key in typeof xAtlasTypes[number]]: Jimp | undefined } = {
+            base: undefined,
+            accents: undefined,
+            eyes: undefined,
+            mouths: undefined,
+            heads: undefined
+        }
+
+        for (let staticPatternKeyIndex = 0; staticPatternKeyIndex < Object.keys(staticPatternImageLayers).length; staticPatternKeyIndex++) {
+            const staticPatternKey: keyof typeof staticPatternImageLayers = Object.keys(staticPatternImageLayers)[staticPatternKeyIndex] as keyof typeof staticPatternImageLayers;
+            if (staticPatternKey !== "base") {
+                if (fs.existsSync(`${imageDirectory}/${staticPatternKey}.png`)) {
+                    staticPatternImageLayers[staticPatternKey] = await Jimp.read(`${imageDirectory}/${staticPatternKey}.png`);
+                }
+            }
+        }
+
         for (let patternIndex = 0; patternIndex < patternIndexLimit; patternIndex++) {
             let patternImages: { [key in typeof xAtlasTypes[number]]?: undefined | Jimp }[] = []
             const overallPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, 0);
@@ -213,39 +320,40 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jim
                 const individualPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, patternImageIndex);
                 const patternImageData = patternInfo.patternimages[patternImageIndex];
 
-                let patternImageLayers: { [key in typeof xAtlasTypes[number]]: Jimp | undefined} = {
+                let patternImageLayers: typeof staticPatternImageLayers = {
                     base: undefined,
-                    accents: undefined,
-                    eyes: undefined,
-                    mouths: undefined
+                    accents: ((staticPatternImageLayers.accents === undefined) ? undefined : staticPatternImageLayers.accents.clone()),
+                    eyes: ((staticPatternImageLayers.eyes === undefined) ? undefined : staticPatternImageLayers.eyes.clone()),
+                    mouths: ((staticPatternImageLayers.mouths === undefined) ? undefined : staticPatternImageLayers.mouths.clone()),
+                    heads: ((staticPatternImageLayers.heads === undefined) ? undefined : staticPatternImageLayers.heads.clone())
                 };
                 for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImageLayers).length; patternImageLayerIndex++) {
                     const key: keyof typeof patternImageLayers = Object.keys(patternImageLayers)[patternImageLayerIndex] as keyof typeof patternImageLayers;
                     const imageFilePath = path.resolve(`./sourceicons/textures/${patternImageData.path}/${key}.png`);
-                    if (fs.existsSync(imageFilePath)) {
+                    if (patternImageLayers[key] === undefined && fs.existsSync(imageFilePath)) {
                         patternImageLayers[key] = await Jimp.read(imageFilePath);
-                        // I love typedefs!!!
-                        let imageManipulations: { apply: "lighten" | "brighten" | "darken" | "desaturate" | "saturate" | "greyscale" | "spin" | "hue" | "mix" | "tint" | "shade" | "xor" | "red" | "green" | "blue", params: [number] }[] = [];
-                        if (key === "base") {
-                            // Brighten the pattern image
-                            if (patternImageData.seedbrightness) {
-                                const brightness = clampRandomHiLo(patternImageData.seedbrightnessrange[0], patternImageData.seedbrightnessrange[1], individualPatternSeedRNG.brightness);
-                                const manipulationMethod = brightness > 0 ? "lighten" : "darken";
-                                imageManipulations.push({ apply: manipulationMethod, params: [Math.abs(brightness)] });
-                            }
-                            // Saturate the pattern image
-                            if (patternImageData.seedsaturate) {
-                                const saturation = clampRandomHiLo(patternImageData.seedsaturaterange[0], patternImageData.seedsaturaterange[1], individualPatternSeedRNG.saturation);
-                                const manipulationMethod = saturation > 0 ? "saturate" : "desaturate";
-                                imageManipulations.push({ apply: manipulationMethod, params: [saturation] });
-                            }
-                
-                            // Hue-Rotate the pattern image
-                            if (patternImageData.seedhuerotate) {
-                                imageManipulations.push({ apply: "hue", params: [Math.round(individualPatternSeedRNG.hue * 360)] });
-                            }
-                        }
                         if (patternImageLayers[key] !== undefined) {
+                            // I love typedefs!!!
+                            let imageManipulations: { apply: "lighten" | "brighten" | "darken" | "desaturate" | "saturate" | "greyscale" | "spin" | "hue" | "mix" | "tint" | "shade" | "xor" | "red" | "green" | "blue", params: [number] }[] = [];
+                            if (key === "base") {
+                                // Brighten the pattern image
+                                if (patternImageData.seedbrightness) {
+                                    const brightness = clampRandomHiLo(patternImageData.seedbrightnessrange[0], patternImageData.seedbrightnessrange[1], individualPatternSeedRNG.brightness);
+                                    const manipulationMethod = brightness > 0 ? "lighten" : "darken";
+                                    imageManipulations.push({ apply: manipulationMethod, params: [Math.abs(brightness)] });
+                                }
+                                // Saturate the pattern image
+                                if (patternImageData.seedsaturate) {
+                                    const saturation = clampRandomHiLo(patternImageData.seedsaturaterange[0], patternImageData.seedsaturaterange[1], individualPatternSeedRNG.saturation);
+                                    const manipulationMethod = saturation > 0 ? "saturate" : "desaturate";
+                                    imageManipulations.push({ apply: manipulationMethod, params: [saturation] });
+                                }
+                    
+                                // Hue-Rotate the pattern image
+                                if (patternImageData.seedhuerotate) {
+                                    imageManipulations.push({ apply: "hue", params: [Math.round(individualPatternSeedRNG.hue * 360)] });
+                                }
+                            }
                             const JimpImg: Jimp = patternImageLayers[key] as Jimp;
                             // Scale the pattern image
                             if (patternImageData.seedscale) {
@@ -272,7 +380,6 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jim
                     }
                 }
 
-    
                 patternImages.push(patternImageLayers);
             }
             const newBaseImage = baseImage.clone();
@@ -286,7 +393,10 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jim
                     // Mask the pattern image with the mask image and composite the modified masked image
                     if (patternImages[maskInfo.patternimage][key] !== undefined) {
                         // @ts-ignore 'key' is a dynamic object property... it's OK!!!
-                        const maskedImage = patternImages[maskInfo.patternimage][key].clone().mask(maskImage, 0, 0);
+                        const maskedImage = patternImages[maskInfo.patternimage][key].clone()
+                        if (staticPatternImageLayers[key] === undefined) {
+                            maskedImage.mask(maskImage, 0, 0);
+                        }
                         if (key === "base") {
                             newBaseImage.composite(maskedImage, 0, 0);
                         } else {
@@ -349,7 +459,7 @@ const iconModifiers = {
                             allBadassFrames.push(newCubeFrame[Math.ceil(newCubeFrame.length * badassRNG()) - 1].resize(32, 32, Jimp.RESIZE_NEAREST_NEIGHBOR));
                         }
                     }
-                    await saveAnimatedCubeIcon(allBadassFrames, `badass`, outcomePath, 0.1);
+                    await saveAnimatedCubeIcon(allBadassFrames, `badass`, outcomePath, getCubeAnimationDelay(modifyingID));
                 }
             } else if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === modifyingID) !== undefined) {
                 const cubeSeed = data.seed;
@@ -359,7 +469,7 @@ const iconModifiers = {
                 // getSeededIconAtlas(modifyingID as CCOIcons.patternedCubeID);
                 if (!fs.existsSync(outcomeFile)) {
                     let iconFile = await getSeededCubeIconType(modifyingID as CCOIcons.patternedCubeID, cubeSeed, "base");
-                    await saveAnimatedCubeIcon([iconFile], fileNameOverride, `${outcomePath}/`);
+                    await saveAnimatedCubeIcon([iconFile], fileNameOverride, `${outcomePath}/`, getCubeAnimationDelay(modifyingID));
                 }
             } else {
                 // Create the outcome path of the file
@@ -367,7 +477,7 @@ const iconModifiers = {
                 // If the icon hasn't been generated yet, then generate it (in this case, it's copying it to the generated icons directory to make sure the original image isn't accidentally modified)
                 if (!fs.existsSync(outcomeFile)) {
                     let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
-                    let savedIcon = await saveAnimatedCubeIcon(iconFrames, fileNameOverride, `${outcomePath}/`);
+                    let savedIcon = await saveAnimatedCubeIcon(iconFrames, fileNameOverride, `${outcomePath}/`, getCubeAnimationDelay(modifyingID));
                     if (savedIcon !== true) {
                         console.log('Failed to save icon!');
                     }
@@ -406,14 +516,16 @@ const iconModifiers = {
                 const cropX = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.width - iconFrames[0].bitmap.width));
                 const cropY = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.height - iconFrames[0].bitmap.height));
                 contrabandEffectImage.crop(cropX, cropY, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
+
+                const contrabandOutlineThickness = 1;
                 for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
                     let contrabandEffectClone = contrabandEffectImage.clone();
                     contrabandEffectClone.mask(frameMasks[frameIndex % frameMasks.length], 0, 0);
-                    contrabandEffectClone = strokeImage(contrabandEffectClone, 0x000000ff);
-                    contrabandEffectClone.crop(1, 1, contrabandEffectClone.bitmap.width-1, contrabandEffectClone.bitmap.height-1);
-                    iconFrames[frameIndex].composite(contrabandEffectClone, 0, 0);
+                    // let accentImage = strokeImage(contrabandEffectClone, 0x000000ff, contrabandOutlineThickness);
+                    
+                    iconFrames[frameIndex] = strokeImage(iconFrames[frameIndex].composite(contrabandEffectClone, 0, 0), 0x000000ff, contrabandOutlineThickness);
                 }
-                await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`);
+                await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`, getCubeAnimationDelay(modifyingID));
             }
             return {
                 directoryAddition: `/contraband/`
@@ -432,7 +544,7 @@ const iconModifiers = {
                     for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
                         iconFrames[frameIndex] = await createBSideImage(iconFrames[frameIndex]);
                     }
-                    await saveAnimatedCubeIcon(iconFrames, fileName, `${newImagePath}/`);
+                await saveAnimatedCubeIcon(iconFrames, fileName, `${newImagePath}/`, getCubeAnimationDelay(modifyingID));
             }
             return {
                 directoryAddition: `/bside/`
@@ -441,12 +553,45 @@ const iconModifiers = {
     },
     tallying: {
         directory: '/tallying',
-        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: {tallies: number}) {
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { tallies: number }) {
             const originalImagePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+            // Create the directory path of the outcome of this modification
+            const tallyNumber = Math.floor(data.tallies % 101).toString();
+            const outcomeFolder = `/tallying${tallyNumber}`
+            const outcomePath = path.resolve(`${relativeRootDirectory}${modifyingPath.join('')}${outcomeFolder}`);
+            // Create the outcome path of the file
+            const outcomeFile = `${outcomePath}/${fileName}`;
+            // If the path to the directory doesn't exist, create it.
+            if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
+            // If the icon hasn't been generated yet, then generate it (in this case, it's just adding the tally flavor to the bottom right of the cube.)
+            if (!fs.existsSync(outcomeFile)) {
+                let tallyNumberFrames = await loadAnimatedCubeIcon(`./sourceicons/attributeeffects/tallying/tallynumbers.png`);
+                const tallyNumberWidth = tallyNumberFrames[0].bitmap.width;
+                const tallyNumberPadding = 1;
+                let tallyNumberImage = new Jimp(((tallyNumber.length + 1) * (tallyNumberWidth + tallyNumberPadding)) - tallyNumberPadding, tallyNumberWidth, 0x00000000);
 
+                tallyNumber.split('').concat(['10']).forEach((numString, index) => {
+                    let number = parseInt(numString);
+                    tallyNumberImage.composite(tallyNumberFrames[number], ((tallyNumberWidth + tallyNumberPadding) * index), 0);
+                })
+
+                tallyNumberImage = strokeImage(tallyNumberImage, 0x000000ff, 1);
+
+
+                let iconFrames: Jimp[] = [];
+                iconFrames = await loadAnimatedCubeIcon(`${originalImagePath}`);
+
+                let tallyNumberX = iconFrames[0].bitmap.width - tallyNumberImage.bitmap.width - 1;
+                let tallyNumberY = iconFrames[0].bitmap.height - tallyNumberImage.bitmap.height - 1;
+
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    iconFrames[frameIndex].composite(tallyNumberImage, tallyNumberX, tallyNumberY);
+                }
+                await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`, getCubeAnimationDelay(modifyingID));
+            }
             return {
-                directoryAddition: `/tallying`
-            };
+                directoryAddition: `${outcomeFolder}/`
+            }
         }
     },
     divine: {
@@ -457,16 +602,16 @@ const iconModifiers = {
             if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
             const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
             if (!fs.existsSync(newIconPath)) {
-                let divineFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/${divineIconName}.png`);
+                let divineFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/${divineConfig.iconName}.png`);
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
                 iconFrames.forEach((frame, index) => {
-                    iconFrames[index] = strokeImage(frame, divineColor);
+                    iconFrames[index] = strokeImage(frame, divineConfig.color, 1);
                 })
                 let neededIconFrames = 0;
-                if (divineFrames % iconFrames.length === 0 || iconFrames.length % divineFrames === 0) {
-                    neededIconFrames = Math.max(divineFrames, iconFrames.length);
+                if (divineConfig.frames % iconFrames.length === 0 || iconFrames.length % divineConfig.frames === 0) {
+                    neededIconFrames = Math.max(divineConfig.frames, iconFrames.length);
                 } else {
-                    neededIconFrames = divineFrames * iconFrames.length;
+                    neededIconFrames = divineConfig.frames * iconFrames.length;
                 }
                 let newIconFrames: Jimp[] = [];
                 for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
@@ -478,7 +623,7 @@ const iconModifiers = {
                     let iconFramePosition = (divineFrameBase[divineFrameBaseIndex].bitmap.width / 2) - (iconFrames[iconFrameIndex].bitmap.width / 2);
                     newIconFrames.push(divineFrameBase[divineFrameBaseIndex].clone().composite(iconFrames[iconFrameIndex], iconFramePosition, iconFramePosition));
                 }
-                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`);
+                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`, getCubeAnimationDelay(modifyingID));
             }
             return {
                 directoryAddition: `/divine/`
@@ -493,16 +638,16 @@ const iconModifiers = {
             if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
             const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
             if (!fs.existsSync(newIconPath)) {
-                let slatedFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/${slatedIconName}.png`);
+                let slatedFrameBase = await loadAnimatedCubeIcon(`${relativeRootDirectory}/ccicons/attributespritesheets/${slatedConfig.iconName}.png`);
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
                 iconFrames.forEach((frame, index) => {
-                    iconFrames[index] = strokeImage(frame, slatedColor);
+                    iconFrames[index] = strokeImage(frame, slatedConfig.color, 1);
                 })
                 let neededIconFrames = 0;
-                if (slatedFrames % iconFrames.length === 0 || iconFrames.length % slatedFrames === 0) {
-                    neededIconFrames = Math.max(slatedFrames, iconFrames.length);
+                if (slatedConfig.frames % iconFrames.length === 0 || iconFrames.length % slatedConfig.frames === 0) {
+                    neededIconFrames = Math.max(slatedConfig.frames, iconFrames.length);
                 } else {
-                    neededIconFrames = slatedFrames * iconFrames.length;
+                    neededIconFrames = slatedConfig.frames * iconFrames.length;
                 }
                 let newIconFrames: Jimp[] = [];
                 for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
@@ -514,7 +659,7 @@ const iconModifiers = {
                     let iconFramePosition = (slatedFrameBase[slatedFrameBaseIndex].bitmap.width / 2) - (iconFrames[iconFrameIndex].bitmap.width / 2);
                     newIconFrames.push(slatedFrameBase[slatedFrameBaseIndex].clone().composite(iconFrames[iconFrameIndex], iconFramePosition, iconFramePosition));
                 }
-                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`);
+                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`, getCubeAnimationDelay(modifyingID));
             }
             return {
                 directoryAddition: `/slated/`
@@ -566,7 +711,7 @@ const iconModifiers = {
                 }
                 
                 // Write the icon
-                await saveAnimatedCubeIcon(iconFrames, fileName, outcomeDirectory);
+                await saveAnimatedCubeIcon(iconFrames, fileName, outcomeDirectory, getCubeAnimationDelay(modifyingID));
             }
 
             // Return the directory to add to the icon generation function.
@@ -632,6 +777,10 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     if (iconAttributes.prefixes !== undefined && iconAttributes.prefixes.use === true) {
         imageDirectories.push((await iconModifiers.prefixes.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.prefixes.data)).directoryAddition);
     }
+
+    if (iconAttributes.tallying !== undefined && iconAttributes.tallying.use === true) {
+        imageDirectories.push((await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.tallying.data)).directoryAddition);
+    }
     
     if (iconAttributes.contraband !== undefined && iconAttributes.contraband.use === true) {
         imageDirectories.push((await iconModifiers.contraband.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.contraband.data)).directoryAddition);
@@ -643,10 +792,6 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     
     if (iconAttributes.slated !== undefined && iconAttributes.slated.use === true) {
         imageDirectories.push((await iconModifiers.slated.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.slated.data)).directoryAddition);
-    }
-
-    if (iconAttributes.tallying !== undefined && iconAttributes.tallying.use === true) {
-        imageDirectories.push((await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.tallying.data)).directoryAddition);
     }
 
     if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
@@ -844,17 +989,17 @@ const route: CCOIcons.documentedRoute = {
         let cubeIconSeed = 1;
         let returnSpriteSheet = false;
         if (Object.keys(req.query).length > 0) {
-            if (typeof req.query.s === "string") { // Cube Icon Size query modifier
+            if (typeof req.query.size === "string") { // Cube Icon Size query modifier
                 cubeIconParams.size = {
                     use: true,
                     data: {
-                        size: Number.parseInt(req.query.s)
+                        size: Number.parseInt(req.query.size)
                     }
                 }
             }
             if (typeof req.query.pattern === "string") {
                 if (req.query.pattern === "random") {
-                    cubeIconSeed = Math.floor(Math.random() * 1000);
+                    cubeIconSeed = Math.floor(Math.random() * patternIndexLimit);
                 } else {
                     let possibleIconSeed = Number.parseInt(req.query.pattern);
                     if (Number.isNaN(possibleIconSeed)) {
@@ -864,11 +1009,31 @@ const route: CCOIcons.documentedRoute = {
                         possibleIconSeed = Math.abs(possibleIconSeed); // If the seed is less than 0, then set it to the positive version of that number.
                     }
                     if (possibleIconSeed > (patternIndexLimit - 1)) {
-                        possibleIconSeed = possibleIconSeed % (patternIndexLimit - 1); // If the number is greater than the pattern limit, then just take the remainder of the number.
+                        possibleIconSeed = possibleIconSeed % (patternIndexLimit - 1); // If the number is greater than the pattern limit, then just take the modulus of the number.
                     }
                     cubeIconSeed = possibleIconSeed;
                 }
             }
+
+            if (typeof req.query.tallying === "string") {
+                let possibleIconTallies = Number.parseInt(req.query.tallying);
+                if (Number.isNaN(possibleIconTallies)) {
+                    possibleIconTallies = 0; // If an unparsable tally% was given
+                }
+                if (possibleIconTallies < 0) {
+                    possibleIconTallies = Math.abs(possibleIconTallies); // If the tally% is less than 0, then set it to the positive version of that number.
+                }
+                if (possibleIconTallies > 101) {
+                    possibleIconTallies = possibleIconTallies % 101; // If the tally% is greater than 100%, then just take the modulus of the %.
+                }
+                cubeIconParams.tallying = {
+                    use: true,
+                    data: {
+                        tallies: possibleIconTallies
+                    }
+                }
+            }
+
             if (req.query.contraband !== undefined) {
                 cubeIconParams.contraband = {
                     use: true,
