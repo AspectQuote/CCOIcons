@@ -5,10 +5,10 @@ import Jimp from 'jimp';
 import * as gifwrap from 'gifwrap';
 import { createBSideImage } from './../modules/bside';
 import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
+import { prefixes } from '../modules/schematics/prefixes';
 let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
-const prefixes: { [key in CCOIcons.prefixID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/prefixes.json');
 const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityConfig.json');
 const patternSchema: { [key in CCOIcons.patternedCubeID]: CCOIcons.patternedCubeDefinition } = fs.readJSONSync('./config/patterneditems.json');
 const patternedCubeIDs: CCOIcons.patternedCubeID[] = Object.keys(patternSchema) as CCOIcons.patternedCubeID[];
@@ -268,7 +268,7 @@ function getSeededIconRNGValues(cubeID: CCOIcons.patternedCubeID, seed: number, 
     return seedValuesObj;
 }
 
-const xAtlasTypes = ["base", "accents", "eyes", "heads", "mouths"] as const;
+const xAtlasTypes: ("base" | CCOIcons.cubeAnchorPoints)[] = ["base", "accents", "eyes", "heads", "mouths"] as const;
 function getPatternAtlasCoordinates(iconWidth: number, iconHeight: number, patternIndex: number, type: typeof xAtlasTypes[number]): {x: number, y: number} {
     const xPatternTypeCoordinateAddition = xAtlasTypes.indexOf(type) * iconWidth * patternAtlasRoot;
     const x = xPatternTypeCoordinateAddition + (iconWidth * (patternIndex % patternAtlasRoot));
@@ -334,7 +334,7 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jim
                         patternImageLayers[key] = await Jimp.read(imageFilePath);
                         if (patternImageLayers[key] !== undefined) {
                             // I love typedefs!!!
-                            let imageManipulations: { apply: "lighten" | "brighten" | "darken" | "desaturate" | "saturate" | "greyscale" | "spin" | "hue" | "mix" | "tint" | "shade" | "xor" | "red" | "green" | "blue", params: [number] }[] = [];
+                            let imageManipulations: CCOIcons.JimpImgMod[] = [];
                             if (key === "base") {
                                 // Brighten the pattern image
                                 if (patternImageData.seedbrightness) {

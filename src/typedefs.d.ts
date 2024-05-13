@@ -1,50 +1,14 @@
 import * as cubes from 'config/cubes.json';
 import * as patterns from 'config/patterneditems.json';
 import * as rarityConfig from 'config/rarityconfig.json';
-import * as prefixes from 'config/prefixes.json';
+import { prefixes } from './modules/schematics/prefixes';
+import Jimp from 'jimp';
 import { RequestHandler, Application, Response } from 'express';
 
 /**
- * Describes how a prefix is applied to a cube.
+ * Coordinate, an x/y pair
  */
-export interface prefixConfig {
-    /**
-     * Describes the steps to take **before** the image is applied to the cube
-     */
-    beforeCubeImage?: prefixImageApplicationStep[]
-
-    /**
-     * Describes the steps to take **after** the image is applied to the cube
-     */
-    afterCubeImage?: prefixImageApplicationStep[]
-}
-
-
-/**
- * Prefix Image Application Step
- * - Describes how an image should be applied to a cube.
- */
-export type prefixImageApplicationStep = {
-    /**
-     * Prefix Image Name
-     * - The name of the image in the directory. Do not include the extension, animation, size, or seed properties, just the name of the file before any of that.
-     */
-    image: string,
-    
-    /**
-     * Prefix Image Application Method
-     * - Describes how the image should be applied to the cube (see {@link prefixApplicationMethod|prefixApplicationMethod}).
-     */
-    method: prefixApplicationMethod,
-
-    /**
-     * Prefix Image Position
-     * - Describes where the image will have its method applied. Keep in mind this is assuming the origin of the image is the center of the image, not the top left.
-     * - Note: Y position is first, then X.
-     * @default ["center", "center"]
-     */
-    position?: [prefixApplicationYPosition, prefixApplicationYPosition]
-}
+export type coordinate = { x: number, y: number };
 
 /**
  * Prefix ID
@@ -53,34 +17,146 @@ export type prefixImageApplicationStep = {
 export type prefixID = keyof typeof prefixes;
 
 /**
- * Prefix Application Method
- * - A value of **"composite"** will simply paste the {@link prefixImageApplicationStep.image|image} onto the {@link prefixImageApplicationStep.position|position} defined in the application step.
- * - A value of **"mask"** will mask the currently generated image with the current {@link prefixImageApplicationStep.image|image} at the defined {@link prefixImageApplicationStep.position|position}.
- * - A value of **"masked"** will composite the image but use the currently generated image as a mask on the {@link prefixImageApplicationStep.image|image} defined in the application step.
+ * Anchor point schematic. Used as an abstraction to store each of the different anchor point types in one place.
  */
-export type prefixApplicationMethod = "composite" | "mask" | "masked";
+export type anchorPointSchema = {
+    /**
+     * Accent Pixel Coordinates
+     */
+    accents: {
+        /**
+         * An array of pixel coordinates that describe what pixels are accent pixels.
+         */
+        coordinates: coordinate[]
+    }
+
+    /**
+     * Eye Pixel Coordinates
+     */
+    eyes: {
+        /**
+         * An array of pixel coordinates that describe what pixels are the 'eyes' of the icon.
+         */
+        coordinates: coordinate[]
+    }
+
+    /**
+     * Head Positions
+     */
+    heads: {
+        /**
+         * An array of objects that describe the position and size of each 'head' on the icon.
+         */
+        positions: {
+            /**
+             * The leftmost pixel of the head.
+             */
+            startPosition: coordinate,
+
+            /**
+             * How wide the head is.
+             */
+            width: number
+        }[]
+    }
+
+    /**
+     * Mouth Positions
+     */
+    mouths: {
+        /**
+         * An array of objects that describe the position and size of each 'mouth' on the icon.
+         */
+        positions: {
+            /**
+             * The leftmost pixel of the mouth.
+             */
+            startPosition: coordinate,
+
+            /**
+             * How wide the mouth is.
+             */
+            width: number
+        }[]
+    }
+}
+
+export type cubeAnchorPoints = keyof anchorPointSchema;
 
 /**
- * Prefix Application Y Position
- * - A value of **"top"** will put the image as high up as it can go without going outside of the icon.
- * - A value of **"bottom"** will put the image as low as it can go without going outside of the icon.
- * - See {@link prefixApplicationPosition} for other possible values.
+ * The definition of any particular prefix, doesn't include everything like CCO does, not all of it matters to CCOIcons.
  */
-export type prefixApplicationYPosition = prefixApplicationPosition | "top" | "bottom";
+export type prefixDefinition = {
+    /**
+     * The name of the prefix.
+     */
+    name: string,
+
+    /**
+     * Which anchor points the prefix needs, this determines which 'parts' of the icon will be read and passed to the {@link prefixDefinition.compileFrames|compileFrames} property.
+     */
+    needs: {
+        [key in cubeAnchorPoints]: boolean
+    }
+
+    /**
+     * If the prefix needs a seed to function
+     */
+    seeded: boolean,
+
+    /**
+     * The function that applies the prefix to each frame of the icon, returns where the icon should be composited, and what filters Jimp should apply to the icon.
+     */
+    compileFrames: (anchorPoints: Partial<anchorPointSchema>, seed: number) => compiledPrefixFrames
+}
+
 /**
- * Prefix Application X Position
- * - A value of **"left"** will put the image as far left as it can go without going outside of the icon.
- * - A value of **"right"** will put the image as far right as it can go without going outside of the icon.
- * - See {@link prefixApplicationPosition} for other possible values.
+ * What should be applied to each frame of the icon to apply the prefix.
  */
-export type prefixApplicationXPosition = prefixApplicationPosition | "left" | "right";
-/**
- * Prefix Application Position
- * - Describes where a prefix will be applied.
- * - A value of **"center"** will be interpreted to be the 'center' of the axis.
- * - Any **number** value will be interpreted as the % from the top left where the image will be pasted. Keep in mind the image's origin is the center of itself; [100,100] will put the image on the bottom right with the top left corner of the prefix image sticking out.
- */
-export type prefixApplicationPosition = number | "center";
+export type compiledPrefixFrames = {
+
+    /**
+     * Where the prefix should appear in front of the cube, described per-frame.
+     */
+    frontFrames: {
+        /**
+         * Image of the prefix for this frame.
+         */
+        image: Jimp,
+
+        /**
+         * Where this layer should be composited. This is declared separately because prefixes can exceed the bounds of the base icon.
+         */
+        compositePosition: coordinate
+    }[],
+
+    /**
+     * Where the prefix should appear behind the cube, described per-frame.
+     */
+    backFrames: {
+        /**
+         * Image of the prefix for this frame.
+         */
+        image: Jimp,
+
+        /**
+         * Where this layer should be composited. This is declared separately because prefixes can exceeed the bounds of the base icon.
+         */
+        compositePosition: coordinate
+    }[],
+
+    /**
+     * What Jimp filters should be applied to the cube and prefix per-frame.
+     */
+    frameModifiers: JimpImgMod[]
+
+    /**
+     * What outlines should be applied to the cube and prefix per-frame.
+     */
+    frameOutlines: number[]
+}
+
+export type JimpImgMod = { apply: "lighten" | "brighten" | "darken" | "desaturate" | "saturate" | "greyscale" | "spin" | "hue" | "mix" | "tint" | "shade" | "xor" | "red" | "green" | "blue", params: [number] };
 
 /**
  * The ID of any particular cube.
