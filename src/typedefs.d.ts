@@ -22,13 +22,14 @@ export type prefixID = keyof typeof prefixes;
 export type anchorPointSchema = {
     /**
      * Accent Pixel Coordinates
+     * - Each item in the array represents a frame of the icon's animation
      */
     accents: {
         /**
          * An array of pixel coordinates that describe what pixels are accent pixels.
          */
         coordinates: coordinate[]
-    }
+    }[]
 
     /**
      * Eye Pixel Coordinates
@@ -38,7 +39,7 @@ export type anchorPointSchema = {
          * An array of pixel coordinates that describe what pixels are the 'eyes' of the icon.
          */
         coordinates: coordinate[]
-    }
+    }[]
 
     /**
      * Head Positions
@@ -58,10 +59,11 @@ export type anchorPointSchema = {
              */
             width: number
         }[]
-    }
+    }[]
 
     /**
      * Mouth Positions
+     * - Each item in the array represents a frame of the icon's animation
      */
     mouths: {
         /**
@@ -78,7 +80,7 @@ export type anchorPointSchema = {
              */
             width: number
         }[]
-    }
+    }[]
 }
 
 export type cubeAnchorPoints = keyof anchorPointSchema;
@@ -107,7 +109,7 @@ export type prefixDefinition = {
     /**
      * The function that applies the prefix to each frame of the icon, returns where the icon should be composited, and what filters Jimp should apply to the icon.
      */
-    compileFrames: (anchorPoints: Partial<anchorPointSchema>, seed: number) => compiledPrefixFrames
+    compileFrames(anchorPoints: anchorPointSchema, cubeFrames: Jimp[], seed: number): Promise<compiledPrefixFrames>
 }
 
 /**
@@ -128,7 +130,7 @@ export type compiledPrefixFrames = {
          * Where this layer should be composited. This is declared separately because prefixes can exceed the bounds of the base icon.
          */
         compositePosition: coordinate
-    }[],
+    }[][],
 
     /**
      * Where the prefix should appear behind the cube, described per-frame.
@@ -143,7 +145,7 @@ export type compiledPrefixFrames = {
          * Where this layer should be composited. This is declared separately because prefixes can exceeed the bounds of the base icon.
          */
         compositePosition: coordinate
-    }[],
+    }[][],
 
     /**
      * What Jimp filters should be applied to the cube and prefix per-frame.
