@@ -53,7 +53,6 @@ async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
         let rawImageFile = await Jimp.read(iconPath);
         if (rawImageFile.bitmap.height % rawImageFile.bitmap.width === 0) {
             let framesInAnimation = rawImageFile.bitmap.height / rawImageFile.bitmap.width;
-            console.log(framesInAnimation)
             for (let frameIndex = 0; frameIndex < framesInAnimation; frameIndex++) {
                 cubeFrames.push(
                     rawImageFile
@@ -77,7 +76,6 @@ async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
  * @returns A boolean that describes whether or not the save was successful.
  */
 async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string, delayCentisecs: number): Promise<boolean> {
-    console.log(`${iconPath}/${iconFileName}.png`)
     return new Promise(async (res, rej) => {
         iconFileName = iconFileName.split('.')[0];
         if (frames.length === 1) {

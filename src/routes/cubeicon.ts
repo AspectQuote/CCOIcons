@@ -6,7 +6,7 @@ import * as gifwrap from 'gifwrap';
 
 import { createBSideImage } from './../modules/bside';
 import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
-import { prefixes, getNeededPaddingFromCompiledFrames } from '../modules/schematics/prefixes';
+import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder } from '../modules/schematics/prefixes';
 import * as config from '../modules/schematics/config';
 import * as maths from '../modules/maths';
 let seedrandom = require('seedrandom');
@@ -562,7 +562,7 @@ const iconModifiers = {
             const baseDirectory = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}`);
             const originalImagePath = path.resolve(`${baseDirectory}/${fileName}`);
 
-            const shownPrefixes = [...data.prefixes].sort().slice(0, config.shownPrefixLimit);
+            const shownPrefixes = [...data.prefixes].sort(sortPrefixesByApplicationOrder).slice(0, config.shownPrefixLimit);
             console.log(shownPrefixes)
             const usingSeed = shownPrefixes.findIndex(prefix => prefixes[prefix].seeded === true) != -1;
 
@@ -705,9 +705,9 @@ const iconModifiers = {
                     allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed));
                 }
 
-                let paddingValues = getNeededPaddingFromCompiledFrames(allPrefixFrames, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
+                const paddingValues = getNeededPaddingFromCompiledFrames(allPrefixFrames, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
                 
-                let neededIconFrames = maths.leastCommonMultipleOfArray([iconFrames.length, ...allPrefixFrames.map(compiledFrames => compiledFrames.frontFrames.length)]);
+                const neededIconFrames = maths.leastCommonMultipleOfArray([iconFrames.length, ...allPrefixFrames.map(compiledFrames => (compiledFrames.frontFrames.length || 1)), ...allPrefixFrames.map(compiledFrames => (compiledFrames.backFrames.length || 1)), ...allPrefixFrames.map(compiledFrames => (compiledFrames.outlineFrames.length || 1))]);
 
                 let newFrameBase = new Jimp(
                     paddingValues.left + iconFrames[0].bitmap.width + paddingValues.right, 
@@ -716,24 +716,33 @@ const iconModifiers = {
                 )
 
 
-                let newFrames: Jimp[] = [];
+                let newFrames: {
+                    front: Jimp,
+                    icon: Jimp,
+                    back: Jimp
+                }[] = [];
 
                 for (let newIconIndex = 0; newIconIndex < neededIconFrames; newIconIndex++) {
-                    const newFrame = newFrameBase.clone();
+                    const newFrame = {
+                        front: newFrameBase.clone(),
+                        icon: newFrameBase.clone(),
+                        back: newFrameBase.clone()
+                    };
                     const oldIconIndex = newIconIndex % iconFrames.length;
 
-                    allPrefixFrames.forEach(compiledPrefixFrames => {
+                    allPrefixFrames.forEach((compiledPrefixFrames) => {
                         const backIndex = newIconIndex % compiledPrefixFrames.backFrames.length;
                         if (compiledPrefixFrames.backFrames.length > 0) {
                             const backFrame = compiledPrefixFrames.backFrames[backIndex];
                             backFrame.forEach(partOfFrame => {
-                                newFrame.composite(partOfFrame.image, paddingValues.left + partOfFrame.compositePosition.x, paddingValues.above + partOfFrame.compositePosition.y)
+                                newFrame.front.composite(partOfFrame.image, paddingValues.left + partOfFrame.compositePosition.x, paddingValues.above + partOfFrame.compositePosition.y)
                             })
                         }
                     })
 
                     allPrefixFrames.forEach(() => {
-                        newFrame.composite(iconFrames[oldIconIndex], paddingValues.left, paddingValues.above);
+                        // Composite the icon in the 'center layer'
+                        newFrame.icon.composite(iconFrames[oldIconIndex], paddingValues.left, paddingValues.above);
                     })
 
                     allPrefixFrames.forEach(compiledPrefixFrames => {
@@ -741,14 +750,29 @@ const iconModifiers = {
                         if (compiledPrefixFrames.frontFrames.length > 0) {
                             const frontFrame = compiledPrefixFrames.frontFrames[frontIndex];
                             frontFrame.forEach(partOfFrame => {
-                                newFrame.composite(partOfFrame.image, paddingValues.left + partOfFrame.compositePosition.x, paddingValues.above + partOfFrame.compositePosition.y)
+                                newFrame.back.composite(partOfFrame.image, paddingValues.left + partOfFrame.compositePosition.x, paddingValues.above + partOfFrame.compositePosition.y)
                             })
                         }
                     })
+
+                    allPrefixFrames.forEach((compiledPrefixFrames) => {
+                        const outlineIndex = newIconIndex % compiledPrefixFrames.outlineFrames.length;
+                        if (compiledPrefixFrames.outlineFrames.length > 0) {
+                            const outlineFrames = compiledPrefixFrames.outlineFrames[outlineIndex];
+                            outlineFrames.forEach(outlinesOnFrame => {
+                                outlinesOnFrame.layers.forEach(layerKey => {
+                                    newFrame[layerKey] = strokeImage(newFrame[layerKey], outlinesOnFrame.color, outlinesOnFrame.width);
+                                })
+                            })
+                        }
+                    })
+
                     newFrames.push(newFrame);
                 }
 
-                await saveAnimatedCubeIcon(newFrames, fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
+                await saveAnimatedCubeIcon(newFrames.map(frameLayers => {
+                    return newFrameBase.clone().composite(frameLayers.front, 0, 0).composite(frameLayers.icon, 0, 0).composite(frameLayers.back, 0, 0)
+                }), fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
             }
             return {
                 directoryAddition: `${newDirectoryName}`
@@ -1039,8 +1063,8 @@ const route: CCOIcons.documentedRoute = {
                 examples: [
                     {
                         name: "Perfect Eclipse Cube Icon",
-                        example: "/cubeicon/eclipse?pattern=984",
-                        description: "Will return the 984th pattern index of the eclipse cube (the 'perfect' variant)."
+                        example: "/cubeicon/eclipse?pattern=45",
+                        description: "Will return the 45th pattern index of the eclipse cube (the 'perfect' variant)."
                     },
                     {
                         name: "512x512 Random Chalkboard Cube Icon",
@@ -1053,7 +1077,7 @@ const route: CCOIcons.documentedRoute = {
                 query: 'prefixes',
                 name: "Prefixes Attribute",
                 subtitle: "Request cubes with specific prefixes.",
-                description: `Can be any valid prefix ID, or a list of valid prefix IDs. Invalid IDs will be ignored. The server will generate up to ${config.shownPrefixLimit} different prefixes on one cube. If more than ${config.shownPrefixLimit} prefixes are supplied, the server will sort the prefixes in alphabetical order and use the first three of those to determine which to show..`,
+                description: `Can be any valid prefix ID, or a list of valid prefix IDs. Invalid IDs will be ignored. The server will generate up to ${config.shownPrefixLimit} different prefixes on one cube. If more than ${config.shownPrefixLimit} prefixes are supplied, the server will sort the prefixes in application order and use the first three of those to determine which to show.`,
                 examples: [
                     {
                         name: "Sacred Green Cube Icon",
@@ -1075,8 +1099,8 @@ const route: CCOIcons.documentedRoute = {
                 examples: [
                     {
                         name: "Perfect Eclipse Cube Icon",
-                        example: "/cubeicon/eclipse?pattern=984&prefixseed=51&prefixes=Chained",
-                        description: "Will return the 984th pattern index of the eclipse cube (the 'perfect' variant), with the Chained prefix applied with its 51st pattern index."
+                        example: "/cubeicon/eclipse?pattern=45&prefixseed=51&prefixes=Chained",
+                        description: "Will return the 45th pattern index of the eclipse cube (the 'perfect' variant), with the Chained prefix applied with its 51st pattern index."
                     }
                 ]
             }
@@ -1154,9 +1178,9 @@ const route: CCOIcons.documentedRoute = {
                         possibleIconSeed = possibleIconSeed % (config.cubePatternIndexLimit - 1); // If the number is greater than the pattern limit, then just take the modulus of the number.
                     }
                     cubeIconSeed = possibleIconSeed;
-                    if (cubeIconParams.prefixes?.use) {
-                        cubeIconParams.prefixes.data.cubeSeed = cubeIconSeed;
-                    }
+                }
+                if (cubeIconParams.prefixes?.use) {
+                    cubeIconParams.prefixes.data.cubeSeed = cubeIconSeed;
                 }
             }
 

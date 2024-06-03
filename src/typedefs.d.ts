@@ -116,7 +116,6 @@ export type prefixDefinition = {
  * What should be applied to each frame of the icon to apply the prefix.
  */
 export type compiledPrefixFrames = {
-
     /**
      * Where the prefix should appear in front of the cube, described per-frame.
      */
@@ -155,7 +154,7 @@ export type compiledPrefixFrames = {
     /**
      * What outlines should be applied to the cube and prefix per-frame.
      */
-    frameOutlines: number[]
+    outlineFrames: {width: number, color: number, layers: ("back" | "front" | "icon")[]}[][]
 }
 
 export type JimpImgMod = { apply: "lighten" | "brighten" | "darken" | "desaturate" | "saturate" | "greyscale" | "spin" | "hue" | "mix" | "tint" | "shade" | "xor" | "red" | "green" | "blue", params: [number] };

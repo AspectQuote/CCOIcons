@@ -7614,5 +7614,68 @@
         "icon": "./sourceimages/cubes/linkskimono.png",
         "desc": "OMG!!! THIS IS SO SUGOI!!! IT'S LIKE IM REALLY KATAJIKENAI!!! <(* _* )<",
         "rarity": "gold"
+    },
+    "bozoblue": {
+        "author": "Aspect",
+        "name": "Blue Clown Cube",
+        "icon": "Cubes/bozoblue.png",
+        "desc": "How did the scarecrow lose the fight? He got the stuffing beat out of him!",
+        "rarity": "common"
+    },
+    "bozored": {
+        "author": "Aspect",
+        "name": "Red Clown Cube",
+        "icon": "Cubes/bozored.png",
+        "desc": "Why do wrestler's pants keep falling down? They keep losing their belts.",
+        "rarity": "common"
+    },
+    "bozopink": {
+        "author": "Aspect",
+        "name": "Pink Clown Cube",
+        "icon": "Cubes/bozopink.png",
+        "desc": "Why can't a leopard hide? Because they're always spotted!",
+        "rarity": "common"
+    },
+    "bozogreen": {
+        "author": "Aspect",
+        "name": "Green Clown Cube",
+        "icon": "Cubes/bozogreen.png",
+        "desc": "Who can drink 5L of petrol without any issues? Jerry can.",
+        "rarity": "common"
+    },
+    "unicycle": {
+        "author": "Aspect",
+        "name": "Unicycle Cube",
+        "icon": "Cubes/unicycle.png",
+        "desc": "They didn't sell many of these. I wonder why!",
+        "rarity": "legendary"
+    },
+    "joker": {
+        "author": "Aspect",
+        "name": "Joker Cube",
+        "icon": "Cubes/joker.png",
+        "desc": "The power of the wild card.",
+        "rarity": "gold"
+    },
+    "milk": {
+        "author": "Aspect",
+        "name": "Milk Cube",
+        "icon": "Cubes/milk.png",
+        "desc": "Imagine if they made 100% milk",
+        "rarity": "epic"
+    },
+    "milkpink": {
+        "author": "Aspect",
+        "name": "Strawberry Milk Cube",
+        "icon": "Cubes/milkpink.png",
+        "desc": "Tasty milk",
+        "rarity": "legendary"
+    },
+    "milkbrown": {
+        "author": "Aspect",
+        "name": "Chocolate Milk Cube",
+        "icon": "Cubes/milkbrown.png",
+        "desc": "Choccy melk",
+        "rarity": "epic"
     }
 }
