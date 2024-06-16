@@ -716,63 +716,85 @@ const iconModifiers = {
                 )
 
 
-                let newFrames: {
-                    front: Jimp,
-                    icon: Jimp,
-                    back: Jimp
-                }[] = [];
+                let newAnimation: Jimp[] = [];
 
                 for (let newIconIndex = 0; newIconIndex < neededIconFrames; newIconIndex++) {
-                    const newFrame = {
-                        front: newFrameBase.clone(),
-                        icon: newFrameBase.clone(),
-                        back: newFrameBase.clone()
-                    };
                     const oldIconIndex = newIconIndex % iconFrames.length;
 
+                    let newFrame = newFrameBase.clone();
+
+                    let frameOutlines: {
+                        [key in ("front" | "back" | "icon")]: {
+                            color: number,
+                            width: number,
+                            origin: CCOIcons.prefixID
+                        }[]
+                    } = {
+                        front: [],
+                        icon: [],
+                        back: []
+                    }
+
                     allPrefixFrames.forEach((compiledPrefixFrames) => {
-                        const backIndex = newIconIndex % compiledPrefixFrames.backFrames.length;
+                        if (compiledPrefixFrames.outlineFrames.length > 0) {
+                            const outlineIndex = newIconIndex % compiledPrefixFrames.outlineFrames.length;
+                            const outlineFrames = compiledPrefixFrames.outlineFrames[outlineIndex];
+                            outlineFrames.forEach(outlinesOnFrame => {
+                                outlinesOnFrame.layers.forEach(layerKey => {
+                                    frameOutlines[layerKey].push({
+                                        color: outlinesOnFrame.color,
+                                        width: outlinesOnFrame.width,
+                                        origin: "Flaming"
+                                    })
+                                })
+                            })
+                        }
+                    })
+
+                    allPrefixFrames.forEach((compiledPrefixFrames) => {
                         if (compiledPrefixFrames.backFrames.length > 0) {
+                            const backIndex = newIconIndex % compiledPrefixFrames.backFrames.length;
                             const backFrame = compiledPrefixFrames.backFrames[backIndex];
+                            const outlinePadding = frameOutlines.back.reduce((prev, curr) => {return prev + ((curr.origin === compiledPrefixFrames.sourceID) ? 0 : curr.width)}, 0);
                             backFrame.forEach(partOfFrame => {
-                                newFrame.front.composite(partOfFrame.image, paddingValues.left + partOfFrame.compositePosition.x, paddingValues.above + partOfFrame.compositePosition.y)
+                                let strokedBackFrame = partOfFrame.image;
+                                frameOutlines.back.forEach(outline => {
+                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedBackFrame = strokeImage(strokedBackFrame, outline.color, outline.width);
+                                })
+                                newFrame.composite(strokedBackFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding)
                             })
                         }
                     })
 
                     allPrefixFrames.forEach(() => {
                         // Composite the icon in the 'center layer'
-                        newFrame.icon.composite(iconFrames[oldIconIndex], paddingValues.left, paddingValues.above);
+                        let strokedIconFrame = iconFrames[oldIconIndex];
+                        const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
+                        frameOutlines.icon.forEach(outline => {
+                            strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width);
+                        })
+                        newFrame.composite(strokedIconFrame, paddingValues.left - outlinePadding, paddingValues.above - outlinePadding);
                     })
 
                     allPrefixFrames.forEach(compiledPrefixFrames => {
-                        const frontIndex = newIconIndex % compiledPrefixFrames.frontFrames.length;
                         if (compiledPrefixFrames.frontFrames.length > 0) {
+                            const frontIndex = newIconIndex % compiledPrefixFrames.frontFrames.length;
                             const frontFrame = compiledPrefixFrames.frontFrames[frontIndex];
+                            const outlinePadding = frameOutlines.front.reduce((prev, curr) => { return prev + ((curr.origin === compiledPrefixFrames.sourceID) ? 0 : curr.width) }, 0);
                             frontFrame.forEach(partOfFrame => {
-                                newFrame.back.composite(partOfFrame.image, paddingValues.left + partOfFrame.compositePosition.x, paddingValues.above + partOfFrame.compositePosition.y)
-                            })
-                        }
-                    })
-
-                    allPrefixFrames.forEach((compiledPrefixFrames) => {
-                        const outlineIndex = newIconIndex % compiledPrefixFrames.outlineFrames.length;
-                        if (compiledPrefixFrames.outlineFrames.length > 0) {
-                            const outlineFrames = compiledPrefixFrames.outlineFrames[outlineIndex];
-                            outlineFrames.forEach(outlinesOnFrame => {
-                                outlinesOnFrame.layers.forEach(layerKey => {
-                                    newFrame[layerKey] = strokeImage(newFrame[layerKey], outlinesOnFrame.color, outlinesOnFrame.width);
+                                let strokedFrontFrame = partOfFrame.image;
+                                frameOutlines.front.forEach(outline => {
+                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedFrontFrame = strokeImage(strokedFrontFrame, outline.color, outline.width);
                                 })
+                                newFrame.composite(strokedFrontFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding)
                             })
                         }
                     })
 
-                    newFrames.push(newFrame);
+                    newAnimation.push(newFrame);
                 }
 
-                await saveAnimatedCubeIcon(newFrames.map(frameLayers => {
-                    return newFrameBase.clone().composite(frameLayers.front, 0, 0).composite(frameLayers.icon, 0, 0).composite(frameLayers.back, 0, 0)
-                }), fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
+                await saveAnimatedCubeIcon(newAnimation, fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
             }
             return {
                 directoryAddition: `${newDirectoryName}`
@@ -801,7 +823,7 @@ const iconModifiers = {
             if (!fs.pathExistsSync(outcomeDirectory)) fs.mkdirSync(outcomeDirectory, { recursive: true });
 
             // If the icon hasn't been generated yet, then generate it (in this case, it's simply reading the original image then resizing it.)
-            if (!fs.existsSync(outcomeFile)) {
+            if (!fs.existsSync(outcomeFile) || !config.useResizeCache) {
                 // Read the original icon
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath)
 

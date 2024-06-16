@@ -2,6 +2,7 @@ import Jimp from 'jimp';
 import * as fs from 'fs-extra';
 import path from 'path';
 import * as gifwrap from 'gifwrap';
+import { coordinate } from 'src/typedefs';
 
 /**
  * Get the RGBA representation of a hex literal
@@ -154,10 +155,15 @@ function strokeImage(image: Jimp, color: number, thickness: number, strokeOnly: 
     return newImage;
 }
 
+function drawLine(image: Jimp, color: number, startPoint: coordinate, endPoint: coordinate, thickness: number) {
+
+}
+
 export {
     fillRect,
     rgbaFromNumberLiteral,
     loadAnimatedCubeIcon,
     saveAnimatedCubeIcon,
-    strokeImage
+    strokeImage,
+    drawLine
 }

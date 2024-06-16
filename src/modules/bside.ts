@@ -78,16 +78,17 @@ type bSideColorGroup = {
  * Get the normalized B-Side coordinates of a pixel. Feed coordinates from the original icon to here.
  * @param pixelX The Y Coordinate of the pixel
  * @param pixelY The X Coordinate of the pixel
+ * @param scale The scale of the B-Side image
  * @returns An object representing each of the relevant points on a B-side pixel
  */
-function getBSideCornerCoordinates(pixelX: number, pixelY: number) {
-    let topLeftOfPixel = { x: pixelX * bSideConfig.resizeSize, y: pixelY * bSideConfig.resizeSize };
+function getBSideCornerCoordinates(pixelX: number, pixelY: number, scale: number) {
+    let topLeftOfPixel = { x: pixelX * scale, y: pixelY * scale };
     let corners = {
         topLeft: topLeftOfPixel, // Top-Left
-        topRight: { x: topLeftOfPixel.x + (bSideConfig.resizeSize - 1), y: topLeftOfPixel.y }, // Top-Right
-        bottomRight: { x: topLeftOfPixel.x + (bSideConfig.resizeSize - 1), y: topLeftOfPixel.y + (bSideConfig.resizeSize - 1) }, // Bottom-Right
-        bottomLeft: { x: topLeftOfPixel.x, y: topLeftOfPixel.y + (bSideConfig.resizeSize - 1) },  // Bottom-Left
-        center: { x: topLeftOfPixel.x + Math.floor(bSideConfig.resizeSize / 2), y: topLeftOfPixel.y + Math.floor(bSideConfig.resizeSize / 2) }
+        topRight: { x: topLeftOfPixel.x + (scale - 1), y: topLeftOfPixel.y }, // Top-Right
+        bottomRight: { x: topLeftOfPixel.x + (scale - 1), y: topLeftOfPixel.y + (scale - 1) }, // Bottom-Right
+        bottomLeft: { x: topLeftOfPixel.x, y: topLeftOfPixel.y + (scale - 1) },  // Bottom-Left
+        center: { x: topLeftOfPixel.x + Math.floor(scale / 2), y: topLeftOfPixel.y + Math.floor(scale / 2) }
     };
     return corners;
 }
@@ -98,11 +99,12 @@ function getBSideCornerCoordinates(pixelX: number, pixelY: number) {
  * @param coordinate The coordinate you want to start searching for triangles from
  * @param xAxisDirection The x increment direction you want to search in (-1 for left, 1 for right, 0 to keep the same X-Axis)
  * @param yAxisDirection The y increment direction you want to search in (-1 for up, 1 for down, 0 to keep the same Y-Axis)
+ * @param scale The scale of the B-Side output image
  * @returns An array of triangles that were found, up to 2.
  */
-function createBSideTriangles(image: Jimp, bitmapIndex: number, coordinate: { x: number, y: number }, xAxisDirection: -1 | 1 | 0, yAxisDirection: -1 | 1 | 0): roughTriangle[] {
+function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number }, xAxisDirection: -1 | 1 | 0, yAxisDirection: -1 | 1 | 0, scale: number): roughTriangle[] {
     const centerColor = image.getPixelColor(coordinate.x, coordinate.y);
-    const centerBSideCoordinates = getBSideCornerCoordinates(coordinate.x, coordinate.y);
+    const centerBSideCoordinates = getBSideCornerCoordinates(coordinate.x, coordinate.y, scale);
     // Each pixel from the original image is checked for triangles in one direction at a time, therefore we can assume there are at max two triangles branching from it.
     let primaryTriangle: roughTriangle = {
         start: { x: 0, y: 0 },
@@ -199,7 +201,7 @@ function createBSideTriangles(image: Jimp, bitmapIndex: number, coordinate: { x:
             break;
         } else {
             // Determine how far to move the end pixel (This ternary here is some weird index shit. If you remove it you'll see that lines get some strange rounding errors, causing 'random' bumps! Very cool!)
-            const endMovement = bSideConfig.resizeSize - ((axisOffset === 1) ? 1 : 0)
+            const endMovement = scale - ((axisOffset === 1) ? 1 : 0)
 
             // This code here is identical to the code below for the secondary pixel
 
@@ -242,13 +244,17 @@ function createBSideTriangles(image: Jimp, bitmapIndex: number, coordinate: { x:
 /**
  * Creates a B-Side image from an input image, returns the new image
  * @param originalJimp The Jimp image you want to be turned B-Side. This won't be modified, instead, the function will return a new image with the algorithm applied.
+ * @param [qualityScale=1] How much more resolution you want to scale with the B-Side config, only really used to generate custom images with higher quality.
  */
-async function createBSideImage(originalJimp: Jimp): Promise<Jimp> {
+async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1): Promise<Jimp> {
     // Read the original icon
     const originalIcon = originalJimp;
 
+    // The pixel-bside resolution ratio
+    const computedScale = bSideConfig.resizeSize * qualityScale;
+
     // Create the new icon, using the resize size and the original icon's size.
-    const newIcon = new Jimp(originalIcon.bitmap.width * bSideConfig.resizeSize, originalIcon.bitmap.height * bSideConfig.resizeSize, 0x00000000);
+    const newIcon = new Jimp(originalIcon.bitmap.width * computedScale, originalIcon.bitmap.height * computedScale, 0x00000000);
 
     // An array of color groups, this will be sorted and used to decide which pixels/triangles go on top of what pixels/triangles.
     const colorGroups: bSideColorGroup[] = [];
@@ -278,10 +284,10 @@ async function createBSideImage(originalJimp: Jimp): Promise<Jimp> {
             }
 
             // Find the triangles related to this pixel in each direction.
-            const trianglesToTheRight: roughTriangle[] = createBSideTriangles(originalIcon, idx, { x, y }, 1, 0);
-            const trianglesToTheLeft: roughTriangle[] = createBSideTriangles(originalIcon, idx, { x, y }, -1, 0);
-            const trianglesBelow: roughTriangle[] = createBSideTriangles(originalIcon, idx, { x, y }, 0, 1);
-            const trianglesAbove: roughTriangle[] = createBSideTriangles(originalIcon, idx, { x, y }, 0, -1);
+            const trianglesToTheRight: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 1, 0, computedScale);
+            const trianglesToTheLeft: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, -1, 0, computedScale);
+            const trianglesBelow: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, 1, computedScale);
+            const trianglesAbove: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, -1, computedScale);
 
             // Merge all the arrays and filter them all out based on whether they should be used or not.
             let newTriangles: typeof trianglesAbove = [];
@@ -317,8 +323,8 @@ async function createBSideImage(originalJimp: Jimp): Promise<Jimp> {
     }).forEach(colorGroup => {
         // This simply fills the pixel's position, basically accomplishes the same thing as resizing, but applies this pixel in the order of groups.
         colorGroup.coordinates.forEach((coordinate) => {
-            const bSidePosition = getBSideCornerCoordinates(coordinate.x, coordinate.y);
-            fillRect(newIcon, bSidePosition.topLeft.x, bSidePosition.topLeft.y, bSideConfig.resizeSize, bSideConfig.resizeSize, colorGroup.color)
+            const bSidePosition = getBSideCornerCoordinates(coordinate.x, coordinate.y, computedScale);
+            fillRect(newIcon, bSidePosition.topLeft.x, bSidePosition.topLeft.y, computedScale, computedScale, colorGroup.color)
         })
 
         colorGroup.triangles.forEach((triangleData) => {

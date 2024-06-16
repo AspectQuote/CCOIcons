@@ -124,6 +124,11 @@ const sourceImagesDirectory = './sourceicons/';
  */
 const usePrefixImageCache = false;
 
+/**
+ * Whether or not to regenerate resized images each time they are requested. Used for debugging.
+ */
+const useResizeCache = false;
+
 export {
     cubePatternIndexLimit,
     prefixPatternIndexLimit,
@@ -138,5 +143,6 @@ export {
     getCubeAnimationDelay,
     relativeRootDirectory,
     sourceImagesDirectory,
-    usePrefixImageCache
+    usePrefixImageCache,
+    useResizeCache
 }

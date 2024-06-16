@@ -25,6 +25,7 @@ let allCubeIDs = (Object.keys(cubes) as CCOIcons.cubeID[]);
 const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityConfig.json')
 
 import { cubeIconRoute } from './routes/cubeicon';
+import { customBSideIconRoute } from './routes/custombsideicon';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -86,7 +87,8 @@ const routes: CCOIcons.documentedRoute[] = [
             return;
         }
     },
-    cubeIconRoute
+    cubeIconRoute,
+    customBSideIconRoute
 ];
 
 routes.forEach((routeInformation) => {

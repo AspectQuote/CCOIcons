@@ -117,6 +117,11 @@ export type prefixDefinition = {
  */
 export type compiledPrefixFrames = {
     /**
+     * What prefix created these frames
+     */
+    sourceID: prefixID
+
+    /**
      * Where the prefix should appear in front of the cube, described per-frame.
      */
     frontFrames: {
@@ -149,7 +154,7 @@ export type compiledPrefixFrames = {
     /**
      * What Jimp filters should be applied to the cube and prefix per-frame.
      */
-    frameModifiers: JimpImgMod[]
+    frameModifiers: JimpImgMod[][]
 
     /**
      * What outlines should be applied to the cube and prefix per-frame.
