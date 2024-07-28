@@ -700,21 +700,42 @@ const iconModifiers = {
                 let allPrefixFrames: CCOIcons.compiledPrefixFrames[] = [];
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
 
-                for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
-                    const compilingPrefixID = shownPrefixes[shownPrefixIndex];
-                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed));
+                async function compilePrefixFrames(masks: boolean, sizeOverride?: {width: number, height: number}) {
+                    for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
+                        const compilingPrefixID = shownPrefixes[shownPrefixIndex];
+                        if (prefixes[compilingPrefixID].maskOnly === masks) {
+                            if (sizeOverride) {
+                                allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), data.prefixSeed));
+                            } else {
+                                allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed));
+                            }
+                        }
+                    }
                 }
+
+                await compilePrefixFrames(false);
 
                 const paddingValues = getNeededPaddingFromCompiledFrames(allPrefixFrames, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
                 
-                const neededIconFrames = maths.leastCommonMultipleOfArray([iconFrames.length, ...allPrefixFrames.map(compiledFrames => (compiledFrames.frontFrames.length || 1)), ...allPrefixFrames.map(compiledFrames => (compiledFrames.backFrames.length || 1)), ...allPrefixFrames.map(compiledFrames => (compiledFrames.outlineFrames.length || 1))]);
+                await compilePrefixFrames(true, {
+                    width: paddingValues.left + paddingValues.right + iconFrames[0].bitmap.width,
+                    height: paddingValues.above + paddingValues.below + iconFrames[0].bitmap.height
+                });
+
+                const neededIconFrames = maths.leastCommonMultipleOfArray([
+                    iconFrames.length,
+                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.frontFrames.length || 1)), 
+                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.backFrames.length || 1)),
+                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.outlineFrames.length || 1)),
+                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.frameModifiers.length || 1)),
+                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.maskFrames.length || 1))
+                ]);
 
                 let newFrameBase = new Jimp(
                     paddingValues.left + iconFrames[0].bitmap.width + paddingValues.right, 
                     paddingValues.above + iconFrames[0].bitmap.height + paddingValues.below,
                     0x00000000
-                )
-
+                );
 
                 let newAnimation: Jimp[] = [];
 
@@ -744,7 +765,7 @@ const iconModifiers = {
                                     frameOutlines[layerKey].push({
                                         color: outlinesOnFrame.color,
                                         width: outlinesOnFrame.width,
-                                        origin: "Flaming"
+                                        origin: compiledPrefixFrames.sourceID
                                     })
                                 })
                             })
@@ -788,6 +809,26 @@ const iconModifiers = {
                                 })
                                 newFrame.composite(strokedFrontFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding)
                             })
+                        }
+                    })
+
+                    let doMask = false;
+                    let compiledMask = new Jimp(newFrame.bitmap.width, newFrame.bitmap.height, 0x00000000);
+                    allPrefixFrames.forEach(compiledPrefixFrames => {
+                        if (compiledPrefixFrames.maskFrames.length > 0) {
+                            const modifierIndex = newIconIndex % compiledPrefixFrames.maskFrames.length;
+                            const modifierFrame = compiledPrefixFrames.maskFrames[modifierIndex].clone().resize(newFrame.bitmap.width, newFrame.bitmap.height, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                            compiledMask.composite(modifierFrame, 0, 0);
+                            doMask = true;
+                        }
+                    })
+                    if (doMask) newFrame.mask(compiledMask, 0, 0);
+
+                    allPrefixFrames.forEach(compiledPrefixFrames => {
+                        if (compiledPrefixFrames.frameModifiers.length > 0) {
+                            const modifierIndex = newIconIndex % compiledPrefixFrames.frameModifiers.length;
+                            const modifierFrame = compiledPrefixFrames.frameModifiers[modifierIndex];
+                            newFrame.color(modifierFrame);
                         }
                     })
 
@@ -1132,8 +1173,8 @@ const route: CCOIcons.documentedRoute = {
         let startIconGeneration = performance.now();
         // Set requested cube ID variable
         let requestedCubeID: CCOIcons.cubeID;
-        if (cubes[req.params.cubeid as CCOIcons.cubeID] !== undefined) {
-            requestedCubeID = (req.params.cubeid as CCOIcons.cubeID) ?? 'green';
+        if (cubes[req.params.cubeid.toLowerCase() as CCOIcons.cubeID] !== undefined) {
+            requestedCubeID = (req.params.cubeid.toLowerCase() as CCOIcons.cubeID) ?? 'green';
         } else {
             requestedCubeID = 'green';
         }

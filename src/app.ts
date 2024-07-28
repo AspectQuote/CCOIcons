@@ -26,6 +26,7 @@ const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = 
 
 import { cubeIconRoute } from './routes/cubeicon';
 import { customBSideIconRoute } from './routes/custombsideicon';
+import { CCOHouTextureRoute } from './routes/ccohoutexture';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -88,7 +89,8 @@ const routes: CCOIcons.documentedRoute[] = [
         }
     },
     cubeIconRoute,
-    customBSideIconRoute
+    customBSideIconRoute,
+    CCOHouTextureRoute
 ];
 
 routes.forEach((routeInformation) => {

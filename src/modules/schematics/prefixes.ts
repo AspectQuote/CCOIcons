@@ -279,6 +279,7 @@ const basePrefixReturnObject: CCOIcons.compiledPrefixFrames = {
     backFrames: [],
     frameModifiers: [],
     outlineFrames: [],
+    maskFrames: [],
     sourceID: "Sacred"
 };
 
@@ -286,6 +287,7 @@ const prefixes = {
     "Sacred": {
         name: "Sacred",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -313,6 +315,7 @@ const prefixes = {
     "Bugged": {
         name: "Bugged",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -348,6 +351,7 @@ const prefixes = {
     "Based": {
         name: "Based",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: true,
@@ -388,6 +392,7 @@ const prefixes = {
     "Glitchy": {
         name: "Glitchy",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -464,6 +469,7 @@ const prefixes = {
     "Bushy": {
         name: "Bushy",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -495,6 +501,7 @@ const prefixes = {
     "Leafy": {
         name: "Leafy",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -556,6 +563,7 @@ const prefixes = {
     "Cruel": {
         name: "Cruel",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -589,6 +597,7 @@ const prefixes = {
     "Orbital": {
         name: "Orbital",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -743,6 +752,7 @@ const prefixes = {
     "Flaming": {
         name: "Flaming",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -808,6 +818,7 @@ const prefixes = {
     "Foolish": {
         name: "Foolish",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -835,6 +846,7 @@ const prefixes = {
     "Cursed": {
         name: "Cursed",
         seeded: true,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -874,6 +886,7 @@ const prefixes = {
     "Emburdening": {
         name: "Emburdening",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -906,6 +919,7 @@ const prefixes = {
     "Cuffed": {
         name: "Cuffed",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -938,6 +952,7 @@ const prefixes = {
     "Endangered": {
         name: "Endangered",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -966,6 +981,7 @@ const prefixes = {
     "Marvelous": {
         name: "Marvelous",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: true,
             eyes: false,
@@ -994,49 +1010,167 @@ const prefixes = {
 
             return prefixFrames;
         }
-    },/*
-    "Phasing": {
-        name: "",
-        seeded: false,
-        needs: {
-            heads: false,
-            eyes: false,
-            accents: false,
-            mouths: false
-        },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
-        }
     },
-    "Tentacular": {
-        name: "",
-        seeded: false,
+    "Phasing": {
+        name: "Phasing",
+        seeded: true,
+        maskOnly: true,
         needs: {
             heads: false,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            const phasingFrames = 20;
+            let seedRNG = new seedrandom(`phasing${seed}`);
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Phasing";
+            const frameOffset = phasingFrames * seedRNG();
+
+            const animationBounds = (5 + (seedRNG() * 10)) * (iconFrames[0].bitmap.width / 32);
+
+            function getAnimationProgress(frameNum: number) {
+                const animationOffset = (animationBounds * 2)/phasingFrames;
+                if (frameNum > phasingFrames / 2) {
+                    frameNum -= phasingFrames;
+                }
+                return (animationOffset * (frameNum % phasingFrames)) / 10;
+            }
+
+            const graphResolution = iconFrames[0].bitmap.height * 2;
+            const graphTransform = Math.round(iconFrames[0].bitmap.width/2);
+
+            for (let phasingFrameIndex = 0; phasingFrameIndex < phasingFrames; phasingFrameIndex++) {
+                let maskImage = new Jimp(iconFrames[0].bitmap.width, iconFrames[0].bitmap.height, 0x00000000);
+                const animationMultiplier = getAnimationProgress(phasingFrameIndex + frameOffset);
+                for (let graphXInput = 0; graphXInput < maskImage.bitmap.width*graphResolution; graphXInput++) {
+                    const xInput = graphXInput/graphResolution;
+                    const yOutput = ((Math.sin((xInput - graphTransform))*Math.tan(animationMultiplier*(xInput - graphTransform)))*animationMultiplier) + graphTransform;
+                    maskImage.setPixelColor(0xffffffff, Math.round(xInput), Math.round(yOutput));
+                }
+                prefixFrames.maskFrames.push(maskImage);
+            }
+
+            return prefixFrames;
         }
     },
     "Evanescent": {
-        name: "",
-        seeded: false,
+        name: "Evanescent",
+        seeded: true,
+        maskOnly: true,
         needs: {
             heads: false,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            const phasingFrames = 20;
+            let seedRNG = new seedrandom(`evanescent${seed}`);
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Evanescent";
+            const frameOffset = phasingFrames * seedRNG();
+
+            const animationBounds = (5 + (seedRNG() * 10)) * (iconFrames[0].bitmap.height / 32);
+
+            function getAnimationProgress(frameNum: number) {
+                const animationOffset = (animationBounds * 2) / phasingFrames;
+                if (frameNum > phasingFrames / 2) {
+                    frameNum -= phasingFrames;
+                }
+                return (animationOffset * (frameNum % phasingFrames)) / 10;
+            }
+
+            const graphResolution = iconFrames[0].bitmap.height * 2;
+            const graphTransform = Math.round(iconFrames[0].bitmap.width / 2);
+
+            for (let evanescentFrameIndex = 0; evanescentFrameIndex < phasingFrames; evanescentFrameIndex++) {
+                let maskImage = new Jimp(iconFrames[0].bitmap.width, iconFrames[0].bitmap.height, 0x00000000);
+                const animationMultiplier = getAnimationProgress(evanescentFrameIndex + frameOffset);
+                for (let graphYInput = 0; graphYInput < maskImage.bitmap.width * graphResolution; graphYInput++) {
+                    const yInput = graphYInput / graphResolution;
+                    const xOutput = ((Math.sin((yInput - graphTransform)) * Math.tan(animationMultiplier * (yInput - graphTransform))) * animationMultiplier) + graphTransform;
+                    maskImage.setPixelColor(0xffffffff, Math.round(xOutput), Math.round(yInput));
+                }
+                prefixFrames.maskFrames.push(maskImage);
+            }
+
+            return prefixFrames;
+        }
+    },
+    "Raving": {
+        name: "Raving",
+        seeded: true,
+        maskOnly: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            const ravingFrames = 15;
+            let seedRNG = new seedrandom(`raving${seed}`);
+            const frameOffset = ravingFrames * seedRNG();
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Raving";
+
+            for (let ravingFrameIndex = 0; ravingFrameIndex < ravingFrames; ravingFrameIndex++) {
+                prefixFrames.frameModifiers.push([
+                    { apply: "hue", params: [(360/ravingFrames)*(ravingFrameIndex+frameOffset)]},
+                    { apply: "darken", params: [10]}
+                ])
+            }
+
+            return prefixFrames;
         }
     },
     "Royal": {
+        name: "Royal",
+        seeded: true,
+        maskOnly: false,
+        needs: {
+            heads: true,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let seedRNG = new seedrandom(`royal${seed}`);
+            let crownType = Math.ceil(2*seedRNG());
+            prefixFrames.sourceID = "Royal";
+            const crownImage = await Jimp.read(`${prefixSourceDirectory}/royal/crown${crownType}.png`);
+            const crownGemMask = await Jimp.read(`${prefixSourceDirectory}/royal/crown${crownType}gemmasks.png`);
+            const crownGems = crownImage.clone().mask(crownGemMask, 0, 0);
+            crownGems.color([{
+                apply: "hue",
+                params: [360 * seedRNG()]
+            }, {
+                apply: "brighten",
+                params: [20 * seedRNG()]
+            }])
+            crownImage.composite(crownGems, 0, 0);
+            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/royal${seed}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            const headPositions = anchorPoints.heads;
+
+            for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
+                const headFrame = headPositions[newAnimationIndex % headPositions.length];
+                const crownsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(crownImage, cacheDirectory, headFrame, { x: 2, y: 17, width: 32 });
+
+                prefixFrames.frontFrames.push([...crownsThisFrame])
+            }
+
+            return prefixFrames;
+        }
+    },/*
+    "Tentacular": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1050,6 +1184,7 @@ const prefixes = {
     "Captain": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1063,6 +1198,7 @@ const prefixes = {
     "Insignificant": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1076,6 +1212,7 @@ const prefixes = {
     "95in'": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1089,6 +1226,7 @@ const prefixes = {
     "Snowy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1102,6 +1240,7 @@ const prefixes = {
     "Summoning": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1115,6 +1254,7 @@ const prefixes = {
     "Swarming": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1128,6 +1268,7 @@ const prefixes = {
     "Kramped": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1141,6 +1282,7 @@ const prefixes = {
     "Dandy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1154,6 +1296,7 @@ const prefixes = {
     "Incarcerated": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1167,6 +1310,7 @@ const prefixes = {
     "Runic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1180,6 +1324,7 @@ const prefixes = {
     "Rippling": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1193,6 +1338,7 @@ const prefixes = {
     "Emphasized": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1206,6 +1352,7 @@ const prefixes = {
     "Chained": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1219,6 +1366,7 @@ const prefixes = {
     "Angelic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1232,6 +1380,7 @@ const prefixes = {
     "Menacing": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1245,6 +1394,7 @@ const prefixes = {
     "Serving": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1258,6 +1408,7 @@ const prefixes = {
     "Holy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1271,6 +1422,7 @@ const prefixes = {
     "Unholy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1284,6 +1436,7 @@ const prefixes = {
     "Contaminated": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1297,6 +1450,7 @@ const prefixes = {
     "Phosphorescent": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1310,6 +1464,7 @@ const prefixes = {
     "Neko": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1323,6 +1478,7 @@ const prefixes = {
     "Mathematical": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1336,6 +1492,7 @@ const prefixes = {
     "Wanted": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1349,6 +1506,7 @@ const prefixes = {
     "Onomatopoeiacal": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1362,6 +1520,7 @@ const prefixes = {
     "Smoked": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1375,6 +1534,7 @@ const prefixes = {
     "Basking": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1388,6 +1548,7 @@ const prefixes = {
     "Omniscient": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1401,6 +1562,7 @@ const prefixes = {
     "Sniping": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1414,6 +1576,7 @@ const prefixes = {
     "Beboppin'": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1427,6 +1590,7 @@ const prefixes = {
     "Hard-Boiled": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1440,6 +1604,7 @@ const prefixes = {
     "Angry": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1453,6 +1618,7 @@ const prefixes = {
     "Gruesome": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1466,6 +1632,7 @@ const prefixes = {
     "Outlawed": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1479,6 +1646,7 @@ const prefixes = {
     "Wranglin'": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1492,6 +1660,7 @@ const prefixes = {
     "Canoodled": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1505,6 +1674,7 @@ const prefixes = {
     "Saiyan": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1518,6 +1688,7 @@ const prefixes = {
     "Amorous": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1531,6 +1702,7 @@ const prefixes = {
     "Dazed": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1544,6 +1716,7 @@ const prefixes = {
     "Adduced": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1557,6 +1730,7 @@ const prefixes = {
     "Frosty": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1570,6 +1744,7 @@ const prefixes = {
     "Cowling": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1583,6 +1758,7 @@ const prefixes = {
     "Overcast": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1596,6 +1772,7 @@ const prefixes = {
     "Berserk": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1609,6 +1786,7 @@ const prefixes = {
     "Jolly": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1622,6 +1800,7 @@ const prefixes = {
     "Partying": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1635,6 +1814,7 @@ const prefixes = {
     "Sophisticated": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1648,6 +1828,7 @@ const prefixes = {
     "Culinary": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1661,6 +1842,7 @@ const prefixes = {
     "Eudaemonic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1674,6 +1856,7 @@ const prefixes = {
     "Magical": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1687,6 +1870,7 @@ const prefixes = {
     "Blushing": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1700,6 +1884,7 @@ const prefixes = {
     "Sweetened": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1713,6 +1898,7 @@ const prefixes = {
     "Dovey": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1726,6 +1912,7 @@ const prefixes = {
     "Batty": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1739,6 +1926,7 @@ const prefixes = {
     "Streaming": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1752,6 +1940,7 @@ const prefixes = {
     "Clapping": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1765,6 +1954,7 @@ const prefixes = {
     "Musical": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1778,6 +1968,7 @@ const prefixes = {
     "Stunned": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1791,6 +1982,7 @@ const prefixes = {
     "Lovey": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1804,6 +1996,7 @@ const prefixes = {
     "Trouvaille": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1817,6 +2010,7 @@ const prefixes = {
     "Googly": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1830,6 +2024,7 @@ const prefixes = {
     "Expressive": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1843,6 +2038,7 @@ const prefixes = {
     "Talkative": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1856,6 +2052,7 @@ const prefixes = {
     "Muscular": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1869,6 +2066,7 @@ const prefixes = {
     "Leggendary": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1882,6 +2080,7 @@ const prefixes = {
     "Thinking": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1895,6 +2094,7 @@ const prefixes = {
     "Boiled": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1908,6 +2108,7 @@ const prefixes = {
     "Typing": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1921,6 +2122,7 @@ const prefixes = {
     "Blind": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1934,6 +2136,7 @@ const prefixes = {
     "Cucurbitaphilic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1947,6 +2150,7 @@ const prefixes = {
     "Radioactive": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1960,6 +2164,7 @@ const prefixes = {
     "Read": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1973,6 +2178,7 @@ const prefixes = {
     "Foggy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1986,6 +2192,7 @@ const prefixes = {
     "Fatherly": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1999,6 +2206,7 @@ const prefixes = {
     "Pugilistic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2012,6 +2220,7 @@ const prefixes = {
     "Censored": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2025,6 +2234,7 @@ const prefixes = {
     "Sick": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2038,6 +2248,7 @@ const prefixes = {
     "Fearful": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2051,6 +2262,7 @@ const prefixes = {
     "Drunken": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2064,6 +2276,7 @@ const prefixes = {
     "Comfortable": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2077,6 +2290,7 @@ const prefixes = {
     "Swag": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2090,6 +2304,7 @@ const prefixes = {
     "Stereoscopic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2103,6 +2318,7 @@ const prefixes = {
     "Scientific": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2116,6 +2332,7 @@ const prefixes = {
     "Brainy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2129,6 +2346,7 @@ const prefixes = {
     "Roped": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2142,6 +2360,7 @@ const prefixes = {
     "Brilliant": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2155,6 +2374,7 @@ const prefixes = {
     "Sparkly": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2168,6 +2388,7 @@ const prefixes = {
     "Adorable": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2181,6 +2402,7 @@ const prefixes = {
     "Hurt": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2194,6 +2416,7 @@ const prefixes = {
     "Ailurophilic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2207,6 +2430,7 @@ const prefixes = {
     "Fake": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2220,6 +2444,7 @@ const prefixes = {
     "Glinting": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2233,6 +2458,7 @@ const prefixes = {
     "Contraband": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2246,6 +2472,7 @@ const prefixes = {
     "Voodoo": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2259,6 +2486,7 @@ const prefixes = {
     "Annoyed": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2272,6 +2500,7 @@ const prefixes = {
     "Zammin": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2285,6 +2514,7 @@ const prefixes = {
     "RDMing": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2298,6 +2528,7 @@ const prefixes = {
     "Acquiescing": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2311,6 +2542,7 @@ const prefixes = {
     "Fuming": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2324,6 +2556,7 @@ const prefixes = {
     "DLC": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2337,6 +2570,7 @@ const prefixes = {
     "Feminine": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2350,6 +2584,7 @@ const prefixes = {
     "Masculine": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2363,19 +2598,7 @@ const prefixes = {
     "Ornamentalized": {
         name: "",
         seeded: false,
-        needs: {
-            heads: false,
-            eyes: false,
-            accents: false,
-            mouths: false
-        },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
-        }
-    },
-    "Raving": {
-        name: "",
-        seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2389,6 +2612,7 @@ const prefixes = {
     "Expensive": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2402,6 +2626,7 @@ const prefixes = {
     "Hyaline": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2415,6 +2640,7 @@ const prefixes = {
     "Sussy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2428,6 +2654,7 @@ const prefixes = {
     "Sleepy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2441,6 +2668,7 @@ const prefixes = {
     "Disgusted": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2454,6 +2682,7 @@ const prefixes = {
     "Hypnotic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2467,6 +2696,7 @@ const prefixes = {
     "Idiotic": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2480,6 +2710,7 @@ const prefixes = {
     "Nailed": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2493,6 +2724,7 @@ const prefixes = {
     "Farmboy": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2506,6 +2738,7 @@ const prefixes = {
     "Blurry": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2519,6 +2752,7 @@ const prefixes = {
     "Obfuscating": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2532,6 +2766,7 @@ const prefixes = {
     "Inverted": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2545,6 +2780,7 @@ const prefixes = {
     "Broken": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2558,6 +2794,7 @@ const prefixes = {
     "Angery": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2571,6 +2808,7 @@ const prefixes = {
     "Despairing": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2584,6 +2822,7 @@ const prefixes = {
     "Dookied": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2597,6 +2836,7 @@ const prefixes = {
     "Grinning": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2610,6 +2850,7 @@ const prefixes = {
     "Worthless": {
         name: "",
         seeded: false,
+        maskOnly: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2647,6 +2888,7 @@ const prefixIDApplicationOrder = [
     "Cuffed", // Adds a handcuff around the cube
     "Marvelous", // Adds a Hand holding the Cube
     "Emburdening", // Adds a statue of Atlas holding up the cube
+    "Royal",
     "Foolish", // Adds a jester Hat to the Cube
     "Cruel", // Adds Cruelty Squad-Inspired Glasses to the Cube
     "Bushy", // Adds a Random Beard to the Cube
@@ -2654,7 +2896,12 @@ const prefixIDApplicationOrder = [
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
 
-    // -------------- Prefixes That Replace The Original Cube (modifies the original image)
+    // -------------- Prefixes That only generate masks
+    "Phasing", // Adds a mask using an overengineered equation (https://www.desmos.com/calculator/mbxk8blmhp)
+    "Evanescent", // Adds a mask using an overengineered equation (https://www.desmos.com/calculator/mbxk8blmhp)
+
+    // -------------- Prefixes that only apply filters
+    "Raving" // Hue shifts the cube every frame to create a 'rainbow' effect
 ] as const;
 
 /**

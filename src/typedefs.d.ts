@@ -107,6 +107,11 @@ export type prefixDefinition = {
     seeded: boolean,
 
     /**
+     * If the prefix only generates a mask, then it should be compiled after other prefixes (to account for the case that those prefixes change the icon's size)
+     */
+    maskOnly: boolean,
+
+    /**
      * The function that applies the prefix to each frame of the icon, returns where the icon should be composited, and what filters Jimp should apply to the icon.
      */
     compileFrames(anchorPoints: anchorPointSchema, cubeFrames: Jimp[], seed: number): Promise<compiledPrefixFrames>
@@ -155,6 +160,11 @@ export type compiledPrefixFrames = {
      * What Jimp filters should be applied to the cube and prefix per-frame.
      */
     frameModifiers: JimpImgMod[][]
+
+    /**
+     * The mask frames the prefix applies
+     */
+    maskFrames: Jimp[]
 
     /**
      * What outlines should be applied to the cube and prefix per-frame.
