@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import Jimp from 'jimp';
 import * as maths from '../maths';
-import { drawLine, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
+import { drawLine, fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
 let seedrandom = require('seedrandom');
 
 /**
@@ -513,7 +513,7 @@ const prefixes = {
             prefixFrames.sourceID = "Leafy";
             
             let seedGen = new seedrandom(`leafy${seed}`);
-            const animationFrameCount = 15; // Yes, there are 16 frames in the animation. However, 16 is not divisible 5... I'm trying to keep prefix animation frame counts at intervals of 5 to make sure their least common multiple is more manageable.
+            const animationFrameCount = 15; // Yes, there are 16 frames in the animation. However, 16 is not divisible by 5... I'm trying to keep prefix animation frame counts at intervals of 5 to make sure their least common multiple is more manageable.
             const possibleLeafImages = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/leafy/source.png`);
             const targetFrameSize = {
                 width: iconFrames[0].bitmap.width,
@@ -1166,51 +1166,70 @@ const prefixes = {
 
             return prefixFrames;
         }
-    },/*
-    "Tentacular": {
-        name: "",
-        seeded: false,
-        maskOnly: false,
-        needs: {
-            heads: false,
-            eyes: false,
-            accents: false,
-            mouths: false
-        },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
-        }
     },
     "Captain": {
-        name: "",
+        name: "Captain",
         seeded: false,
         maskOnly: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Captain";
+            const teamCaptainHatImage = await Jimp.read(`${prefixSourceDirectory}/captain/hat.png`);
+            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/captain/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            const headPositions = anchorPoints.heads;
+
+            for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
+                const headFrame = headPositions[newAnimationIndex % headPositions.length];
+                const hatsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(teamCaptainHatImage, cacheDirectory, headFrame, { x: 5, y: 13, width: 32 });
+
+                prefixFrames.frontFrames.push([...hatsThisFrame])
+            }
+
+            return prefixFrames;
         }
     },
     "Insignificant": {
-        name: "",
+        name: "Insignificant",
         seeded: false,
         maskOnly: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Insignificant";
+            const wingsImage = await Jimp.read(`${prefixSourceDirectory}/insignificant/wings.png`);
+            const haloImage = await Jimp.read(`${prefixSourceDirectory}/insignificant/halo.png`);
+            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/insignificant/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            const headPositions = anchorPoints.heads;
+
+            for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
+                const headFrame = headPositions[newAnimationIndex % headPositions.length];
+                const halosThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloImage, cacheDirectory, headFrame, { x: 74, y: 54, width: 32 });
+                const wingsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(wingsImage, cacheDirectory, headFrame, { x: 74, y: 54, width: 32 });
+
+                prefixFrames.frontFrames.push([...halosThisFrame]);
+                prefixFrames.backFrames.push([...wingsThisFrame]);
+            }
+
+            return prefixFrames;
         }
     },
     "95in'": {
-        name: "",
+        name: "95in'",
         seeded: false,
         maskOnly: false,
         needs: {
@@ -1219,11 +1238,129 @@ const prefixes = {
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+
+            const topLeftBorderColor = 0xc3c3c3ff;
+            const topLeftShineColor = 0xffffffff;
+            const bottomRightBorderColor = 0x828282ff;
+            const baseColor = 0xc3c3c3ff;
+            const topBarColor = 0x000082ff;
+
+            const toolBarImage = await Jimp.read(`${prefixSourceDirectory}/95in/toolbar.png`);
+            const toolBarNameImage = await Jimp.read(`${prefixSourceDirectory}/95in/toolbarname.png`);
+
+            const windowPadding = 10;
+
+            const shadowDistance = 3;
+            const shadowColor = 0xa1a1a1ff;
+
+            let basePrefixFrame = new Jimp(iconFrames[0].bitmap.width + 4 + (windowPadding*2), iconFrames[0].bitmap.width + 4 + (windowPadding*2) + toolBarImage.bitmap.height, baseColor);
+
+            fillRect(basePrefixFrame, 0, 0, basePrefixFrame.bitmap.width, 1, topLeftBorderColor);
+            fillRect(basePrefixFrame, 0, 0, 1, basePrefixFrame.bitmap.height, topLeftBorderColor);
+
+            fillRect(basePrefixFrame, 1, 1, basePrefixFrame.bitmap.width - 2, 1, topLeftShineColor);
+            fillRect(basePrefixFrame, 1, 1, 1, basePrefixFrame.bitmap.height - 2, topLeftShineColor);
+
+            fillRect(basePrefixFrame, basePrefixFrame.bitmap.width - 1, 1, 1, basePrefixFrame.bitmap.height - 1, bottomRightBorderColor);
+            fillRect(basePrefixFrame, 1, basePrefixFrame.bitmap.height - 1, basePrefixFrame.bitmap.width - 1, 1, bottomRightBorderColor);
+
+            fillRect(basePrefixFrame, 4, 4, basePrefixFrame.bitmap.width - 8, 10, topBarColor);
+            basePrefixFrame.composite(toolBarNameImage, 4, 4);
+            basePrefixFrame.composite(toolBarImage, basePrefixFrame.bitmap.width - 4 - toolBarImage.bitmap.width, 4);
+
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex];
+
+                let newPrefixFrame = basePrefixFrame.clone();
+
+                let frameShadow = new Jimp(iconFrame.bitmap.width, iconFrame.bitmap.height, shadowColor);
+                frameShadow.mask(iconFrame, 0, 0);
+                frameShadow.scan(0, 0, frameShadow.bitmap.width, frameShadow.bitmap.height, function(x, y, idx) {
+                    if (this.bitmap.data[idx + 3] > 0) {
+                        this.setPixelColor(shadowColor, x, y);
+                    }
+                })
+
+                newPrefixFrame.composite(frameShadow, 2 + windowPadding + shadowDistance, 4 + windowPadding + toolBarImage.bitmap.height + shadowDistance)
+
+                prefixFrames.backFrames.push([{
+                    image: newPrefixFrame,
+                    compositePosition: {
+                        x: - 2 - windowPadding,
+                        y: - 4 - windowPadding - toolBarImage.bitmap.height
+                    }
+                }])
+            }
+
+            return prefixFrames;
         }
     },
     "Snowy": {
+        name: "Snowy",
+        seeded: true,
+        maskOnly: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Snowy";
+
+            let seedGen = new seedrandom(`snowy${seed}`);
+            const animationFrameCount = 15;
+            const possibleSnowflakeImages = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/snowy/source.png`);
+            const largeSnowflakeImages = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/snowy/large.png`);
+            const targetFrameSize = {
+                width: iconFrames[0].bitmap.width,
+                height: iconFrames[0].bitmap.height
+            }
+
+            const numberOfSnowflakes = 7 + Math.round(seedGen() * 2);
+            let fallingSnowflakes: {
+                iconIndexOffset: number,
+                x: number,
+                y: number,
+                large: boolean
+            }[] = [];
+
+            while (fallingSnowflakes.length < numberOfSnowflakes) {
+                fallingSnowflakes.push({
+                    iconIndexOffset: Math.floor(seedGen() * possibleSnowflakeImages.length),
+                    x: Math.floor(seedGen() * (targetFrameSize.width - possibleSnowflakeImages[0].bitmap.width)),
+                    y: Math.floor(seedGen() * targetFrameSize.height),
+                    large: seedGen() > 0.8
+                })
+            }
+
+            for (let animationFrameIndex = 0; animationFrameIndex < animationFrameCount; animationFrameIndex++) {
+                const newAnimationFrame = new Jimp(targetFrameSize.width, targetFrameSize.height, 0x00000000);
+                for (let snowflakeIconIndex = 0; snowflakeIconIndex < fallingSnowflakes.length; snowflakeIconIndex++) {
+                    const snowflakeIcon = fallingSnowflakes[snowflakeIconIndex];
+                    const fallOffset = (targetFrameSize.height / animationFrameCount) * animationFrameIndex;
+                    const snowflakeAnimationIndex = (snowflakeIcon.iconIndexOffset + animationFrameIndex) % animationFrameCount;
+                    const imageUsed = (snowflakeIcon.large) ? largeSnowflakeImages[snowflakeAnimationIndex]  : possibleSnowflakeImages[snowflakeAnimationIndex]
+                    newAnimationFrame.composite(imageUsed, snowflakeIcon.x, snowflakeIcon.y + fallOffset);
+                    newAnimationFrame.composite(imageUsed, snowflakeIcon.x, (snowflakeIcon.y - targetFrameSize.height) + fallOffset);
+                }
+                prefixFrames.frontFrames.push([{
+                    image: newAnimationFrame,
+                    compositePosition: {
+                        x: Math.floor((iconFrames[0].bitmap.width - targetFrameSize.width) / 2),
+                        y: 0
+                    }
+                }]
+                )
+            }
+
+            return prefixFrames;
+        }
+    },/*
+    "Tentacular": {
         name: "",
         seeded: false,
         maskOnly: false,
@@ -2874,12 +3011,14 @@ const prefixIDApplicationOrder = [
 
     // -------------- Prefixes That Add Particles That don't depend on the cube
     "Leafy", // Adds some raining leaves to the cube
+    "Snowy", // Adds some raining snow to the cube
     "Bugged", // Adds a Glitchy 'Missing Texture' Animation to the Cube
     "Cursed", // Adds a spinning Pentagram beneath the Cube
 
     // -------------- Prefixes That Add Particles That depend on the cube itself (are bound to parts of the cube)
     "Flaming", // Makes the cube on FREAKING FIRE
     "Based", // Adds Flashing Eyes to the Cube
+    "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
 
     // -------------- Prefixes That Add Props (Accessories that aren't bound to the cube's parts)
     
@@ -2888,13 +3027,15 @@ const prefixIDApplicationOrder = [
     "Cuffed", // Adds a handcuff around the cube
     "Marvelous", // Adds a Hand holding the Cube
     "Emburdening", // Adds a statue of Atlas holding up the cube
-    "Royal",
+    "Royal", // Adds a crown to the cube
+    "Captain", // Adds a Team Captain hat to the cube
     "Foolish", // Adds a jester Hat to the Cube
     "Cruel", // Adds Cruelty Squad-Inspired Glasses to the Cube
     "Bushy", // Adds a Random Beard to the Cube
 
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
+    "95in'", // Adds a Windows 95-esque application window to the cube
 
     // -------------- Prefixes That only generate masks
     "Phasing", // Adds a mask using an overengineered equation (https://www.desmos.com/calculator/mbxk8blmhp)
