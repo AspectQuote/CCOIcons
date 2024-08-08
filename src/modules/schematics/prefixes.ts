@@ -1359,24 +1359,171 @@ const prefixes = {
 
             return prefixFrames;
         }
-    },/*
+    },
     "Tentacular": {
-        name: "",
-        seeded: false,
+        name: "Tentacular",
+        seeded: true,
         maskOnly: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            const prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Tentacular";
+            let seedGen = new seedrandom(`tentacular${seed}`);
+
+            let iconHeight = iconFrames[0].bitmap.height;
+            let iconWidth = iconFrames[0].bitmap.width;
+
+            let tentacleCount = Math.round(seedGen() * 2) + 2;
+            let tentacleImage = await Jimp.read(`${prefixSourceDirectory}/tentacular/tentacle.png`);
+            const desiredFrames = 15;
+
+            let tentacleHeadFrontImage = await Jimp.read(`${prefixSourceDirectory}/tentacular/front.png`);
+            let frontCacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/tentacular/front/`);
+            if (!fs.existsSync(frontCacheDirectory)) fs.mkdirSync(frontCacheDirectory, { recursive: true });
+
+            let frontHeadFrames: CCOIcons.compiledPrefixFrames["frontFrames"][number][] = [];
+
+            for (let headFrameIndex = 0; headFrameIndex < anchorPoints.heads.length; headFrameIndex++) {
+                const frameHeadPosition = anchorPoints.heads[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(tentacleHeadFrontImage, frontCacheDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                frontHeadFrames.push(headImagesThisFrame);
+            }
+
+            let tentacleHeadBackImage = await Jimp.read(`${prefixSourceDirectory}/tentacular/back.png`);
+            let backCacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/tentacular/back/`);
+            if (!fs.existsSync(backCacheDirectory)) fs.mkdirSync(backCacheDirectory, { recursive: true });
+
+            let backHeadFrames: CCOIcons.compiledPrefixFrames["frontFrames"][number][] = [];
+
+            for (let headFrameIndex = 0; headFrameIndex < anchorPoints.heads.length; headFrameIndex++) {
+                const frameHeadPosition = anchorPoints.heads[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(tentacleHeadBackImage, backCacheDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                backHeadFrames.push(headImagesThisFrame);
+            }
+
+            let tentacleSlopeVariance = 0.2;
+
+            let tentacleLines: {
+                start: {
+                    x: number,
+                    y: number
+                },
+                end: {
+                    x: number,
+                    y: number
+                },
+                offset: number,
+                flipX: boolean,
+                flipY: boolean,
+                direction: number,
+                slope: number,
+                lineImage: Jimp,
+                lineImagesPerFrame: Jimp[]
+            }[] = [];
+
+            const maskThickness = Math.ceil(tentacleImage.bitmap.height / 2);
+
+            while (tentacleLines.length < tentacleCount) {
+                let newTentacle: typeof tentacleLines[number] = {
+                    start: {
+                        x: 0,
+                        y: 0
+                    },
+                    end: {
+                        x: 0,
+                        y: 0
+                    },
+                    offset: Math.round(seedGen() * tentacleImage.bitmap.width),
+                    flipX: seedGen() > 0.5,
+                    flipY: seedGen() > 0.5,
+                    direction: ((seedGen() > 0.5) ? -1 : 1),
+                    slope: 0,
+                    lineImage: new Jimp(0, 0, 0),
+                    lineImagesPerFrame: []
+                }
+                newTentacle.offset = 7
+                newTentacle.start.y = Math.round((seedGen() * ((iconHeight + (maskThickness * 2)) * (1 - (tentacleSlopeVariance * 2)))) + ((iconHeight + (maskThickness * 2)) * tentacleSlopeVariance));
+                newTentacle.end.x = iconWidth+maskThickness-1;
+                newTentacle.end.y = Math.round(newTentacle.start.y + (seedGen() * (iconHeight + (maskThickness * 2)) * tentacleSlopeVariance * ((seedGen() > 0.5) ? -1 : 1)));
+                newTentacle.slope = (newTentacle.start.y - newTentacle.end.y) / (newTentacle.start.x - newTentacle.end.x);
+                newTentacle.lineImage = new Jimp(iconFrames[0].bitmap.width + (maskThickness * 2), iconFrames[0].bitmap.height + (maskThickness * 2), 0x00000000);
+                for (let lineImageX = 0; lineImageX < newTentacle.lineImage.bitmap.width; lineImageX++) {
+                    newTentacle.lineImage.setPixelColor(0xffffffff, lineImageX, newTentacle.start.y + Math.round(lineImageX * newTentacle.slope));
+                }
+                tentacleLines.push(newTentacle);
+            }
+
+            const tentacleMovementPerFrame = tentacleImage.bitmap.width/desiredFrames;
+            const tentacleImageCenterOffset = Math.round(tentacleImage.bitmap.height/2);
+            iconFrames.forEach((frame, index) => {
+                iconFrames[index] = strokeImage(frame, 0x00000000, maskThickness);
+                tentacleLines.forEach((tentacleLine) => {
+                    tentacleLine.lineImagesPerFrame.push(strokeImage(tentacleLine.lineImage.clone().mask(iconFrames[index], 0, 0), 0xffffffff, maskThickness));
+                })
+            })
+            const neededFrames = maths.leastCommonMultipleOfArray([desiredFrames, iconFrames.length]);
+            for (let neededIconFrameIndex = 0; neededIconFrameIndex < neededFrames; neededIconFrameIndex++) {
+                let newPrefixImage = new Jimp(iconWidth + (maskThickness * 2), iconHeight + (maskThickness * 2), 0x00000000);
+                const iconFrameIndex = neededIconFrameIndex % iconFrames.length;
+                const frontHeadIndex = neededIconFrameIndex % frontHeadFrames.length;
+                const backHeadIndex = neededIconFrameIndex % backHeadFrames.length;
+
+                for (let tentacleLineIndex = 0; tentacleLineIndex < tentacleLines.length; tentacleLineIndex++) {
+                    const tentacleLine = tentacleLines[tentacleLineIndex];
+                    const lineImageThisFrame = tentacleLine.lineImagesPerFrame[iconFrameIndex];
+
+                    let newTentacleFrame = new Jimp(newPrefixImage.bitmap.width, newPrefixImage.bitmap.height, 0x00000000);
+
+                    for (let newTentacleFrameX = 0; newTentacleFrameX < newTentacleFrame.bitmap.width; newTentacleFrameX++) {
+                        const newCenterPoint = { 
+                            x: newTentacleFrameX,
+                            y: tentacleLine.start.y + Math.round(newTentacleFrameX * tentacleLine.slope)
+                        }
+                        for (let newTentacleFrameY = 0; newTentacleFrameY < tentacleImage.bitmap.height; newTentacleFrameY++) {
+                            let sourceX = (((newCenterPoint.x + (tentacleLine.offset + tentacleImage.bitmap.width-1)) + Math.round((tentacleLine.direction * neededIconFrameIndex) * tentacleMovementPerFrame)) % tentacleImage.bitmap.width);
+                            if (tentacleLine.flipX) {
+                                sourceX = tentacleImage.bitmap.width - 1 - sourceX;
+                            }
+                            let sourceY = newTentacleFrameY;
+                            if (tentacleLine.flipY) {
+                                sourceY = tentacleImage.bitmap.height - 1 - sourceY;
+                            }
+                            const sourceCoordinates = {
+                                x: sourceX,
+                                y: sourceY
+                            }
+                            const destinationCoordinates = {
+                                x: newTentacleFrameX,
+                                y: newCenterPoint.y - tentacleImageCenterOffset + newTentacleFrameY + 1
+                            }
+                            newTentacleFrame.setPixelColor(tentacleImage.getPixelColor(sourceCoordinates.x, sourceCoordinates.y), destinationCoordinates.x, destinationCoordinates.y);
+                        }
+                    }
+                    // newPrefixImage.composite(lineImageThisFrame, -maskThickness, -maskThickness);
+                    newPrefixImage.composite(newTentacleFrame.mask(lineImageThisFrame, -maskThickness, -maskThickness), 0, 0);
+                }
+
+                prefixFrames.frontFrames.push([{
+                    image: newPrefixImage,
+                    compositePosition: {
+                        x: -maskThickness,
+                        y: -maskThickness
+                    }
+                }, ...frontHeadFrames[frontHeadIndex]]);
+                prefixFrames.backFrames.push([...backHeadFrames[backHeadIndex]]);
+            }
+
+            return prefixFrames;
         }
     },
     "Summoning": {
-        name: "",
-        seeded: false,
+        name: "Summoning",
+        seeded: true,
         maskOnly: false,
         needs: {
             heads: false,
@@ -1384,13 +1531,108 @@ const prefixes = {
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let seedGen = new seedrandom(`summoning${seed}`);
+            prefixFrames.sourceID = "Summoning";
+
+            const desiredFrames = 30;
+            const rainbowFrames = 30;
+            const desiredPoints = 32;
+            const summoningCount = Math.ceil(seedGen() * 4) * 2;
+            const globalOffset = Math.ceil(desiredFrames * seedGen());
+            const centerPoint = Math.round(iconFrames[0].bitmap.width/2);
+            function f(x: number) {
+                return {x, y: Math.round(Math.sqrt(-Math.pow(x-centerPoint, 2)+(Math.pow(centerPoint, 2)/2)) + centerPoint)}
+            }
+            const radius = Math.sqrt(Math.pow(centerPoint, 2) / 2);
+            const circumference = radius * Math.PI * 2
+            const rightPoint = f(centerPoint + radius - 0.00001);
+            const leftPoint = {x: rightPoint.x - (radius * 2), y: rightPoint.y};
+            const domain = [
+                leftPoint.x,
+                rightPoint.x
+            ];
+
+            const padding = 2;
+            let prefixImage = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
+
+            prefixImage.setPixelColor(0xffffffff, rightPoint.x + padding, rightPoint.y + padding);
+            prefixImage.setPixelColor(0xffffffff, leftPoint.x + padding, leftPoint.y + padding);
+
+            let startingKeyFrames: animationKeyFrame[] = [
+                {
+                    x: leftPoint.x + padding,
+                    y: leftPoint.y + padding,
+                    layer: "front"
+                }
+            ];
+            let endingKeyFrames: animationKeyFrame[] = [
+                {
+                    x: rightPoint.x + padding,
+                    y: rightPoint.y + padding,
+                    layer: "front"
+                }
+            ]
+
+            // I know this implementation is stupid. I haven't taken a trigonometry class yet so I don't know circle-related functions yet.
+            const pointsNeeded = Math.round(desiredPoints/2);
+            const normalizedDomain = domain[1] - domain[0];
+            const res = 15;
+            const xIncrementPerIndex = normalizedDomain/(pointsNeeded * res);
+            const neededDistance = circumference/(pointsNeeded * 2);
+            const lastPoint = {x: leftPoint.x, y: leftPoint.y};
+            for (let loopIndex = 0; loopIndex < (iconFrames[0].bitmap.width * res * (pointsNeeded/2)); loopIndex++) {
+                const xPosition = domain[0] + (xIncrementPerIndex * (loopIndex / res));
+                const yPosition = f(xPosition).y;
+                if (!Number.isNaN(yPosition) && maths.distanceBetweenPoints(lastPoint, {x: xPosition, y: yPosition}) > neededDistance) {
+                    lastPoint.x = xPosition;
+                    lastPoint.y = yPosition;
+                    startingKeyFrames.push({
+                        x: xPosition + padding,
+                        y: yPosition + padding,
+                        layer: "front"
+                    });
+                    startingKeyFrames.unshift({
+                        x: xPosition + padding,
+                        y: centerPoint - (yPosition - centerPoint) + padding,
+                        layer: "front"
+                    });
+                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, yPosition + padding);
+                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, centerPoint - (yPosition - centerPoint) + padding);
+                }
+            }
+
+            const allKeyFrames = generateInterpolatedFramesFromKeyFrames(desiredFrames, [...startingKeyFrames, ...endingKeyFrames], 1, 0);
+
+            const summoningFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/summoning/cube.png`)
+
+            const neededFrames = maths.leastCommonMultipleOfArray([rainbowFrames, desiredFrames, summoningFrames.length]);
+
+            for (let desiredFrameIndex = 0; desiredFrameIndex < neededFrames; desiredFrameIndex++) {
+                let constructedFrame: typeof prefixFrames.frontFrames[number] = [];
+                for (let summoningCountIndex = 0; summoningCountIndex < summoningCount; summoningCountIndex++) {
+                    const offset = (summoningCountIndex * Math.ceil(desiredFrames/summoningCount)) + globalOffset;
+                    const rainbowMod: CCOIcons.JimpImgMod[] = [{ apply: "hue", params: [(desiredFrameIndex + offset) *(360/rainbowFrames)]}]
+                    const keyFrame = allKeyFrames[(desiredFrameIndex + offset) % allKeyFrames.length];
+                    const summoningFrame = summoningFrames[(desiredFrameIndex + offset) % summoningFrames.length];
+                    constructedFrame.push({
+                        image: summoningFrame.clone().color(rainbowMod),
+                        compositePosition: {
+                            x: Math.round(keyFrame.x) - Math.ceil(summoningFrame.bitmap.width/2) - padding,
+                            y: Math.round(keyFrame.y) - Math.ceil(summoningFrame.bitmap.height/2) - padding
+                        }
+                    })
+                }
+                prefixFrames.frontFrames.push(constructedFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Swarming": {
-        name: "",
-        seeded: false,
+        name: "Swarming",
+        seeded: true,
         maskOnly: false,
         needs: {
             heads: false,
@@ -1398,10 +1640,108 @@ const prefixes = {
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let seedGen = new seedrandom(`swarming${seed}`);
+            prefixFrames.sourceID = "Swarming";
+
+            const desiredFrames = 30;
+            const desiredPoints = 15;
+            const possibleSummoningCounts = [1, 1, 1, 2, 2, 2, 3, 3, 3, 5, 5, 5, 6, 6, 10];
+            const summoningCount = possibleSummoningCounts[Math.floor(possibleSummoningCounts.length*seedGen())];
+            const globalOffset = Math.ceil(desiredFrames * seedGen());
+            const centerPoint = Math.round(iconFrames[0].bitmap.width / 2);
+            const radiusAddition = Math.round(iconFrames[0].bitmap.width * 0.6);
+            function f(x: number) {
+                return { x, y: Math.round(Math.sqrt(-Math.pow(x - centerPoint, 2) + (Math.pow(centerPoint + radiusAddition, 2) / 2)) + centerPoint) }
+            }
+            const radius = Math.sqrt(Math.pow(centerPoint + radiusAddition, 2) / 2);
+            const circumference = radius * Math.PI * 2
+            const rightPoint = f(centerPoint + radius - 0.00001);
+            const leftPoint = { x: rightPoint.x - (radius * 2), y: rightPoint.y };
+            const domain = [
+                leftPoint.x,
+                rightPoint.x
+            ];
+
+            const padding = 2;
+            let prefixImage = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
+
+            prefixImage.setPixelColor(0xffffffff, rightPoint.x + padding, rightPoint.y + padding);
+            prefixImage.setPixelColor(0xffffffff, leftPoint.x + padding, leftPoint.y + padding);
+
+            let startingKeyFrames: animationKeyFrame[] = [
+                {
+                    x: leftPoint.x + padding,
+                    y: leftPoint.y + padding,
+                    layer: "front"
+                }
+            ];
+            let endingKeyFrames: animationKeyFrame[] = [
+                {
+                    x: rightPoint.x + padding,
+                    y: rightPoint.y + padding,
+                    layer: "front"
+                }
+            ]
+
+            // I know this implementation is stupid. I haven't taken a trigonometry class yet so I don't know circle-related functions yet.
+            const pointsNeeded = Math.round(desiredPoints / 2);
+            const normalizedDomain = domain[1] - domain[0];
+            const res = 15;
+            const xIncrementPerIndex = normalizedDomain / (pointsNeeded * res);
+            const neededDistance = circumference / (pointsNeeded * 2);
+            const lastPoint = { x: leftPoint.x, y: leftPoint.y };
+            for (let loopIndex = 0; loopIndex < (iconFrames[0].bitmap.width * res * (pointsNeeded / 2)); loopIndex++) {
+                const xPosition = domain[0] + (xIncrementPerIndex * (loopIndex / res));
+                const yPosition = f(xPosition).y;
+                if (!Number.isNaN(yPosition) && maths.distanceBetweenPoints(lastPoint, { x: xPosition, y: yPosition }) > neededDistance) {
+                    lastPoint.x = xPosition;
+                    lastPoint.y = yPosition;
+                    startingKeyFrames.push({
+                        x: xPosition + padding,
+                        y: yPosition + padding,
+                        layer: "front"
+                    });
+                    startingKeyFrames.unshift({
+                        x: xPosition + padding,
+                        y: centerPoint - (yPosition - centerPoint) + padding,
+                        layer: "front"
+                    });
+                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, yPosition + padding);
+                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, centerPoint - (yPosition - centerPoint) + padding);
+                }
+            }
+
+            const allKeyFrames = generateInterpolatedFramesFromKeyFrames(desiredFrames, [...startingKeyFrames, ...endingKeyFrames], 1, 0);
+
+            const neededFrames = maths.leastCommonMultipleOfArray([desiredFrames, iconFrames.length]);
+
+            const compiledFrames: Jimp[] = []; 
+            iconFrames.forEach(frame => {
+                compiledFrames.push(strokeImage(frame.resize(Math.round(iconFrames[iconFrames.length-1].bitmap.width/2.5), Math.round(iconFrames[iconFrames.length-1].bitmap.width/2.5), Jimp.RESIZE_NEAREST_NEIGHBOR), 0x000000ff, 1));
+            })
+
+            for (let desiredFrameIndex = 0; desiredFrameIndex < neededFrames; desiredFrameIndex++) {
+                let constructedFrame: typeof prefixFrames.frontFrames[number] = [];
+                for (let summoningCountIndex = 0; summoningCountIndex < summoningCount; summoningCountIndex++) {
+                    const offset = (summoningCountIndex * Math.ceil(desiredFrames / summoningCount)) + globalOffset;
+                    const keyFrame = allKeyFrames[(desiredFrameIndex + offset) % allKeyFrames.length];
+                    const summoningFrame = compiledFrames[(desiredFrameIndex + offset) % compiledFrames.length];
+                    constructedFrame.push({
+                        image: summoningFrame,
+                        compositePosition: {
+                            x: Math.round(keyFrame.x) - Math.ceil(summoningFrame.bitmap.width / 2) - padding,
+                            y: Math.round(keyFrame.y) - Math.ceil(summoningFrame.bitmap.height / 2) - padding
+                        }
+                    })
+                }
+                prefixFrames.frontFrames.push(constructedFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Kramped": {
         name: "",
         seeded: false,
@@ -3021,7 +3361,9 @@ const prefixIDApplicationOrder = [
     "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
 
     // -------------- Prefixes That Add Props (Accessories that aren't bound to the cube's parts)
-    
+    "Summoning",
+    "Swarming",
+
     // -------------- Prefixes That Add Accessories (Props that are bound to the cube's parts)
     "Sacred", // Adds a Fancy Halo to the Cube
     "Cuffed", // Adds a handcuff around the cube
@@ -3031,6 +3373,7 @@ const prefixIDApplicationOrder = [
     "Captain", // Adds a Team Captain hat to the cube
     "Foolish", // Adds a jester Hat to the Cube
     "Cruel", // Adds Cruelty Squad-Inspired Glasses to the Cube
+    "Tentacular", // Adds moving tentacles to the cube
     "Bushy", // Adds a Random Beard to the Cube
 
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)

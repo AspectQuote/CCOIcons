@@ -1,3 +1,5 @@
+import { coordinate } from "src/typedefs";
+
 function gcd(a: number, b: number): number { 
     return a ? gcd(b % a, a) : b
 };
@@ -13,8 +15,13 @@ function leastCommonMultipleOfArray(arr: number[]) {
     return arr.reduce(lcm);
 }
 
+function distanceBetweenPoints(one: coordinate, two: coordinate) {
+    return Math.sqrt(((one.x-two.x) ** 2) + ((one.y-two.y) ** 2))
+}
+
 export {
     gcd as greatestCommonDenominator,
     lcm as leastCommonMultiple,
-    leastCommonMultipleOfArray
+    leastCommonMultipleOfArray,
+    distanceBetweenPoints
 }
