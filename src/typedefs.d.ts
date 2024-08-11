@@ -112,6 +112,11 @@ export type prefixDefinition = {
     maskOnly: boolean,
 
     /**
+     * If the prefix should only be applied after all the other prefixes have been applied. Feeds the final icon frames into the {@link prefixDefinition.compileFrames|compileFrames} function. If this boolean is set, the {@link prefixDefinition.compileFrames|compileFrames} function's maskFrames output property replaces the original output animation.
+     */
+    appliesDirectlyAfterAllPrefixes: boolean,
+
+    /**
      * The function that applies the prefix to each frame of the icon, returns where the icon should be composited, and what filters Jimp should apply to the icon.
      */
     compileFrames(anchorPoints: anchorPointSchema, cubeFrames: Jimp[], seed: number): Promise<compiledPrefixFrames>

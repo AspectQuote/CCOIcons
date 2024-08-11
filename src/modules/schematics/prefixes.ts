@@ -284,10 +284,91 @@ const basePrefixReturnObject: CCOIcons.compiledPrefixFrames = {
 };
 
 const prefixes = {
+    "Divine": {
+        name: "Divine",
+        seeded: false,
+        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Divine";
+            let divineFrames = await loadAnimatedCubeIcon(`${config.relativeRootDirectory}/ccicons/attributespritesheets/${config.divineConfig.iconName}.png`);
+            prefixFrames.outlineFrames.push([{width: 1, color: config.divineConfig.color, layers: ["icon"]}])
+            let neededIconFrames = maths.leastCommonMultiple(config.divineConfig.frames, iconFrames.length);
+            const targetDivineFrameSize = iconFrames[0].bitmap.width * 2;
+            if (divineFrames[0].bitmap.width !== targetDivineFrameSize) {
+                divineFrames.forEach(divineFrame => {
+                    divineFrame.resize(targetDivineFrameSize, targetDivineFrameSize, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                })
+            }
+            const frameCompositePosition = Math.round(divineFrames[0].bitmap.width / 4);
+            for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
+                const divineFrame = divineFrames[frameIndex % divineFrames.length];
+                prefixFrames.backFrames.push([
+                    {
+                        image: divineFrame,
+                        compositePosition: {
+                            x: -frameCompositePosition,
+                            y: -frameCompositePosition
+                        }
+                    }
+                ]);
+            }
+
+            return prefixFrames;
+        }
+    },
+    "Slated": {
+        name: "Slated",
+        seeded: false,
+        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Slated";
+            let slatedFrames = await loadAnimatedCubeIcon(`${config.relativeRootDirectory}/ccicons/attributespritesheets/${config.slatedConfig.iconName}.png`);
+            prefixFrames.outlineFrames.push([{ width: 1, color: config.slatedConfig.color, layers: ["icon"] }])
+            let neededIconFrames = maths.leastCommonMultiple(config.slatedConfig.frames, iconFrames.length);
+            const targetSlatedFrameSize = iconFrames[0].bitmap.width * 2;
+            if (slatedFrames[0].bitmap.width !== targetSlatedFrameSize) {
+                slatedFrames.forEach(slatedFrame => {
+                    slatedFrame.resize(targetSlatedFrameSize, targetSlatedFrameSize, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                })
+            }
+            const frameCompositePosition = Math.round(slatedFrames[0].bitmap.width / 4);
+            for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
+                const slatedFrame = slatedFrames[frameIndex % slatedFrames.length];
+                prefixFrames.backFrames.push([
+                    {
+                        image: slatedFrame,
+                        compositePosition: {
+                            x: -frameCompositePosition,
+                            y: -frameCompositePosition
+                        }
+                    }
+                ]);
+            }
+
+            return prefixFrames;
+        }
+    },
     "Sacred": {
         name: "Sacred",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -316,6 +397,7 @@ const prefixes = {
         name: "Bugged",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -352,6 +434,7 @@ const prefixes = {
         name: "Based",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: true,
@@ -393,6 +476,7 @@ const prefixes = {
         name: "Glitchy",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -470,6 +554,7 @@ const prefixes = {
         name: "Bushy",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -502,6 +587,7 @@ const prefixes = {
         name: "Leafy",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: true,
         needs: {
             heads: false,
             eyes: false,
@@ -533,28 +619,31 @@ const prefixes = {
             while (fallingLeaves.length < numberOfLeaves) {
                 fallingLeaves.push({
                     iconIndexOffset: Math.floor(seedGen() * possibleLeafImages.length),
-                    x: Math.floor(seedGen() * (targetFrameSize.width - possibleLeafImages[0].bitmap.width)),
+                    x: Math.floor(seedGen() * (targetFrameSize.width - possibleLeafImages[0].bitmap.width)) + possibleLeafImages[0].bitmap.width,
                     y: Math.floor(seedGen() * targetFrameSize.height)
                 })
             }
 
-            for (let animationFrameIndex = 0; animationFrameIndex < animationFrameCount; animationFrameIndex++) {
+            const neededFrames = maths.leastCommonMultiple(iconFrames.length, animationFrameCount);
+            for (let animationFrameIndex = 0; animationFrameIndex < neededFrames; animationFrameIndex++) {
                 const newAnimationFrame = new Jimp(targetFrameSize.width, targetFrameSize.height, 0x00000000);
+                const iconIndex = animationFrameIndex % iconFrames.length;
                 for (let leafIconIndex = 0; leafIconIndex < fallingLeaves.length; leafIconIndex++) {
                     const leafIcon = fallingLeaves[leafIconIndex];
-                    const fallOffset = (targetFrameSize.height / animationFrameCount) * animationFrameIndex;
+                    const fallOffset = (targetFrameSize.height / neededFrames) * animationFrameIndex;
                     const leafAnimationIndex = (leafIcon.iconIndexOffset + animationFrameIndex) % animationFrameCount;
                     newAnimationFrame.composite(possibleLeafImages[leafAnimationIndex].clone().color(universalHueRotation), leafIcon.x, leafIcon.y + fallOffset);
                     newAnimationFrame.composite(possibleLeafImages[leafAnimationIndex].clone().color(universalHueRotation), leafIcon.x, (leafIcon.y - targetFrameSize.height) + fallOffset);
                 }
-                prefixFrames.frontFrames.push([{
-                        image: newAnimationFrame,
-                        compositePosition: {
-                            x: Math.floor((iconFrames[0].bitmap.width - targetFrameSize.width) / 2),
-                            y: 0
-                        }
-                    }]
-                )
+                prefixFrames.maskFrames.push(iconFrames[iconIndex].clone().composite(newAnimationFrame, Math.floor((iconFrames[0].bitmap.width - targetFrameSize.width) / 2), 0))
+                // prefixFrames.frontFrames.push([{
+                //         image: newAnimationFrame,
+                //         compositePosition: {
+                //             x: Math.floor((iconFrames[0].bitmap.width - targetFrameSize.width) / 2),
+                //             y: 0
+                //         }
+                //     }]
+                // )
             }
             
             return prefixFrames;
@@ -564,6 +653,7 @@ const prefixes = {
         name: "Cruel",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -598,6 +688,7 @@ const prefixes = {
         name: "Orbital",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -753,6 +844,7 @@ const prefixes = {
         name: "Flaming",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -811,7 +903,6 @@ const prefixes = {
                 }
             ])
 
-
             return prefixFrames;
         }
     },
@@ -819,6 +910,7 @@ const prefixes = {
         name: "Foolish",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -847,6 +939,7 @@ const prefixes = {
         name: "Cursed",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -887,6 +980,7 @@ const prefixes = {
         name: "Emburdening",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -920,6 +1014,7 @@ const prefixes = {
         name: "Cuffed",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -953,6 +1048,7 @@ const prefixes = {
         name: "Endangered",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -982,6 +1078,7 @@ const prefixes = {
         name: "Marvelous",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -1015,6 +1112,7 @@ const prefixes = {
         name: "Phasing",
         seeded: true,
         maskOnly: true,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1059,6 +1157,7 @@ const prefixes = {
         name: "Evanescent",
         seeded: true,
         maskOnly: true,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1103,6 +1202,7 @@ const prefixes = {
         name: "Raving",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1130,6 +1230,7 @@ const prefixes = {
         name: "Royal",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -1171,6 +1272,7 @@ const prefixes = {
         name: "Captain",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -1200,6 +1302,7 @@ const prefixes = {
         name: "Insignificant",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -1232,6 +1335,7 @@ const prefixes = {
         name: "95in'",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1301,6 +1405,7 @@ const prefixes = {
         name: "Snowy",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: true,
         needs: {
             heads: false,
             eyes: false,
@@ -1337,24 +1442,26 @@ const prefixes = {
                 })
             }
 
-            for (let animationFrameIndex = 0; animationFrameIndex < animationFrameCount; animationFrameIndex++) {
+            const neededFrames = maths.leastCommonMultiple(animationFrameCount, iconFrames.length);
+            for (let animationFrameIndex = 0; animationFrameIndex < neededFrames; animationFrameIndex++) {
                 const newAnimationFrame = new Jimp(targetFrameSize.width, targetFrameSize.height, 0x00000000);
+                const iconIndex = animationFrameIndex % iconFrames.length;
                 for (let snowflakeIconIndex = 0; snowflakeIconIndex < fallingSnowflakes.length; snowflakeIconIndex++) {
                     const snowflakeIcon = fallingSnowflakes[snowflakeIconIndex];
-                    const fallOffset = (targetFrameSize.height / animationFrameCount) * animationFrameIndex;
+                    const fallOffset = (targetFrameSize.height / neededFrames) * animationFrameIndex;
                     const snowflakeAnimationIndex = (snowflakeIcon.iconIndexOffset + animationFrameIndex) % animationFrameCount;
                     const imageUsed = (snowflakeIcon.large) ? largeSnowflakeImages[snowflakeAnimationIndex]  : possibleSnowflakeImages[snowflakeAnimationIndex]
                     newAnimationFrame.composite(imageUsed, snowflakeIcon.x, snowflakeIcon.y + fallOffset);
                     newAnimationFrame.composite(imageUsed, snowflakeIcon.x, (snowflakeIcon.y - targetFrameSize.height) + fallOffset);
                 }
-                prefixFrames.frontFrames.push([{
-                    image: newAnimationFrame,
-                    compositePosition: {
-                        x: Math.floor((iconFrames[0].bitmap.width - targetFrameSize.width) / 2),
-                        y: 0
-                    }
-                }]
-                )
+                prefixFrames.maskFrames.push(iconFrames[iconIndex].clone().composite(newAnimationFrame, Math.floor((iconFrames[0].bitmap.width - targetFrameSize.width) / 2), 0))
+                // prefixFrames.frontFrames.push([{
+                //     image: newAnimationFrame,
+                //     compositePosition: {
+                //         x: Math.floor((iconFrames[0].bitmap.width - targetFrameSize.width) / 2),
+                //         y: 0
+                //     }
+                // }])
             }
 
             return prefixFrames;
@@ -1364,6 +1471,7 @@ const prefixes = {
         name: "Tentacular",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: true,
             eyes: false,
@@ -1446,7 +1554,6 @@ const prefixes = {
                     lineImage: new Jimp(0, 0, 0),
                     lineImagesPerFrame: []
                 }
-                newTentacle.offset = 7
                 newTentacle.start.y = Math.round((seedGen() * ((iconHeight + (maskThickness * 2)) * (1 - (tentacleSlopeVariance * 2)))) + ((iconHeight + (maskThickness * 2)) * tentacleSlopeVariance));
                 newTentacle.end.x = iconWidth+maskThickness-1;
                 newTentacle.end.y = Math.round(newTentacle.start.y + (seedGen() * (iconHeight + (maskThickness * 2)) * tentacleSlopeVariance * ((seedGen() > 0.5) ? -1 : 1)));
@@ -1525,6 +1632,7 @@ const prefixes = {
         name: "Summoning",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1634,6 +1742,7 @@ const prefixes = {
         name: "Swarming",
         seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1741,123 +1850,575 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Kramped": {
-        name: "",
+        name: "Kramped",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Kramped";
+
+            let krampedHornsImage = await Jimp.read(`${prefixSourceDirectory}/kramped/horns.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/kramped/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(krampedHornsImage, cacheDirectory, frameHeadPosition, { x: 16, y: 24, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Dandy": {
-        name: "",
+        name: "Dandy",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Dandy";
+
+            let dandyHairImage = await Jimp.read(`${prefixSourceDirectory}/dandy/hair.png`);
+            let dandyBackofHairImage = await Jimp.read(`${prefixSourceDirectory}/dandy/hairback.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/dandy/front/`);
+            let backCacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/dandy/back/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            if (!fs.existsSync(backCacheDirectory)) fs.mkdirSync(backCacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(dandyHairImage, cacheDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+                const backImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(dandyBackofHairImage, backCacheDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                prefixFrames.backFrames.push(backImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Incarcerated": {
-        name: "",
+        name: "Incarcerated",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
-        }
-    },
-    "Runic": {
-        name: "",
-        seeded: false,
-        maskOnly: false,
-        needs: {
-            heads: false,
-            eyes: false,
-            accents: false,
-            mouths: false
-        },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Incarcerated";
+
+            let jailLidImage = await Jimp.read(`${prefixSourceDirectory}/incarcerated/top.png`);
+            let jailFloorImage = await Jimp.read(`${prefixSourceDirectory}/incarcerated/bottom.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/incarcerated/front/`);
+            let backCacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/incarcerated/back/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            if (!fs.existsSync(backCacheDirectory)) fs.mkdirSync(backCacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(jailLidImage, cacheDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+                const backImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(jailFloorImage, backCacheDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                prefixFrames.backFrames.push(backImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Rippling": {
-        name: "",
+        name: "Rippling",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: true,
         needs: {
             heads: false,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let desiredFrames = 30;
+            const maxSinMovement = 2;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Rippling";
+
+            function yOffset(x: number, frame: number) {
+                return Math.round(Math.sin((x-((frame/desiredFrames) * (Math.PI * 2 * maxSinMovement)))/(maxSinMovement/2))*maxSinMovement)
+            }
+
+            const neededFrames = maths.leastCommonMultiple(desiredFrames, iconFrames.length);
+
+            for (let outputFrameIndex = 0; outputFrameIndex < neededFrames; outputFrameIndex++) {
+                const currentIconFrame = iconFrames[outputFrameIndex % iconFrames.length];
+                const sinWaveFrameIdx = outputFrameIndex % desiredFrames;
+                const outputFrame = new Jimp(currentIconFrame.bitmap.width + (maxSinMovement * 2), currentIconFrame.bitmap.height + (maxSinMovement * 2), 0x00000000)
+
+                for (let iconFrameXPosition = 0; iconFrameXPosition < currentIconFrame.bitmap.width; iconFrameXPosition++) {
+                    const iconFrameYOffset = yOffset(iconFrameXPosition, sinWaveFrameIdx);
+                    for (let iconFrameYPosition = 0; iconFrameYPosition < currentIconFrame.bitmap.height; iconFrameYPosition++) {
+                        // console.log(currentIconFrame.getPixelColor(iconFrameXPosition, iconFrameYPosition), iconFrameXPosition, iconFrameYPosition)
+                        outputFrame.setPixelColor(currentIconFrame.getPixelColor(iconFrameXPosition, iconFrameYPosition), iconFrameXPosition + maxSinMovement, iconFrameYPosition + iconFrameYOffset + maxSinMovement)
+                    }
+                }
+                prefixFrames.maskFrames.push(outputFrame);
+            }
+
+            return prefixFrames;
+        }
+    },
+    "Runic": {
+        name: "Runic",
+        seeded: true,
+        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Runic";
+            let seedGen = new seedrandom(`runic${seed}`);
+            const allRunes = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/runic/runes.png`)
+
+            const floatingFramesYOffsets = [
+                -1,
+                -1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                1,
+                1,
+                0,
+            ];
+
+            const possibleColorShifts: CCOIcons.JimpImgMod[][] = [
+                [], [], [], [], [],
+                [
+                    { apply: "hue", params: [100] },
+                    { apply: "desaturate", params: [30] }
+                ],
+                [
+                    { apply: "hue", params: [180] },
+                    { apply: "desaturate", params: [30] }
+                ],
+                [
+                    { apply: "hue", params: [-120] },
+                    { apply: "saturate", params: [60] }
+                ]
+            ];
+
+            const colorShift = possibleColorShifts[Math.floor(seedGen() * possibleColorShifts.length)];
+            allRunes.forEach(image => image.color(colorShift));
+
+            const runeCount = Math.round(seedGen() * 3) + 1;
+            let runes: {
+                runeIndex: number,
+                animationOffset: number,
+                position: CCOIcons.coordinate
+            }[] = [];
+            const runePadding = allRunes[0].bitmap.width;
+            while (runes.length < runeCount) {
+                runes.push({
+                    runeIndex: Math.floor(allRunes.length * seedGen()),
+                    animationOffset: Math.floor(floatingFramesYOffsets.length * seedGen()),
+                    position: {
+                        x: Math.floor((iconFrames[0].bitmap.width - runePadding) * seedGen()) + Math.round(runePadding /2),
+                        y: Math.floor((iconFrames[0].bitmap.height - runePadding) * seedGen()) + Math.round(runePadding /2),
+                    }
+                })
+            }
+
+            for (let floatingFramesYOffsetIndex = 0; floatingFramesYOffsetIndex < floatingFramesYOffsets.length; floatingFramesYOffsetIndex++) {
+                let newFrame: typeof prefixFrames.frontFrames[number][number][] = []
+                for (let generatedRuneIndex = 0; generatedRuneIndex < runes.length; generatedRuneIndex++) {
+                    const rune = runes[generatedRuneIndex];
+                    const yOffset = floatingFramesYOffsets[(floatingFramesYOffsetIndex + rune.animationOffset) % floatingFramesYOffsets.length];
+                    newFrame.push({
+                        image: allRunes[rune.runeIndex],
+                        compositePosition: {
+                            x: rune.position.x - Math.ceil(allRunes[rune.runeIndex].bitmap.width/2),
+                            y: (rune.position.y + yOffset) - Math.ceil(allRunes[rune.runeIndex].bitmap.height/2)
+                        }
+                    })
+                }
+                prefixFrames.frontFrames.push(newFrame);
+            }
+
+            prefixFrames.outlineFrames.push([{width: 1, color: allRunes[0].getPixelColor(6, 1), layers: ["back", "front", "icon"]}])
+
+            return prefixFrames;
         }
     },
     "Emphasized": {
-        name: "",
-        seeded: false,
+        name: "Emphasized",
+        seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Emphasized";
+            let seedGen = new seedrandom(`emphasized${seed}`);
+
+            let arrowImages = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/emphasized/arrows.png`);
+            let constructedArrowFrame = new Jimp(arrowImages[0].bitmap.width, arrowImages[0].bitmap.height, 0x00000000);
+
+            let usedArrows: number[] = [];
+            const arrowCount = Math.ceil(arrowImages.length * (2 ** (5 * (seedGen() - 1)))); // \operatorname{ceil}\left(\left(8\right)2^{5\left(x-1\right)}\right) 
+            while (usedArrows.length < arrowCount) {
+                const newIndex = Math.floor(seedGen() * arrowImages.length);
+                if (!usedArrows.includes(newIndex)) {
+                    usedArrows.push(newIndex)
+                }
+            }
+            usedArrows.forEach(arrowIndex => {
+                constructedArrowFrame.composite(arrowImages[arrowIndex], 0, 0);
+            })
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/emphasized${seed}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(constructedArrowFrame, cacheDirectory, frameHeadPosition, { x: 32, y: 40, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Chained": {
-        name: "",
-        seeded: false,
+        name: "Chained",
+        seeded: true,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            const prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Chained";
+            let seedGen = new seedrandom(`chained${seed}`);
+
+            let iconHeight = iconFrames[0].bitmap.height;
+            let iconWidth = iconFrames[0].bitmap.width;
+
+            let chainCount = Math.round(seedGen() * 2) + 1;
+            let chainImage = await Jimp.read(`${prefixSourceDirectory}/chained/chain.png`);
+            const desiredFrames = 15;
+
+            let chainSlopeVariance = 0.3;
+
+            let chainLines: {
+                start: {
+                    x: number,
+                    y: number
+                },
+                end: {
+                    x: number,
+                    y: number
+                },
+                offset: number,
+                flipX: boolean,
+                direction: number,
+                slope: number,
+                lineImage: Jimp,
+                lineImagesPerFrame: Jimp[]
+            }[] = [];
+
+            const maskThickness = 1;
+
+            while (chainLines.length < chainCount) {
+                let newChain: typeof chainLines[number] = {
+                    start: {
+                        x: 0,
+                        y: 0
+                    },
+                    end: {
+                        x: 0,
+                        y: 0
+                    },
+                    offset: Math.round(seedGen() * chainImage.bitmap.width),
+                    flipX: seedGen() > 0.5,
+                    direction: ((seedGen() > 0.5) ? -1 : 1),
+                    slope: 0,
+                    lineImage: new Jimp(0, 0, 0),
+                    lineImagesPerFrame: []
+                }
+                newChain.start.y = Math.round((seedGen() * ((iconHeight + (maskThickness * 2)) * (1 - (chainSlopeVariance * 2)))) + ((iconHeight + (maskThickness * 2)) * chainSlopeVariance));
+                newChain.end.x = iconWidth + maskThickness - 1;
+                newChain.end.y = Math.round(newChain.start.y + (seedGen() * (iconHeight + (maskThickness * 2)) * chainSlopeVariance * ((seedGen() > 0.5) ? -1 : 1)));
+                newChain.slope = (newChain.start.y - newChain.end.y) / (newChain.start.x - newChain.end.x);
+                newChain.lineImage = new Jimp(iconFrames[0].bitmap.width + (maskThickness * 2), iconFrames[0].bitmap.height + (maskThickness * 2), 0x00000000);
+                for (let lineImageX = 0; lineImageX < newChain.lineImage.bitmap.width; lineImageX++) {
+                    for (let chainImageYPosition = 0; chainImageYPosition < chainImage.bitmap.height; chainImageYPosition++) {
+                        const yOffset = chainImageYPosition - Math.ceil(chainImage.bitmap.height/2);
+                        newChain.lineImage.setPixelColor(0xffffffff, lineImageX, newChain.start.y + Math.round(lineImageX * newChain.slope) + yOffset);
+                    }
+                }
+                chainLines.push(newChain);
+            }
+
+            const chainMovementPerFrame = chainImage.bitmap.width / desiredFrames;
+            const chainImageCenterOffset = Math.round(chainImage.bitmap.height / 2);
+            iconFrames.forEach((frame, index) => {
+                iconFrames[index] = strokeImage(frame, 0x00000000, maskThickness);
+                chainLines.forEach((chainLine) => {
+                    chainLine.lineImagesPerFrame.push(strokeImage(chainLine.lineImage.clone().mask(iconFrames[index], 0, 0), 0xffffffff, maskThickness));
+                })
+            })
+            const neededFrames = maths.leastCommonMultipleOfArray([desiredFrames, iconFrames.length]);
+            for (let neededIconFrameIndex = 0; neededIconFrameIndex < neededFrames; neededIconFrameIndex++) {
+                let newPrefixImage = new Jimp(iconWidth + (maskThickness * 2), iconHeight + (maskThickness * 2), 0x00000000);
+                const iconFrameIndex = neededIconFrameIndex % iconFrames.length;
+
+                for (let chainLineIndex = 0; chainLineIndex < chainLines.length; chainLineIndex++) {
+                    const chainLine = chainLines[chainLineIndex];
+                    const lineImageThisFrame = chainLine.lineImagesPerFrame[iconFrameIndex];
+
+                    let newChainFrame = new Jimp(newPrefixImage.bitmap.width, newPrefixImage.bitmap.height, 0x00000000);
+
+                    for (let newChainFrameX = 0; newChainFrameX < newChainFrame.bitmap.width; newChainFrameX++) {
+                        const newCenterPoint = {
+                            x: newChainFrameX,
+                            y: chainLine.start.y + Math.round(newChainFrameX * chainLine.slope)
+                        }
+                        for (let newChainFrameY = 0; newChainFrameY < chainImage.bitmap.height; newChainFrameY++) {
+                            let sourceX = (((newCenterPoint.x + (chainLine.offset + chainImage.bitmap.width - 1)) + Math.round((chainLine.direction * neededIconFrameIndex) * chainMovementPerFrame)) % chainImage.bitmap.width);
+                            if (chainLine.flipX) {
+                                sourceX = chainImage.bitmap.width - 1 - sourceX;
+                            }
+                            let sourceY = newChainFrameY;
+                            const sourceCoordinates = {
+                                x: sourceX,
+                                y: sourceY
+                            }
+                            const destinationCoordinates = {
+                                x: newChainFrameX,
+                                y: newCenterPoint.y - chainImageCenterOffset + newChainFrameY + 1
+                            }
+                            newChainFrame.setPixelColor(chainImage.getPixelColor(sourceCoordinates.x, sourceCoordinates.y), destinationCoordinates.x, destinationCoordinates.y);
+                        }
+                    }
+                    // newPrefixImage.composite(lineImageThisFrame, -maskThickness, -maskThickness);
+                    newPrefixImage.composite(newChainFrame.mask(lineImageThisFrame, -maskThickness, -maskThickness), 0, 0);
+                }
+
+                prefixFrames.frontFrames.push([{
+                    image: newPrefixImage,
+                    compositePosition: {
+                        x: -maskThickness,
+                        y: -maskThickness
+                    }
+                }]);
+            }
+
+            return prefixFrames;
+        }
+    },
+    "Adduced": {
+        name: "Adduced",
+        seeded: true,
+        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            const prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Adduced";
+            let seedGen = new seedrandom(`adduced${seed}`);
+
+            let iconHeight = iconFrames[0].bitmap.height;
+            let iconWidth = iconFrames[0].bitmap.width;
+
+            let tapeCount = Math.round(seedGen() * 2) + 1;
+            let tapeImage = await Jimp.read(`${prefixSourceDirectory}/adduced/cautiontape.png`);
+            const desiredFrames = 15;
+
+            let tapeSlopeVariance = 0.3;
+
+            let tapeLines: {
+                start: {
+                    x: number,
+                    y: number
+                },
+                end: {
+                    x: number,
+                    y: number
+                },
+                offset: number,
+                direction: number,
+                slope: number,
+                lineImage: Jimp,
+                lineImagesPerFrame: Jimp[]
+            }[] = [];
+
+            const maskThickness = 1;
+
+            while (tapeLines.length < tapeCount) {
+                let newTape: typeof tapeLines[number] = {
+                    start: {
+                        x: 0,
+                        y: 0
+                    },
+                    end: {
+                        x: 0,
+                        y: 0
+                    },
+                    offset: Math.round(seedGen() * tapeImage.bitmap.width),
+                    direction: ((seedGen() > 0.5) ? -1 : 1),
+                    slope: 0,
+                    lineImage: new Jimp(0, 0, 0),
+                    lineImagesPerFrame: []
+                }
+                newTape.start.y = Math.round((seedGen() * ((iconHeight + (maskThickness * 2)) * (1 - (tapeSlopeVariance * 2)))) + ((iconHeight + (maskThickness * 2)) * tapeSlopeVariance));
+                newTape.end.x = iconWidth + maskThickness - 1;
+                newTape.end.y = Math.round(newTape.start.y + (seedGen() * (iconHeight + (maskThickness * 2)) * tapeSlopeVariance * ((seedGen() > 0.5) ? -1 : 1)));
+                newTape.slope = (newTape.start.y - newTape.end.y) / (newTape.start.x - newTape.end.x);
+                newTape.lineImage = new Jimp(iconFrames[0].bitmap.width + (maskThickness * 2), iconFrames[0].bitmap.height + (maskThickness * 2), 0x00000000);
+                for (let lineImageX = 0; lineImageX < newTape.lineImage.bitmap.width; lineImageX++) {
+                    for (let tapeImageYPosition = 0; tapeImageYPosition < tapeImage.bitmap.height; tapeImageYPosition++) {
+                        const yOffset = tapeImageYPosition - Math.ceil(tapeImage.bitmap.height / 2);
+                        newTape.lineImage.setPixelColor(0xffffffff, lineImageX, newTape.start.y + Math.round(lineImageX * newTape.slope) + yOffset);
+                    }
+                }
+                tapeLines.push(newTape);
+            }
+
+            const tapeMovementPerFrame = tapeImage.bitmap.width / desiredFrames;
+            const tapeImageCenterOffset = Math.round(tapeImage.bitmap.height / 2);
+            iconFrames.forEach((frame, index) => {
+                iconFrames[index] = strokeImage(frame, 0x00000000, maskThickness);
+                tapeLines.forEach((tapeLine) => {
+                    tapeLine.lineImagesPerFrame.push(strokeImage(tapeLine.lineImage.clone().mask(iconFrames[index], 0, 0), 0xffffffff, maskThickness));
+                })
+            })
+            const neededFrames = maths.leastCommonMultipleOfArray([desiredFrames, iconFrames.length]);
+            for (let neededIconFrameIndex = 0; neededIconFrameIndex < neededFrames; neededIconFrameIndex++) {
+                let newPrefixImage = new Jimp(iconWidth + (maskThickness * 2), iconHeight + (maskThickness * 2), 0x00000000);
+                const iconFrameIndex = neededIconFrameIndex % iconFrames.length;
+
+                for (let tapeLineIndex = 0; tapeLineIndex < tapeLines.length; tapeLineIndex++) {
+                    const tapeLine = tapeLines[tapeLineIndex];
+                    const lineImageThisFrame = tapeLine.lineImagesPerFrame[iconFrameIndex];
+
+                    let newChainFrame = new Jimp(newPrefixImage.bitmap.width, newPrefixImage.bitmap.height, 0x00000000);
+
+                    for (let newChainFrameX = 0; newChainFrameX < newChainFrame.bitmap.width; newChainFrameX++) {
+                        const newCenterPoint = {
+                            x: newChainFrameX,
+                            y: tapeLine.start.y + Math.round(newChainFrameX * tapeLine.slope)
+                        }
+                        for (let newTapeFrameY = 0; newTapeFrameY < tapeImage.bitmap.height; newTapeFrameY++) {
+                            let sourceX = (((newCenterPoint.x + (tapeLine.offset + tapeImage.bitmap.width - 1)) + Math.round((tapeLine.direction * neededIconFrameIndex) * tapeMovementPerFrame)) % tapeImage.bitmap.width);
+                            let sourceY = newTapeFrameY;
+                            const sourceCoordinates = {
+                                x: sourceX,
+                                y: sourceY
+                            }
+                            const destinationCoordinates = {
+                                x: newChainFrameX,
+                                y: newCenterPoint.y - tapeImageCenterOffset + newTapeFrameY + 1
+                            }
+                            newChainFrame.setPixelColor(tapeImage.getPixelColor(sourceCoordinates.x, sourceCoordinates.y), destinationCoordinates.x, destinationCoordinates.y);
+                        }
+                    }
+                    // newPrefixImage.composite(lineImageThisFrame, -maskThickness, -maskThickness);
+                    newPrefixImage.composite(newChainFrame.mask(lineImageThisFrame, -maskThickness, -maskThickness), 0, 0);
+                }
+
+                prefixFrames.frontFrames.push([{
+                    image: newPrefixImage,
+                    compositePosition: {
+                        x: -maskThickness,
+                        y: -maskThickness
+                    }
+                }]);
+            }
+
+            return prefixFrames;
         }
     },
     "Angelic": {
-        name: "",
+        name: "Angelic",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Angelic";
+
+            let haloFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/angelic/halo.png`);
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/angelic/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(haloFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const flamingFrame = haloFrames[animationFrameIndex % haloFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(flamingFrame, cacheDirectory, frameHeadData, { x: 3, y: 14, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Menacing": {
-        name: "",
+        name: "Menacing",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1867,11 +2428,12 @@ const prefixes = {
         compileFrames: function(anchorPoints, seed) {
             return structuredClone(basePrefixReturnObject)
         }
-    },
+    }, /*
     "Serving": {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1886,6 +2448,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1900,6 +2463,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1914,6 +2478,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1928,6 +2493,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1942,6 +2508,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1956,6 +2523,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1970,6 +2538,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1984,6 +2553,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -1998,6 +2568,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2012,6 +2583,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2026,6 +2598,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2040,6 +2613,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2054,6 +2628,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2068,6 +2643,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2082,6 +2658,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2096,6 +2673,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2110,6 +2688,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2124,6 +2703,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2138,6 +2718,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2152,6 +2733,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2166,6 +2748,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2180,20 +2763,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
-        needs: {
-            heads: false,
-            eyes: false,
-            accents: false,
-            mouths: false
-        },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
-        }
-    },
-    "Adduced": {
-        name: "",
-        seeded: false,
-        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2208,6 +2778,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2222,6 +2793,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2236,6 +2808,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2250,6 +2823,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2264,6 +2838,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2278,6 +2853,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2292,6 +2868,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2306,6 +2883,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2320,6 +2898,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2334,6 +2913,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2348,6 +2928,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2362,6 +2943,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2376,6 +2958,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2390,6 +2973,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2404,6 +2988,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2418,6 +3003,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2432,6 +3018,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2446,6 +3033,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2460,6 +3048,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2474,6 +3063,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2488,6 +3078,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2502,6 +3093,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2516,6 +3108,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2530,6 +3123,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2544,6 +3138,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2558,6 +3153,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2572,6 +3168,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2586,6 +3183,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2600,6 +3198,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2614,6 +3213,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2628,6 +3228,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2642,6 +3243,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2656,6 +3258,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2670,6 +3273,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2684,6 +3288,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2698,6 +3303,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2712,6 +3318,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2726,6 +3333,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2740,6 +3348,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2754,6 +3363,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2768,6 +3378,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2782,6 +3393,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2796,6 +3408,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2810,6 +3423,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2824,6 +3438,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2838,6 +3453,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2852,6 +3468,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2866,6 +3483,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2880,6 +3498,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2894,6 +3513,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2908,6 +3528,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2922,6 +3543,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2936,6 +3558,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2950,6 +3573,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2964,6 +3588,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2978,6 +3603,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -2992,6 +3618,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3006,6 +3633,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3020,6 +3648,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3034,6 +3663,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3048,6 +3678,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3062,6 +3693,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3076,6 +3708,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3090,6 +3723,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3104,6 +3738,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3118,6 +3753,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3132,6 +3768,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3146,6 +3783,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3160,6 +3798,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3174,6 +3813,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3188,6 +3828,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3202,6 +3843,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3216,6 +3858,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3230,6 +3873,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3244,6 +3888,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3258,6 +3903,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3272,6 +3918,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3286,6 +3933,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3300,6 +3948,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3314,6 +3963,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3328,6 +3978,7 @@ const prefixes = {
         name: "",
         seeded: false,
         maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
         needs: {
             heads: false,
             eyes: false,
@@ -3361,20 +4012,28 @@ const prefixIDApplicationOrder = [
     "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
 
     // -------------- Prefixes That Add Props (Accessories that aren't bound to the cube's parts)
-    "Summoning",
-    "Swarming",
+    "Summoning", // Adds spinning cubes to the cube
+    "Swarming", // Adds spinning cubes to the cube
+    "Runic", // Adds nordic runes to the cube
 
     // -------------- Prefixes That Add Accessories (Props that are bound to the cube's parts)
     "Sacred", // Adds a Fancy Halo to the Cube
     "Cuffed", // Adds a handcuff around the cube
     "Marvelous", // Adds a Hand holding the Cube
+    "Incarcerated", // Adds a Jail around the Cube
     "Emburdening", // Adds a statue of Atlas holding up the cube
     "Royal", // Adds a crown to the cube
+    "Kramped", // Adds a pair of krampus horns to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Angelic", // Adds a halo to the cube
+    "Dandy", // Adds space dandy hair to the cube
     "Foolish", // Adds a jester Hat to the Cube
     "Cruel", // Adds Cruelty Squad-Inspired Glasses to the Cube
     "Tentacular", // Adds moving tentacles to the cube
+    "Chained", // Adds moving chains to the cube
+    "Adduced", // Adds moving caution tape to the cube
     "Bushy", // Adds a Random Beard to the Cube
+    "Emphasized", // Adds a random amount of red arrows to the cube
 
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
@@ -3385,7 +4044,12 @@ const prefixIDApplicationOrder = [
     "Evanescent", // Adds a mask using an overengineered equation (https://www.desmos.com/calculator/mbxk8blmhp)
 
     // -------------- Prefixes that only apply filters
-    "Raving" // Hue shifts the cube every frame to create a 'rainbow' effect
+    "Raving", // Hue shifts the cube every frame to create a 'rainbow' effect
+    "Rippling", // Adds a sine wave to the cube
+
+    // -------------- Divine and Slated Effects should always be behind everything else
+    "Divine", // Divine Effect for the cube
+    "Slated", // Slated Effect for the cube
 ] as const;
 
 /**

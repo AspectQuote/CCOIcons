@@ -380,7 +380,7 @@ const iconModifiers = {
                 // Create the outcome path of the file
                 const outcomeFile = `${outcomePath}/${modifyingID}.png`;
                 // If the icon hasn't been generated yet, then generate it (in this case, it's copying it to the generated icons directory to make sure the original image isn't accidentally modified)
-                if (!fs.existsSync(outcomeFile)) {
+                if (!fs.existsSync(outcomeFile) || !config.useBaseCubeCache) {
                     let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
                     let savedIcon = await saveAnimatedCubeIcon(iconFrames, fileNameOverride, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
                     if (savedIcon !== true) {
@@ -492,68 +492,6 @@ const iconModifiers = {
             return {
                 directoryAddition: `${outcomeFolder}/`
             }
-        }
-    },
-    divine: {
-        directory: '/divine',
-        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: any) {
-            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
-            const newImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}/divine`);
-            if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
-            const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
-            if (!fs.existsSync(newIconPath)) {
-                let divineFrameBase = await loadAnimatedCubeIcon(`${config.relativeRootDirectory}/ccicons/attributespritesheets/${config.divineConfig.iconName}.png`);
-                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
-                iconFrames.forEach((frame, index) => {
-                    iconFrames[index] = strokeImage(frame, config.divineConfig.color, 1);
-                })
-                let neededIconFrames = maths.leastCommonMultiple(config.divineConfig.frames, iconFrames.length);
-                let newIconFrames: Jimp[] = [];
-                for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
-                    let divineFrameBaseIndex = frameIndex % divineFrameBase.length;
-                    let iconFrameIndex = frameIndex % iconFrames.length;
-                    if (divineFrameBase[divineFrameBaseIndex].bitmap.width !== (iconFrames[iconFrameIndex].bitmap.width * 2)) {
-                        divineFrameBase[divineFrameBaseIndex].resize(iconFrames[iconFrameIndex].bitmap.width * 2, iconFrames[0].bitmap.height * 2, Jimp.RESIZE_NEAREST_NEIGHBOR);
-                    }
-                    let iconFramePosition = (divineFrameBase[divineFrameBaseIndex].bitmap.width / 2) - (iconFrames[iconFrameIndex].bitmap.width / 2);
-                    newIconFrames.push(divineFrameBase[divineFrameBaseIndex].clone().composite(iconFrames[iconFrameIndex], iconFramePosition, iconFramePosition));
-                }
-                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`, config.getCubeAnimationDelay(modifyingID));
-            }
-            return {
-                directoryAddition: `/divine/`
-            };
-        }
-    },
-    slated: {
-        directory: '/slated',
-        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: any) {
-            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
-            const newImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}/slated`);
-            if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
-            const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
-            if (!fs.existsSync(newIconPath)) {
-                let slatedFrameBase = await loadAnimatedCubeIcon(`${config.relativeRootDirectory}/ccicons/attributespritesheets/${config.slatedConfig.iconName}.png`);
-                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
-                iconFrames.forEach((frame, index) => {
-                    iconFrames[index] = strokeImage(frame, config.slatedConfig.color, 1);
-                })
-                let neededIconFrames = maths.leastCommonMultiple(config.slatedConfig.frames, iconFrames.length);;
-                let newIconFrames: Jimp[] = [];
-                for (let frameIndex = 0; frameIndex < neededIconFrames; frameIndex++) {
-                    let slatedFrameBaseIndex = frameIndex % slatedFrameBase.length;
-                    let iconFrameIndex = frameIndex % iconFrames.length;
-                    if (slatedFrameBase[slatedFrameBaseIndex].bitmap.width !== (iconFrames[iconFrameIndex].bitmap.width * 2)) {
-                        slatedFrameBase[slatedFrameBaseIndex].resize(iconFrames[iconFrameIndex].bitmap.width * 2, iconFrames[0].bitmap.height * 2, Jimp.RESIZE_NEAREST_NEIGHBOR);
-                    }
-                    let iconFramePosition = (slatedFrameBase[slatedFrameBaseIndex].bitmap.width / 2) - (iconFrames[iconFrameIndex].bitmap.width / 2);
-                    newIconFrames.push(slatedFrameBase[slatedFrameBaseIndex].clone().composite(iconFrames[iconFrameIndex], iconFramePosition, iconFramePosition));
-                }
-                await saveAnimatedCubeIcon(newIconFrames, fileName, `${newImagePath}/`, config.getCubeAnimationDelay(modifyingID));
-            }
-            return {
-                directoryAddition: `/slated/`
-            };
         }
     },
     prefixes: {
@@ -703,11 +641,13 @@ const iconModifiers = {
                 async function compilePrefixFrames(masks: boolean, sizeOverride?: {width: number, height: number}) {
                     for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
                         const compilingPrefixID = shownPrefixes[shownPrefixIndex];
-                        if (prefixes[compilingPrefixID].maskOnly === masks) {
-                            if (sizeOverride) {
-                                allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), data.prefixSeed));
-                            } else {
-                                allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed));
+                        if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === false) {
+                            if (prefixes[compilingPrefixID].maskOnly === masks) {
+                                if (sizeOverride) {
+                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), data.prefixSeed));
+                                } else {
+                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed));
+                                }
                             }
                         }
                     }
@@ -715,7 +655,22 @@ const iconModifiers = {
 
                 await compilePrefixFrames(false);
 
-                const paddingValues = getNeededPaddingFromCompiledFrames(allPrefixFrames, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
+                const paddingValues = getNeededPaddingFromCompiledFrames([...allPrefixFrames, {
+                    frontFrames: iconFrames.map((frame): CCOIcons.compiledPrefixFrames["frontFrames"][number] => {
+                        return [{
+                            image: frame,
+                            compositePosition: {
+                                x: 0,
+                                y: 0
+                            }
+                        }]
+                    }),
+                    backFrames: [],
+                    frameModifiers: [],
+                    outlineFrames: [],
+                    maskFrames: [],
+                    sourceID: "Sacred"
+                }], iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
                 
                 await compilePrefixFrames(true, {
                     width: paddingValues.left + paddingValues.right + iconFrames[0].bitmap.width,
@@ -787,15 +742,13 @@ const iconModifiers = {
                         }
                     })
 
-                    allPrefixFrames.forEach(() => {
-                        // Composite the icon in the 'center layer'
-                        let strokedIconFrame = iconFrames[oldIconIndex];
-                        const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
-                        frameOutlines.icon.forEach(outline => {
-                            strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width);
-                        })
-                        newFrame.composite(strokedIconFrame, paddingValues.left - outlinePadding, paddingValues.above - outlinePadding);
+                    // Composite the icon in the 'center layer'
+                    let strokedIconFrame = iconFrames[oldIconIndex];
+                    const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
+                    frameOutlines.icon.forEach(outline => {
+                        strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width);
                     })
+                    newFrame.composite(strokedIconFrame, paddingValues.left - outlinePadding, paddingValues.above - outlinePadding);
 
                     allPrefixFrames.forEach(compiledPrefixFrames => {
                         if (compiledPrefixFrames.frontFrames.length > 0) {
@@ -833,6 +786,13 @@ const iconModifiers = {
                     })
 
                     newAnimation.push(newFrame);
+                }
+
+                for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
+                    const compilingPrefixID = shownPrefixes[shownPrefixIndex];
+                    if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === true) {
+                        newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, data.prefixSeed)).maskFrames;
+                    }
                 }
 
                 await saveAnimatedCubeIcon(newAnimation, fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
@@ -899,14 +859,6 @@ interface cubeIconGenerationParameters {
         use: boolean,
             data: any
     },
-    divine: {
-        use: boolean,
-            data: any
-    },
-    slated: {
-        use: boolean,
-            data: any
-    },
     prefixes: {
         use: boolean,
         data: {
@@ -948,14 +900,6 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     
     if (iconAttributes.contraband !== undefined && iconAttributes.contraband.use === true) {
         imageDirectories.push((await iconModifiers.contraband.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.contraband.data)).directoryAddition);
-    }
-    
-    if (iconAttributes.divine !== undefined && iconAttributes.divine.use === true) {
-        imageDirectories.push((await iconModifiers.divine.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.divine.data)).directoryAddition);
-    }
-    
-    if (iconAttributes.slated !== undefined && iconAttributes.slated.use === true) {
-        imageDirectories.push((await iconModifiers.slated.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.slated.data)).directoryAddition);
     }
 
     if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
@@ -1061,42 +1005,6 @@ const route: CCOIcons.documentedRoute = {
                         name: "512x512 Contraband Red Cube Icon",
                         example: "/cubeicon/red?contraband&size=512",
                         description: "Will return the contraband red cube icon at a size of 512x512px. Note: 'contraband' is simply provided without any value in the URL."
-                    }
-                ]
-            },
-            {
-                query: 'divine',
-                name: "Divine Attribute",
-                subtitle: "Whether or not you want the divine attribute modification to be applied.",
-                description: "You don't have to include anything as part of this parameter, simply including 'divine' as a query modifier in the URL is enough.",
-                examples: [
-                    {
-                        name: "Divine Cardboard Box Cube Icon",
-                        example: "/cubeicon/cardboardbox?divine",
-                        description: "Will return the 'cardboardbox' cubeID icon in its divine variant."
-                    },
-                    {
-                        name: "512x512 Divine B-Side Red Cube Icon",
-                        example: "/cubeicon/red?divine&bside",
-                        description: "Will return the divine b-side red cube icon. Note: 'divine' is simply provided without any value in the URL."
-                    }
-                ]
-            },
-            {
-                query: 'slated',
-                name: "Slated Attribute",
-                subtitle: "Whether or not you want the slated attribute modification to be applied.",
-                description: "You don't have to include anything as part of this parameter, simply including 'slated' as a query modifier in the URL is enough.",
-                examples: [
-                    {
-                        name: "Slated Medusa Cube Icon",
-                        example: "/cubeicon/medusa?slated",
-                        description: "Will return the 'medusa' cubeID icon in its slated variant."
-                    },
-                    {
-                        name: "512x512 Slated B-Side Orange Cube Icon",
-                        example: "/cubeicon/orange?slated&bside",
-                        description: "Will return the slated b-side orange cube icon. Note: 'slated' is simply provided without any value in the URL."
                     }
                 ]
             },
@@ -1276,18 +1184,6 @@ const route: CCOIcons.documentedRoute = {
             }
             if (req.query.bside !== undefined) {
                 cubeIconParams.bSide = {
-                    use: true,
-                    data: {}
-                }
-            }
-            if (req.query.divine !== undefined) {
-                cubeIconParams.divine = {
-                    use: true,
-                    data: {}
-                }
-            }
-            if (req.query.slated !== undefined) {
-                cubeIconParams.slated = {
                     use: true,
                     data: {}
                 }
