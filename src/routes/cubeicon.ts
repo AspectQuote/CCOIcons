@@ -1081,8 +1081,8 @@ const route: CCOIcons.documentedRoute = {
         let startIconGeneration = performance.now();
         // Set requested cube ID variable
         let requestedCubeID: CCOIcons.cubeID;
-        if (cubes[req.params.cubeid.toLowerCase() as CCOIcons.cubeID] !== undefined) {
-            requestedCubeID = (req.params.cubeid.toLowerCase() as CCOIcons.cubeID) ?? 'green';
+        if (cubes[(req.params?.cubeid ?? 'green').toLowerCase() as CCOIcons.cubeID] !== undefined) {
+            requestedCubeID = ((req.params?.cubeid ?? 'green').toLowerCase() as CCOIcons.cubeID);
         } else {
             requestedCubeID = 'green';
         }

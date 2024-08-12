@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import Jimp from 'jimp';
 import * as maths from '../maths';
-import { drawLine, fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
+import { drawLine, fillRect, loadAnimatedCubeIcon, parseHorizontalSpriteSheet, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
 let seedrandom = require('seedrandom');
 
 /**
@@ -2405,106 +2405,309 @@ const prefixes = {
             let neededAnimationFrames = maths.leastCommonMultiple(haloFrames.length, iconFrames.length);
 
             for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
-                const flamingFrame = haloFrames[animationFrameIndex % haloFrames.length];
+                const haloMovementFrame = haloFrames[animationFrameIndex % haloFrames.length];
                 const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
-                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(flamingFrame, cacheDirectory, frameHeadData, { x: 3, y: 14, width: 32 }, false);
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloMovementFrame, cacheDirectory, frameHeadData, { x: 3, y: 14, width: 32 }, false);
                 prefixFrames.frontFrames.push(headImagesThisFrame);
             }
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Menacing": {
         name: "Menacing",
         seeded: false,
         maskOnly: false,
-        appliesDirectlyAfterAllPrefixes: false,
+        appliesDirectlyAfterAllPrefixes: true,
         needs: {
             heads: false,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Menacing";
+
+            let menacingFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/menacing/menacing.png`);
+
+            let desiredFrames = 30;
+
+            const padding = 5;
+            const newFrameBase = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
+
+            let baseKeyFrames: animationKeyFrame[] = [
+                {
+                    x: Math.round(newFrameBase.bitmap.width * 0.7),
+                    y: newFrameBase.bitmap.height + menacingFrames[0].bitmap.height,
+                    layer: "front"
+                },
+                {
+                    x: Math.round(newFrameBase.bitmap.width * 1.1),
+                    y: -Math.round(menacingFrames[0].bitmap.height * 1.8),
+                    layer: "front"
+                }
+            ]
+
+            const menacingCount = Math.max(5, Math.floor(iconFrames[0].bitmap.height/50)*6);
+
+            const finalKeyFrames = generateInterpolatedFramesFromKeyFrames(desiredFrames * 2, baseKeyFrames, 1, 0).slice(0, desiredFrames);
+
+            const neededFrames = maths.leastCommonMultipleOfArray([desiredFrames, menacingFrames.length, iconFrames.length]);
+
+            const menacingFrameOffset = Math.round(menacingFrames[0].bitmap.width/2);
+            for (let newFrameIndex = 0; newFrameIndex < neededFrames; newFrameIndex++) {
+                const iconFrame = iconFrames[newFrameIndex % iconFrames.length];
+                let newFrame = newFrameBase.clone().composite(iconFrame, padding, padding);
+                for (let menacingIndex = 0; menacingIndex < menacingCount; menacingIndex++) {
+                    const keyFrameOffset = menacingIndex*Math.round(finalKeyFrames.length / menacingCount);
+                    const keyFrame = finalKeyFrames[(newFrameIndex + keyFrameOffset) % finalKeyFrames.length];
+                    const animationOffset = menacingIndex * Math.round(menacingFrames.length / menacingCount);
+                    const menacingFrame = menacingFrames[(newFrameIndex + animationOffset) % menacingFrames.length];
+                    
+                    newFrame.composite(menacingFrame, keyFrame.x - menacingFrameOffset, keyFrame.y - menacingFrameOffset);
+                }
+                prefixFrames.maskFrames.push(newFrame);
+            }
+
+            return prefixFrames;
         }
-    }, /*
+    },
     "Serving": {
-        name: "",
+        name: "Serving",
         seeded: false,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function(anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Serving";
+
+            let maidBonnetImage = await Jimp.read(`${prefixSourceDirectory}/serving/bonnet.png`);
+            let maidSkirtImage = await Jimp.read(`${prefixSourceDirectory}/serving/skirt.png`);
+            let maidSkirtBackImage = await Jimp.read(`${prefixSourceDirectory}/serving/skirtback.png`);
+
+            let skirtDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/serving/skirtfront/`);
+            if (!fs.existsSync(skirtDirectory)) fs.mkdirSync(skirtDirectory, { recursive: true });
+            let bonnetDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/serving/bonnet/`);
+            if (!fs.existsSync(bonnetDirectory)) fs.mkdirSync(bonnetDirectory, { recursive: true });
+            let backSkirtDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/serving/skirtback/`);
+            if (!fs.existsSync(backSkirtDirectory)) fs.mkdirSync(backSkirtDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const bonnetImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(maidBonnetImage, bonnetDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                const skirtImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(maidSkirtImage, skirtDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                prefixFrames.frontFrames.push([...bonnetImagesThisFrame, ...skirtImagesThisFrame]);
+
+                const backSkirtImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(maidSkirtBackImage, backSkirtDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                prefixFrames.backFrames.push(backSkirtImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Holy": {
-        name: "",
-        seeded: false,
+        name: "Holy",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Holy";
+            let seedGen = new seedrandom(`holy${seed}`);
+
+            let allGlowFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/holy/glows.png`);
+
+            let animationLength = Math.floor(seedGen() * (allGlowFrames.length - 1)) + 2;
+            let constructedGlowAnimation: Jimp[] = allGlowFrames.slice(-animationLength, -1);
+            for (let newAnimationIndex = 1; newAnimationIndex < animationLength; newAnimationIndex++) {
+                const sourceIndex = animationLength - newAnimationIndex - 1;
+                constructedGlowAnimation.push(constructedGlowAnimation[sourceIndex]);
+            }
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/holy/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(constructedGlowAnimation.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const haloFrame = constructedGlowAnimation[animationFrameIndex % constructedGlowAnimation.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloFrame, cacheDirectory, frameHeadData, { x: 24, y: 32, width: 32 }, false);
+                prefixFrames.backFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Unholy": {
-        name: "",
-        seeded: false,
+        name: "Unholy",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Unholy";
+            let seedGen = new seedrandom(`unholy${seed}`);
+
+            let allGlowFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/unholy/glows.png`);
+
+            let animationLength = Math.floor(seedGen() * (allGlowFrames.length - 1)) + 2;
+            let constructedGlowAnimation: Jimp[] = allGlowFrames.slice(-animationLength, -1);
+            for (let newAnimationIndex = 1; newAnimationIndex < animationLength; newAnimationIndex++) {
+                const sourceIndex = animationLength - newAnimationIndex - 1;
+                constructedGlowAnimation.push(constructedGlowAnimation[sourceIndex]);
+            }
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/unholy/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(constructedGlowAnimation.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const haloFrame = constructedGlowAnimation[animationFrameIndex % constructedGlowAnimation.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloFrame, cacheDirectory, frameHeadData, { x: 24, y: 32, width: 32 }, false);
+                prefixFrames.backFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Contaminated": {
-        name: "",
-        seeded: false,
+        name: "Contaminated",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
-        }
-    },
-    "Phosphorescent": {
-        name: "",
-        seeded: false,
-        maskOnly: false,
-        appliesDirectlyAfterAllPrefixes: false,
-        needs: {
-            heads: false,
-            eyes: false,
-            accents: false,
-            mouths: false
-        },
-        compileFrames: function(anchorPoints, seed) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Contaminated";
+            let seedGen = new seedrandom(`contaminated${seed}`);
+            let dropFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/contaminated/drip.png`), 20);
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/contaminated/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let dripPixels: {position: CCOIcons.coordinate, animationOffset: number}[] = [];
+            iconFrames[0].scan(0, 0, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height, function(x, y, idx) {
+                if (y < this.bitmap.height-1) {
+                    if (this.bitmap.data[idx + 3] > 0 && this.bitmap.data[this.getPixelIndex(x, y+1) + 3] === 0) {
+                        if (seedGen() > 0.8) {
+                            dripPixels.push({position: {x, y}, animationOffset: Math.floor(seedGen() * dropFrames.length)});
+                        }
+                    }
+                }
+            })
+            iconFrames.forEach((frame, index) => {
+                if (index !== 0) {
+                    dripPixels = dripPixels.filter((dripPixel) => {
+                        return (frame.bitmap.data[frame.getPixelIndex(dripPixel.position.x, dripPixel.position.y) + 3] > 0 && frame.bitmap.data[frame.getPixelIndex(dripPixel.position.x, dripPixel.position.y + 1) + 3] === 0) ;
+                    })
+                }
+            })
+
+            const padding = 5;
+
+            let neededAnimationFrames = maths.leastCommonMultiple(dropFrames.length, iconFrames.length);
+
+            for (let newAnimationFrameIndex = 0; newAnimationFrameIndex < neededAnimationFrames; newAnimationFrameIndex++) {
+                let newFrame = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
+                for (let dripIndex = 0; dripIndex < dripPixels.length; dripIndex++) {
+                    const dripPixel = dripPixels[dripIndex];
+                    const dripPixelAnimationFrame = dropFrames[(newAnimationFrameIndex + dripPixel.animationOffset) % dropFrames.length];
+                    newFrame.composite(dripPixelAnimationFrame, dripPixel.position.x + padding, dripPixel.position.y + 1 + padding);
+                }
+                prefixFrames.backFrames.push([{
+                    image: newFrame,
+                    compositePosition: {
+                        x: -padding,
+                        y: -padding
+                    }
+                }])
+            }
+
+            prefixFrames.outlineFrames.push([{ width: 1, color: 0x17f215ff, layers: ["icon", "front", "back"]}])
+
+            return prefixFrames;
         }
     },
     "Neko": {
+        name: "Neko",
+        seeded: true,
+        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
+        needs: {
+            heads: true,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Neko";
+            let seedGen = new seedrandom(`contaminated${seed}`);
+
+            
+            let allCatEars = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/neko/ears.png`);
+            let allCatTails = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/neko/tails.png`);
+            
+            const catVariation = Math.floor(seedGen() * allCatEars.length);
+
+            let catEarImage = allCatEars[catVariation];
+            let catTailImage = allCatTails[catVariation];
+
+            let earDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/neko/ears/`);
+            if (!fs.existsSync(earDirectory)) fs.mkdirSync(earDirectory, { recursive: true });
+            let tailDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/neko/tail/`);
+            if (!fs.existsSync(tailDirectory)) fs.mkdirSync(tailDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const catEarsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(catEarImage, earDirectory, frameHeadPosition, { x: 16, y: 24, width: 32 });
+                prefixFrames.frontFrames.push(catEarsThisFrame);
+
+                const catTailsThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(catTailImage, tailDirectory, frameHeadPosition, { x: 16, y: 24, width: 32 });
+                prefixFrames.backFrames.push(catTailsThisFrame);
+            }
+
+            return prefixFrames;
+        }
+    }, /*
+    "Phosphorescent": {
         name: "",
         seeded: false,
         maskOnly: false,
@@ -3996,6 +4199,8 @@ const prefixes = {
  * Describes the order in which prefixes should be applied; if applied in the wrong order, prefixes can look strange.
  */
 const prefixIDApplicationOrder = [
+    "Rippling", // Adds a sine wave to the cube
+
     // -------------- Prefixes That Add Environmental Stuffs (Or just super large props)
     "Orbital", // Adds 3 orbiting planets to the cube
     "Endangered", // Adds a sword on a string above the cube
@@ -4003,6 +4208,7 @@ const prefixIDApplicationOrder = [
     // -------------- Prefixes That Add Particles That don't depend on the cube
     "Leafy", // Adds some raining leaves to the cube
     "Snowy", // Adds some raining snow to the cube
+    "Menacing", // Adds a jjba-style menacing effect to the cube
     "Bugged", // Adds a Glitchy 'Missing Texture' Animation to the Cube
     "Cursed", // Adds a spinning Pentagram beneath the Cube
 
@@ -4010,6 +4216,9 @@ const prefixIDApplicationOrder = [
     "Flaming", // Makes the cube on FREAKING FIRE
     "Based", // Adds Flashing Eyes to the Cube
     "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
+    "Holy", // Adds an embellished animated decoration to the cube
+    "Unholy", // Adds an embellished animated decoration to the cube
+    "Contaminated", // Adds a dripping and outlined effect to the cube
 
     // -------------- Prefixes That Add Props (Accessories that aren't bound to the cube's parts)
     "Summoning", // Adds spinning cubes to the cube
@@ -4025,10 +4234,12 @@ const prefixIDApplicationOrder = [
     "Royal", // Adds a crown to the cube
     "Kramped", // Adds a pair of krampus horns to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Serving", // Adds a french-maid-style skirt and bonnet to the cube
     "Angelic", // Adds a halo to the cube
     "Dandy", // Adds space dandy hair to the cube
     "Foolish", // Adds a jester Hat to the Cube
     "Cruel", // Adds Cruelty Squad-Inspired Glasses to the Cube
+    "Neko", // Adds cat ears and tail to the cube
     "Tentacular", // Adds moving tentacles to the cube
     "Chained", // Adds moving chains to the cube
     "Adduced", // Adds moving caution tape to the cube
@@ -4045,7 +4256,6 @@ const prefixIDApplicationOrder = [
 
     // -------------- Prefixes that only apply filters
     "Raving", // Hue shifts the cube every frame to create a 'rainbow' effect
-    "Rippling", // Adds a sine wave to the cube
 
     // -------------- Divine and Slated Effects should always be behind everything else
     "Divine", // Divine Effect for the cube

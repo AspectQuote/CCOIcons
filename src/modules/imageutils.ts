@@ -155,6 +155,17 @@ function strokeImage(image: Jimp, color: number, thickness: number, strokeOnly: 
     return newImage;
 }
 
+function parseHorizontalSpriteSheet(image: Jimp, frameCount: number): Jimp[] {
+    let parsedFrames: Jimp[] = [];
+
+    const frameWidth = Math.floor(image.bitmap.width/frameCount);
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
+        parsedFrames.push(image.clone().crop(frameWidth*frameIndex, 0, frameWidth, image.bitmap.height));
+    }
+
+    return parsedFrames;
+}
+
 function drawLine(image: Jimp, color: number, startPoint: coordinate, endPoint: coordinate, thickness: number) {
 
 }
@@ -165,5 +176,6 @@ export {
     loadAnimatedCubeIcon,
     saveAnimatedCubeIcon,
     strokeImage,
-    drawLine
+    drawLine,
+    parseHorizontalSpriteSheet
 }
