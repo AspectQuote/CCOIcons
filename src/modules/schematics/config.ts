@@ -8,7 +8,7 @@ const cubePatternIndexLimit = 1000;
 /**
  * Controls how many prefix pattern indices there can be, it's pretty arbitrary.
  */
-const prefixPatternIndexLimit = 33;
+const prefixPatternIndexLimit = 100;
 
 /**
  * Controls how many prefixes can be displayed on a cube at once. Increasing this will GREATLY effect how many icons can be generated.

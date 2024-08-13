@@ -644,9 +644,9 @@ const iconModifiers = {
                         if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === false) {
                             if (prefixes[compilingPrefixID].maskOnly === masks) {
                                 if (sizeOverride) {
-                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), data.prefixSeed));
+                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), data.prefixSeed, cubes[modifyingID]));
                                 } else {
-                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed));
+                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed, cubes[modifyingID]));
                                 }
                             }
                         }
@@ -936,7 +936,7 @@ const route: CCOIcons.documentedRoute = {
                 parameter: ':cubeid',
                 name: "Cube ID",
                 subtitle: "ID of any Cube",
-                description: "Accepts any cube ID. Changes the requested icon to that cube ID. For example, 'green' will give the green cube icon. Similarly, 'red' will return the Red Cube's icon, so on and so forth.",
+                description: "Accepts any cube ID. Changes the requested icon to that cube ID. For example, 'green' will give the green cube icon. Similarly, 'red' will return the Red Cube's icon, so on and so forth. If 'random' is supplied, a random cubeID will be used.",
                 required: false,
                 requiredNote: "If no cubeid is given the server will return the 'green' cube icon.",
                 examples: [
@@ -949,6 +949,11 @@ const route: CCOIcons.documentedRoute = {
                         name: "Raccoon Cube Icon",
                         example: "/cubeicon/raccoon",
                         description: "Will return the icon for the raccoon cube."
+                    },
+                    {
+                        name: "Random Cube Icon",
+                        example: "/cubeicon/random",
+                        description: "Will return the icon for a random cube."
                     }
                 ]
             }
@@ -1083,6 +1088,8 @@ const route: CCOIcons.documentedRoute = {
         let requestedCubeID: CCOIcons.cubeID;
         if (cubes[(req.params?.cubeid ?? 'green').toLowerCase() as CCOIcons.cubeID] !== undefined) {
             requestedCubeID = ((req.params?.cubeid ?? 'green').toLowerCase() as CCOIcons.cubeID);
+        } else if (req.params?.cubeid === 'random') {
+            requestedCubeID = (Object.keys(cubes) as CCOIcons.cubeID[])[Math.floor(Math.random() * Object.keys(cubes).length)]
         } else {
             requestedCubeID = 'green';
         }

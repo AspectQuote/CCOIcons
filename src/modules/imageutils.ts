@@ -3,6 +3,7 @@ import * as fs from 'fs-extra';
 import path from 'path';
 import * as gifwrap from 'gifwrap';
 import { coordinate } from 'src/typedefs';
+import * as config from './schematics/config';
 
 /**
  * Get the RGBA representation of a hex literal
@@ -166,6 +167,92 @@ function parseHorizontalSpriteSheet(image: Jimp, frameCount: number): Jimp[] {
     return parsedFrames;
 }
 
+async function generateSmallWordImage(word: string, background: number, color: number, padding: number): Promise<Jimp> {
+    const alphabetLetters = parseHorizontalSpriteSheet(await Jimp.read(`${config.relativeRootDirectory}/CCOIcons/${config.sourceImagesDirectory}/misc/smallalphabet.png`), 37);
+    return await assembleWordImage(word, alphabetLetters, background, color, padding);
+}
+
+async function assembleWordImage(word: string, alphabetLetters: Jimp[], background: number, color: number, padding: number): Promise<Jimp> {
+    const lowerCaseCharCodeOffset = 97;
+    const upperCaseCharCodeOffset = 65;
+    const spaceCharCode = 32;
+    const singleQuoteCharCode = 39;
+    const doubleQuoteCharCode = 34;
+    const exclamationCharCode = 33;
+    const questionMarkCharCode = 63;
+    const periodCharCode = 46;
+    const dashCharCode = 45;
+    const underscoreCharCode = 95;
+    const equalsCharCode = 61;
+    const plusCharCode = 43;
+    
+    const imageWidth = alphabetLetters[0].bitmap.width * word.length;
+    const imageHeight = alphabetLetters[0].bitmap.height / 2;
+    const image = new Jimp(imageWidth, imageHeight, background);
+
+    const letterArray = word.split('');
+
+    let writeXPosition = 0;
+    for (let letterArrayIndex = 0; letterArrayIndex < letterArray.length; letterArrayIndex++) {
+        const character = letterArray[letterArrayIndex];
+        let letterImageIndex = character.charCodeAt(0);
+        let cropYOffset = 0;
+        if (!Number.isNaN(parseInt(character))) { // Character is a number
+            letterImageIndex = 26 + parseInt(character);
+        } else if (letterImageIndex === spaceCharCode) { // Character is a space
+            letterImageIndex = 26;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === singleQuoteCharCode) { // Character is a single quote
+            letterImageIndex = 27;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === doubleQuoteCharCode) { // Character is a double quote
+            letterImageIndex = 28;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === exclamationCharCode) { // Character is an exclamation point
+            letterImageIndex = 29;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === questionMarkCharCode) { // Character is a question mark
+            letterImageIndex = 30;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === periodCharCode) { // Character is a period
+            letterImageIndex = 31;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === dashCharCode) { // Character is a dash
+            letterImageIndex = 32;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === underscoreCharCode) { // Character is an underscore
+            letterImageIndex = 33;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === equalsCharCode) { // Character is a equals sign
+            letterImageIndex = 34;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === plusCharCode) { // Character is a plus sign
+            letterImageIndex = 35;
+            cropYOffset += imageHeight;
+        } else if (character.toUpperCase() === character) { // Character is uppercase
+            letterImageIndex -= upperCaseCharCodeOffset;
+        } else { // Character is lowercase
+            letterImageIndex -= lowerCaseCharCodeOffset;
+            cropYOffset += imageHeight;
+        }
+        if (letterImageIndex < 0 || letterImageIndex >= alphabetLetters.length) {
+            letterImageIndex = alphabetLetters.length - 1;
+        }
+
+        const characterImage = alphabetLetters[letterImageIndex].clone().crop(0, cropYOffset, alphabetLetters[0].bitmap.width, imageHeight + cropYOffset);
+
+        characterImage.scan(0, 0, characterImage.bitmap.width, characterImage.bitmap.height, function (x, y, idx) {
+            if (this.bitmap.data[idx + 3] > 0) {
+                image.setPixelColor(color, (x + writeXPosition) % image.bitmap.width, y % image.bitmap.height);
+            }
+        })
+
+        writeXPosition += characterImage.bitmap.width;
+    }
+
+    return strokeImage(image, background, padding);
+}
+
 function drawLine(image: Jimp, color: number, startPoint: coordinate, endPoint: coordinate, thickness: number) {
 
 }
@@ -177,5 +264,6 @@ export {
     saveAnimatedCubeIcon,
     strokeImage,
     drawLine,
-    parseHorizontalSpriteSheet
+    parseHorizontalSpriteSheet,
+    generateSmallWordImage
 }
