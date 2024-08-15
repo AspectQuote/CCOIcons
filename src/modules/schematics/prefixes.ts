@@ -375,7 +375,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
-        compileFrames: async function (anchorPoints, iconFrames, seed) {
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Sacred";
@@ -2899,9 +2899,9 @@ const prefixes = {
     },
     "Wanted": {
         name: "Wanted",
-        seeded: false,
+        seeded: true,
         maskOnly: false,
-        appliesDirectlyAfterAllPrefixes: false,
+        appliesDirectlyAfterAllPrefixes: true,
         needs: {
             heads: false,
             eyes: false,
@@ -2911,9 +2911,13 @@ const prefixes = {
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Wanted";
+            let seedGen = new seedrandom(`wanted${seed}`);
 
             let neededWords: string[] = [''];
             const wordLengthCutoff = 6;
+            const posterBackgroundColor = 0xd9bfb6ff;
+            const posterBorderColor = 0x9e8177ff;
+            const posterTextColor = 0x9e8177ff;
             
             cubeData.name.toUpperCase().split('').forEach(character => {
                 const modifyingIndex = neededWords.length - 1;
@@ -2928,24 +2932,114 @@ const prefixes = {
 
             for (let wordIndex = 0; wordIndex < neededWords.length; wordIndex++) {
                 const word = neededWords[wordIndex];
-                wordImages.push(await generateSmallWordImage(word, 0x00000000, 0xffffffff, 1));
+                wordImages.push(await generateSmallWordImage(word, 0x00000000, posterTextColor, 1));
             }
 
-            const newFrame = new Jimp(Math.max(...wordImages.map(image => image.bitmap.width)), wordImages.reduce((prev, curr) => {
+            const wantedPosterName = new Jimp(Math.max(...wordImages.map(image => image.bitmap.width)), wordImages.reduce((prev, curr) => {
                 return prev + curr.bitmap.height;
             }, 0), 0x00000000);
 
             wordImages.forEach((image, index) => {
-                newFrame.composite(image, (newFrame.bitmap.width-image.bitmap.width) / 2, index * image.bitmap.height);
+                wantedPosterName.composite(image, (wantedPosterName.bitmap.width-image.bitmap.width) / 2, index * image.bitmap.height);
             })
 
-            prefixFrames.frontFrames.push([{
-                image: newFrame,
-                compositePosition: {
-                    x: (iconFrames[0].bitmap.width - newFrame.bitmap.width) / 2,
-                    y: iconFrames[0].bitmap.height 
+            const wantedPosterTitle = await Jimp.read(`${prefixSourceDirectory}/wanted/postertitle.png`);
+
+            const wantedPosterBaseWidth = Math.max(wantedPosterName.bitmap.width, iconFrames[0].bitmap.width, wantedPosterTitle.bitmap.width);
+
+            let cubeTextDistance = 6;
+            let cubeTitleDistance = 5;
+            const posterPadding = 5;
+            
+            const wantedPosterBaseHeight = wantedPosterName.bitmap.height + cubeTextDistance + iconFrames[0].bitmap.height + cubeTitleDistance + wantedPosterTitle.bitmap.height;
+
+            const wantedPosterSize = Math.max(wantedPosterBaseWidth, wantedPosterBaseHeight);
+            
+            if (wantedPosterBaseHeight < wantedPosterSize) {
+                const leftoverPixels = wantedPosterSize - (wantedPosterName.bitmap.height + iconFrames[0].bitmap.height + wantedPosterTitle.bitmap.height);
+                cubeTextDistance = Math.ceil(leftoverPixels/2);
+                cubeTitleDistance = Math.floor(leftoverPixels/2);
+            }
+
+            const constructedPoster = new Jimp(wantedPosterSize, wantedPosterSize, posterBackgroundColor);
+
+            let compositeYPostion = 0;
+            constructedPoster.composite(wantedPosterTitle, (wantedPosterSize-wantedPosterTitle.bitmap.width)/2, compositeYPostion);
+            compositeYPostion += wantedPosterTitle.bitmap.height;
+            compositeYPostion += cubeTitleDistance;
+
+            const cubeCompositeYPosition = compositeYPostion + posterPadding + 1;
+            const cubeCompositeXPosition = (constructedPoster.bitmap.width - iconFrames[0].bitmap.width) / 2;
+
+            compositeYPostion += iconFrames[0].bitmap.height;
+            compositeYPostion += cubeTextDistance;
+
+            constructedPoster.composite(wantedPosterName, (wantedPosterSize - wantedPosterName.bitmap.width) / 2, compositeYPostion);
+
+            const completePoster = strokeImage(strokeImage(constructedPoster, posterBackgroundColor, posterPadding, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]), posterBorderColor, 1, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]);
+
+            const ripsOnEachSide = [
+                Math.round(seedGen() * (wantedPosterSize/5)) + 3,  // Top
+                Math.round(seedGen() * (wantedPosterSize/5)) + 3,  // Right
+                Math.round(seedGen() * (wantedPosterSize/5)) + 3,  // Bottom
+                Math.round(seedGen() * (wantedPosterSize/5)) + 3,  // Left
+            ]
+
+            const ripImages = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/wanted/rips.png`), 4);
+            const ripSize = ripImages[0].bitmap.width;
+            const ripsInEachFrame = Math.floor(ripImages[0].bitmap.height/ripSize);
+
+            for (let ripsOnEachSideIndex = 0; ripsOnEachSideIndex < ripsOnEachSide.length; ripsOnEachSideIndex++) {
+                const ripCount = ripsOnEachSide[ripsOnEachSideIndex];
+                for (let ripIndex = 0; ripIndex < ripCount; ripIndex++) {
+                    let ripCompositeXPosition = 0;
+                    let ripCompositeYPosition = 0;
+                    const usingRip = Math.floor(seedGen() * ripsInEachFrame);
+                    switch (ripsOnEachSideIndex) {
+                        case 0:
+                            ripCompositeXPosition = Math.round(seedGen() * (completePoster.bitmap.width));
+                            break;
+                        case 1:
+                            ripCompositeXPosition = completePoster.bitmap.width - ripSize;
+                            ripCompositeYPosition = Math.round(seedGen() * (completePoster.bitmap.height));
+                            break;
+                        case 2:
+                            ripCompositeYPosition = completePoster.bitmap.height - ripSize;
+                            ripCompositeXPosition = Math.round(seedGen() * (completePoster.bitmap.width));
+                            break;
+                        case 3:
+                            ripCompositeYPosition = Math.round(seedGen() * (completePoster.bitmap.height));
+                            break;
+                        default:
+                            break;
+                    }
+                    ripImages[ripsOnEachSideIndex % ripImages.length].scan(0, (ripSize * usingRip), ripSize, ripSize, function(x, y, idx) {
+                        const pixelDestinationX = (x % ripSize) + ripCompositeXPosition;
+                        const pixelDestinationY = (y % ripSize) + ripCompositeYPosition;
+                        if (completePoster.bitmap.data[completePoster.getPixelIndex(pixelDestinationX, pixelDestinationY) + 3] > 0) {
+                            completePoster.setPixelColor(this.getPixelColor(x, y), pixelDestinationX, pixelDestinationY)
+                        }
+                    })
                 }
-            }])
+            }
+
+            let shadowFrames: Jimp[] = [];
+            iconFrames.forEach(frame => {
+                const newShadowFrame = new Jimp(frame.bitmap.width, frame.bitmap.height, 0x00000000);
+                frame.scan(0, 0, frame.bitmap.width, frame.bitmap.height, function(x, y, idx) {
+                    if (this.bitmap.data[idx + 3] > 0) {
+                        newShadowFrame.setPixelColor(0x000000ff, x, y);
+                        newShadowFrame.bitmap.data[idx + 3] = this.bitmap.data[idx + 3];
+                        newShadowFrame.bitmap.data[idx + 3] = Math.round(newShadowFrame.bitmap.data[idx + 3] * 0.4);
+                    }
+                })
+                shadowFrames.push(newShadowFrame)
+            })
+
+            let shadowDistance = 3;
+            iconFrames.forEach((frame, index) => {
+                prefixFrames.maskFrames.push(completePoster.clone().composite(shadowFrames[index], posterPadding + 1 + cubeCompositeXPosition + shadowDistance, cubeCompositeYPosition + shadowDistance).composite(strokeImage(frame, 0x9e8177ff, 1, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]), posterPadding + 1 + cubeCompositeXPosition, cubeCompositeYPosition));
+            })
 
             return prefixFrames;
         }

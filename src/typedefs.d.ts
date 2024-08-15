@@ -174,8 +174,10 @@ export type compiledPrefixFrames = {
     /**
      * What outlines should be applied to the cube and prefix per-frame.
      */
-    outlineFrames: {width: number, color: number, layers: ("back" | "front" | "icon")[]}[][]
+    outlineFrames: {width: number, color: number, matrix?: strokeMatrix, layers: ("back" | "front" | "icon")[]}[][]
 }
+
+export type strokeMatrix = [[(1 | 0), (1 | 0), (1 | 0)], [(1 | 0), (1 | 0), (1 | 0)], [(1 | 0), (1 | 0), (1 | 0)]];
 
 export type JimpImgMod = { apply: "lighten" | "brighten" | "darken" | "desaturate" | "saturate" | "greyscale" | "spin" | "hue" | "mix" | "tint" | "shade" | "xor" | "red" | "green" | "blue", params: [number] };
 

@@ -2,7 +2,7 @@ import Jimp from 'jimp';
 import * as fs from 'fs-extra';
 import path from 'path';
 import * as gifwrap from 'gifwrap';
-import { coordinate } from 'src/typedefs';
+import { coordinate, strokeMatrix } from 'src/typedefs';
 import * as config from './schematics/config';
 
 /**
@@ -105,27 +105,38 @@ async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPa
  * @param strokeOnly Only return an image with the stroke, not the original image
  * @returns The image after the stroke is applied
  */
-function strokeImage(image: Jimp, color: number, thickness: number, strokeOnly: boolean = false): Jimp {
+function strokeImage(image: Jimp, color: number, thickness: number, strokeOnly: boolean = false, matrix: strokeMatrix = [
+    [0, 1, 0],
+    [1, 0, 1],
+    [0, 1, 0]
+]): Jimp {
     let outlineCoords: { x: number, y: number }[] = [];
     let strokeWidth = Math.max(thickness, 1);
     let newImage = new Jimp(image.bitmap.width + (strokeWidth * 2), image.bitmap.height + (strokeWidth * 2), 0x00000000);
+    if (matrix.length !== 3 || matrix[0]?.length !== 3) {
+        console.log("stroke Image: bad matrix supplied.", matrix)
+        return process.exit(1)
+    }
     if (!strokeOnly) newImage.composite(image, strokeWidth, strokeWidth);
 
     image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(x, y, idx) {
         if (this.bitmap.data[idx + 3] != 0) {
-            for (let pixelXOffset = -1; pixelXOffset <= 1; pixelXOffset++) {
-                let checkingCoords: { x: number, y: number }[] = [
-                    { x: x - 1, y: y },
-                    { x: x + 1, y: y },
-                    { x: x, y: y - 1 },
-                    { x: x, y: y + 1 }
-                ];
-
-                checkingCoords.forEach(coord => {
-                    if (coord.x < 0 || coord.y < 0 || coord.x >= this.bitmap.width || coord.y >= this.bitmap.height || this.bitmap.data[this.getPixelIndex(coord.x, coord.y) + 3] === 0) {
-                        outlineCoords.push({x: coord.x + strokeWidth, y: coord.y + strokeWidth});
+            for (let matrixYIndex = -1; matrixYIndex < matrix.length - 1; matrixYIndex++) {
+                const matrixRow = matrix[matrixYIndex + 1];
+                for (let matrixXIndex = -1; matrixXIndex < matrixRow.length - 1; matrixXIndex++) {
+                    const matrixCheck = matrixRow[matrixXIndex + 1];
+                    if (matrixCheck === 1) {
+                        const coord = {
+                            x: x + matrixXIndex,
+                            y: y + matrixYIndex
+                        }
+                        if (coord.x !== x || coord.y !== y) {
+                            if (coord.x < 0 || coord.y < 0 || coord.x >= this.bitmap.width || coord.y >= this.bitmap.height || this.bitmap.data[this.getPixelIndex(coord.x, coord.y) + 3] === 0) {
+                                outlineCoords.push({ x: coord.x + strokeWidth, y: coord.y + strokeWidth });
+                            }
+                        }
                     }
-                })
+                }
             }
         }
     })
@@ -135,18 +146,23 @@ function strokeImage(image: Jimp, color: number, thickness: number, strokeOnly: 
     for (let strokeIndex = 0; strokeIndex < strokeWidth-1; strokeIndex++) {
         let newOutlineCoords: typeof outlineCoords = [];
         outlineCoords.forEach(coord => {
-            let checkingCoords: { x: number, y: number }[] = [
-                { x: coord.x - 1, y: coord.y },
-                { x: coord.x + 1, y: coord.y },
-                { x: coord.x, y: coord.y - 1 },
-                { x: coord.x, y: coord.y + 1 }
-            ];
-
-            checkingCoords.forEach(newCoord => {
-                if (newCoord.x < 0 || newCoord.y < 0 || newCoord.x >= newImage.bitmap.width || newCoord.y >= newImage.bitmap.height || newImage.bitmap.data[newImage.getPixelIndex(newCoord.x, newCoord.y) + 3] === 0) {
-                    newOutlineCoords.push({ x: newCoord.x, y: newCoord.y });
+            for (let matrixYIndex = -1; matrixYIndex < matrix.length - 1; matrixYIndex++) {
+                const matrixRow = matrix[matrixYIndex + 1];
+                for (let matrixXIndex = -1; matrixXIndex < matrixRow.length - 1; matrixXIndex++) {
+                    const matrixCheck = matrixRow[matrixXIndex + 1];
+                    if (matrixCheck === 1) {
+                        const newCoord = {
+                            x: coord.x + matrixXIndex,
+                            y: coord.y + matrixYIndex
+                        }
+                        if (coord.x !== newCoord.x || coord.y !== newCoord.y) {
+                            if (newCoord.x < 0 || newCoord.y < 0 || newCoord.x >= newImage.bitmap.width || newCoord.y >= newImage.bitmap.height || newImage.bitmap.data[newImage.getPixelIndex(newCoord.x, newCoord.y) + 3] === 0) {
+                                newOutlineCoords.push({ x: newCoord.x, y: newCoord.y });
+                            }
+                        }
+                    }
                 }
-            })
+            }
         })
 
         outlineCoords = newOutlineCoords;
@@ -168,7 +184,7 @@ function parseHorizontalSpriteSheet(image: Jimp, frameCount: number): Jimp[] {
 }
 
 async function generateSmallWordImage(word: string, background: number, color: number, padding: number): Promise<Jimp> {
-    const alphabetLetters = parseHorizontalSpriteSheet(await Jimp.read(`${config.relativeRootDirectory}/CCOIcons/${config.sourceImagesDirectory}/misc/smallalphabet.png`), 37);
+    const alphabetLetters = parseHorizontalSpriteSheet(await Jimp.read(`${config.relativeRootDirectory}/CCOIcons/${config.sourceImagesDirectory}/misc/smallalphabet.png`), 38);
     return await assembleWordImage(word, alphabetLetters, background, color, padding);
 }
 
@@ -185,6 +201,8 @@ async function assembleWordImage(word: string, alphabetLetters: Jimp[], backgrou
     const underscoreCharCode = 95;
     const equalsCharCode = 61;
     const plusCharCode = 43;
+    const openParenthesisCharCode = 40;
+    const closedParenthesisCharCode = 41;
     
     const imageWidth = alphabetLetters[0].bitmap.width * word.length;
     const imageHeight = alphabetLetters[0].bitmap.height / 2;
@@ -229,6 +247,11 @@ async function assembleWordImage(word: string, alphabetLetters: Jimp[], backgrou
         } else if (letterImageIndex === plusCharCode) { // Character is a plus sign
             letterImageIndex = 35;
             cropYOffset += imageHeight;
+        } else if (letterImageIndex === openParenthesisCharCode) { // Character is an open parenthesis
+            letterImageIndex = 36;
+            cropYOffset += imageHeight;
+        } else if (letterImageIndex === closedParenthesisCharCode) { // Character is a closed parenthesis
+            letterImageIndex = 36;
         } else if (character.toUpperCase() === character) { // Character is uppercase
             letterImageIndex -= upperCaseCharCodeOffset;
         } else { // Character is lowercase

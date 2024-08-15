@@ -423,7 +423,7 @@ const iconModifiers = {
                     contrabandEffectClone.mask(frameMasks[frameIndex % frameMasks.length], 0, 0);
                     // let accentImage = strokeImage(contrabandEffectClone, 0x000000ff, contrabandOutlineThickness);
                     
-                    iconFrames[frameIndex] = strokeImage(iconFrames[frameIndex].composite(contrabandEffectClone, 0, 0), 0x000000ff, contrabandOutlineThickness);
+                    iconFrames[frameIndex] = strokeImage(iconFrames[frameIndex].composite(contrabandEffectClone, 0, 0), 0x000000ff, contrabandOutlineThickness, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]);
                 }
                 await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
             }
@@ -475,7 +475,7 @@ const iconModifiers = {
                     tallyNumberImage.composite(tallyNumberFrames[number], ((tallyNumberWidth + tallyNumberPadding) * index), 0);
                 })
 
-                tallyNumberImage = strokeImage(tallyNumberImage, 0x000000ff, 1);
+                tallyNumberImage = strokeImage(tallyNumberImage, 0x000000ff, 1, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]);
 
 
                 let iconFrames: Jimp[] = [];
@@ -703,7 +703,8 @@ const iconModifiers = {
                         [key in ("front" | "back" | "icon")]: {
                             color: number,
                             width: number,
-                            origin: CCOIcons.prefixID
+                            origin: CCOIcons.prefixID,
+                            matrix: CCOIcons.strokeMatrix | undefined
                         }[]
                     } = {
                         front: [],
@@ -720,7 +721,8 @@ const iconModifiers = {
                                     frameOutlines[layerKey].push({
                                         color: outlinesOnFrame.color,
                                         width: outlinesOnFrame.width,
-                                        origin: compiledPrefixFrames.sourceID
+                                        origin: compiledPrefixFrames.sourceID,
+                                        matrix: outlinesOnFrame.matrix ?? undefined
                                     })
                                 })
                             })
@@ -735,7 +737,7 @@ const iconModifiers = {
                             backFrame.forEach(partOfFrame => {
                                 let strokedBackFrame = partOfFrame.image;
                                 frameOutlines.back.forEach(outline => {
-                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedBackFrame = strokeImage(strokedBackFrame, outline.color, outline.width);
+                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedBackFrame = strokeImage(strokedBackFrame, outline.color, outline.width, false, outline.matrix);
                                 })
                                 newFrame.composite(strokedBackFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding)
                             })
@@ -746,7 +748,7 @@ const iconModifiers = {
                     let strokedIconFrame = iconFrames[oldIconIndex];
                     const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
                     frameOutlines.icon.forEach(outline => {
-                        strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width);
+                        strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width, false, outline.matrix);
                     })
                     newFrame.composite(strokedIconFrame, paddingValues.left - outlinePadding, paddingValues.above - outlinePadding);
 
@@ -758,7 +760,7 @@ const iconModifiers = {
                             frontFrame.forEach(partOfFrame => {
                                 let strokedFrontFrame = partOfFrame.image;
                                 frameOutlines.front.forEach(outline => {
-                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedFrontFrame = strokeImage(strokedFrontFrame, outline.color, outline.width);
+                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedFrontFrame = strokeImage(strokedFrontFrame, outline.color, outline.width, false, outline.matrix);
                                 })
                                 newFrame.composite(strokedFrontFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding)
                             })
@@ -791,7 +793,7 @@ const iconModifiers = {
                 for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
                     const compilingPrefixID = shownPrefixes[shownPrefixIndex];
                     if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === true) {
-                        newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, data.prefixSeed)).maskFrames;
+                        newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, data.prefixSeed, cubes[modifyingID])).maskFrames;
                     }
                 }
 
