@@ -12,7 +12,7 @@ import * as maths from '../modules/maths';
 let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
-const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityConfig.json');
+const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityconfig.json');
 const patternSchema: { [key in CCOIcons.patternedCubeID]: CCOIcons.patternedCubeDefinition } = fs.readJSONSync('./config/patterneditems.json');
 const patternedCubeIDs: CCOIcons.patternedCubeID[] = Object.keys(patternSchema) as CCOIcons.patternedCubeID[];
 const validPrefixIDs: CCOIcons.prefixID[] = Object.keys(prefixes) as CCOIcons.prefixID[];
@@ -456,7 +456,7 @@ const iconModifiers = {
         modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { tallies: number }) {
             const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
             // Create the directory path of the outcome of this modification
-            const tallyNumber = Math.floor(data.tallies % 101).toString();
+            const tallyNumber = Math.floor(Math.min(Math.abs(data.tallies), config.maxTallyPercent)).toString();
             const outcomeFolder = `/tallying${tallyNumber}`
             const outcomePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${outcomeFolder}`);
             // Create the outcome path of the file
@@ -464,7 +464,7 @@ const iconModifiers = {
             // If the path to the directory doesn't exist, create it.
             if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
             // If the icon hasn't been generated yet, then generate it (in this case, it's just adding the tally flavor to the bottom right of the cube.)
-            if (!fs.existsSync(outcomeFile)) {
+            if (!fs.existsSync(outcomeFile) || !config.useTallyingImageCache) {
                 let tallyNumberFrames = await loadAnimatedCubeIcon(`./sourceicons/attributeeffects/tallying/tallynumbers.png`);
                 const tallyNumberWidth = tallyNumberFrames[0].bitmap.width;
                 const tallyNumberPadding = 1;
@@ -475,7 +475,7 @@ const iconModifiers = {
                     tallyNumberImage.composite(tallyNumberFrames[number], ((tallyNumberWidth + tallyNumberPadding) * index), 0);
                 })
 
-                tallyNumberImage = strokeImage(tallyNumberImage, 0x000000ff, 1, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]);
+                tallyNumberImage = strokeImage(strokeImage(tallyNumberImage, 0x000000ff, 1, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]), 0x616161ff, 1, false, [[0, 0, 0], [0, 0, 0], [0, 0, 1]]);
 
 
                 let iconFrames: Jimp[] = [];
@@ -485,7 +485,16 @@ const iconModifiers = {
                 let tallyNumberY = iconFrames[0].bitmap.height - tallyNumberImage.bitmap.height - 1;
 
                 for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
-                    iconFrames[frameIndex].composite(tallyNumberImage, tallyNumberX, tallyNumberY);
+                    if (tallyNumberImage.bitmap.width > iconFrames[frameIndex].bitmap.width) {
+                        const newFrameSize = tallyNumberImage.bitmap.width;
+                        let newFrame = new Jimp(newFrameSize, newFrameSize, 0x00000000);
+                        const newIconPosition = Math.round((newFrameSize / 2) - (iconFrames[frameIndex].bitmap.width / 2));
+                        newFrame.composite(iconFrames[frameIndex], newIconPosition, newIconPosition);
+                        newFrame.composite(tallyNumberImage, 0, newFrame.bitmap.height-tallyNumberImage.bitmap.height-1);
+                        iconFrames[frameIndex] = newFrame;
+                    } else {
+                        iconFrames[frameIndex].composite(tallyNumberImage, tallyNumberX, tallyNumberY);
+                    }
                 }
                 await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
             }
@@ -980,6 +989,24 @@ const route: CCOIcons.documentedRoute = {
                 ]
             },
             {
+                query: 'tallying',
+                name: "Cube Tallies",
+                subtitle: "The desired tallying completion percent.",
+                description: `The desired tally completion percent, with the minimum being 0, and the maximum being ${config.maxTallyPercent}.`,
+                examples: [
+                    {
+                        name: "Initial Tallying Cube Icon",
+                        example: "/cubeicon?tallying=0",
+                        description: "Will return the 'green' cubeID icon with 0% tally completion."
+                    },
+                    {
+                        name: "High Percent Tallying Cube Icon",
+                        example: "/cubeicon/orange?tallying=1182",
+                        description: "Will return the 'orange' cubeID icon with 1182% tally completion."
+                    },
+                ]
+            },
+            {
                 query: 'bside',
                 name: "B-Side Icon",
                 subtitle: "Whether or not you want the B-Side attribute modification to be applied.",
@@ -1171,9 +1198,6 @@ const route: CCOIcons.documentedRoute = {
                 }
                 if (possibleIconTallies < 0) {
                     possibleIconTallies = Math.abs(possibleIconTallies); // If the tally% is less than 0, then set it to the positive version of that number.
-                }
-                if (possibleIconTallies > 101) {
-                    possibleIconTallies = possibleIconTallies % 101; // If the tally% is greater than 100%, then just take the modulus of the %.
                 }
                 cubeIconParams.tallying = {
                     use: true,

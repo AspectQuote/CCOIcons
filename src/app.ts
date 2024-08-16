@@ -22,7 +22,7 @@ app.use((req, res, next) => {
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
 let allCubeIDs = (Object.keys(cubes) as CCOIcons.cubeID[]);
-const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityConfig.json')
+const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityconfig.json')
 
 import { cubeIconRoute } from './routes/cubeicon';
 import { customBSideIconRoute } from './routes/custombsideicon';

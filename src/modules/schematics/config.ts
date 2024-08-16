@@ -134,6 +134,16 @@ const useResizeCache = false;
  */
 const useBaseCubeCache = false;
 
+/**
+ * Whether or not to regenerate tallying images each time they are requested. Used for debugging.
+ */
+const useTallyingImageCache = false;
+
+/**
+ * The maximum % of tallies that the server will generate
+ */
+const maxTallyPercent = 999;
+
 export {
     cubePatternIndexLimit,
     prefixPatternIndexLimit,
@@ -150,5 +160,7 @@ export {
     sourceImagesDirectory,
     usePrefixImageCache,
     useBaseCubeCache,
-    useResizeCache
+    useResizeCache,
+    useTallyingImageCache,
+    maxTallyPercent
 }
