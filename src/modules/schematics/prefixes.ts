@@ -2439,12 +2439,12 @@ const prefixes = {
             let baseKeyFrames: animationKeyFrame[] = [
                 {
                     x: Math.round(newFrameBase.bitmap.width * 0.7),
-                    y: newFrameBase.bitmap.height + menacingFrames[0].bitmap.height,
+                    y: newFrameBase.bitmap.height + Math.round(1.2 * menacingFrames[0].bitmap.height),
                     layer: "front"
                 },
                 {
                     x: Math.round(newFrameBase.bitmap.width * 1.1),
-                    y: -Math.round(menacingFrames[0].bitmap.height * 1.8),
+                    y: -Math.round(menacingFrames[0].bitmap.height * 2.2),
                     layer: "front"
                 }
             ]
@@ -2985,41 +2985,43 @@ const prefixes = {
                 Math.round(seedGen() * (wantedPosterSize/5)) + 3,  // Left
             ]
 
-            const ripImages = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/wanted/rips.png`), 4);
-            const ripSize = ripImages[0].bitmap.width;
-            const ripsInEachFrame = Math.floor(ripImages[0].bitmap.height/ripSize);
+            if (seedGen() < 0.99) {
+                const ripImages = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/wanted/rips.png`), 4);
+                const ripSize = ripImages[0].bitmap.width;
+                const ripsInEachFrame = Math.floor(ripImages[0].bitmap.height/ripSize);
 
-            for (let ripsOnEachSideIndex = 0; ripsOnEachSideIndex < ripsOnEachSide.length; ripsOnEachSideIndex++) {
-                const ripCount = ripsOnEachSide[ripsOnEachSideIndex];
-                for (let ripIndex = 0; ripIndex < ripCount; ripIndex++) {
-                    let ripCompositeXPosition = 0;
-                    let ripCompositeYPosition = 0;
-                    const usingRip = Math.floor(seedGen() * ripsInEachFrame);
-                    switch (ripsOnEachSideIndex) {
-                        case 0:
-                            ripCompositeXPosition = Math.round(seedGen() * (completePoster.bitmap.width));
-                            break;
-                        case 1:
-                            ripCompositeXPosition = completePoster.bitmap.width - ripSize;
-                            ripCompositeYPosition = Math.round(seedGen() * (completePoster.bitmap.height));
-                            break;
-                        case 2:
-                            ripCompositeYPosition = completePoster.bitmap.height - ripSize;
-                            ripCompositeXPosition = Math.round(seedGen() * (completePoster.bitmap.width));
-                            break;
-                        case 3:
-                            ripCompositeYPosition = Math.round(seedGen() * (completePoster.bitmap.height));
-                            break;
-                        default:
-                            break;
-                    }
-                    ripImages[ripsOnEachSideIndex % ripImages.length].scan(0, (ripSize * usingRip), ripSize, ripSize, function(x, y, idx) {
-                        const pixelDestinationX = (x % ripSize) + ripCompositeXPosition;
-                        const pixelDestinationY = (y % ripSize) + ripCompositeYPosition;
-                        if (completePoster.bitmap.data[completePoster.getPixelIndex(pixelDestinationX, pixelDestinationY) + 3] > 0) {
-                            completePoster.setPixelColor(this.getPixelColor(x, y), pixelDestinationX, pixelDestinationY)
+                for (let ripsOnEachSideIndex = 0; ripsOnEachSideIndex < ripsOnEachSide.length; ripsOnEachSideIndex++) {
+                    const ripCount = ripsOnEachSide[ripsOnEachSideIndex];
+                    for (let ripIndex = 0; ripIndex < ripCount; ripIndex++) {
+                        let ripCompositeXPosition = 0;
+                        let ripCompositeYPosition = 0;
+                        const usingRip = Math.floor(seedGen() * ripsInEachFrame);
+                        switch (ripsOnEachSideIndex) {
+                            case 0:
+                                ripCompositeXPosition = Math.round(seedGen() * (completePoster.bitmap.width));
+                                break;
+                            case 1:
+                                ripCompositeXPosition = completePoster.bitmap.width - ripSize;
+                                ripCompositeYPosition = Math.round(seedGen() * (completePoster.bitmap.height));
+                                break;
+                            case 2:
+                                ripCompositeYPosition = completePoster.bitmap.height - ripSize;
+                                ripCompositeXPosition = Math.round(seedGen() * (completePoster.bitmap.width));
+                                break;
+                            case 3:
+                                ripCompositeYPosition = Math.round(seedGen() * (completePoster.bitmap.height));
+                                break;
+                            default:
+                                break;
                         }
-                    })
+                        ripImages[ripsOnEachSideIndex % ripImages.length].scan(0, (ripSize * usingRip), ripSize, ripSize, function(x, y, idx) {
+                            const pixelDestinationX = (x % ripSize) + ripCompositeXPosition;
+                            const pixelDestinationY = (y % ripSize) + ripCompositeYPosition;
+                            if (completePoster.bitmap.data[completePoster.getPixelIndex(pixelDestinationX, pixelDestinationY) + 3] > 0) {
+                                completePoster.setPixelColor(this.getPixelColor(x, y), pixelDestinationX, pixelDestinationY)
+                            }
+                        })
+                    }
                 }
             }
 
@@ -3043,10 +3045,10 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Onomatopoeiacal": {
-        name: "",
-        seeded: false,
+        name: "Onomatopoeiacal",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
@@ -3056,54 +3058,195 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Onomatopoeiacal";
+            let seedGen = new seedrandom(`onomatopoeiacal${seed}`);
+
+            const possibleOnomatos: string[] = [
+                "BANG!",
+                "POW!",
+                "CRASH!",
+                "WHAM!",
+                "POP!",
+                "WHOOSH!",
+                "SQUELCH!",
+                "BIFF!",
+                "BAP!",
+                "BOP!",
+                "BRAAAP!",
+                "!!!",
+                "GROAN...",
+                "...",
+                "!?",
+                "SCREECH!",
+                "SCREAM!",
+                "SCHLUCK?"
+            ];
+            const onomatoColorsImage = await Jimp.read(`${prefixSourceDirectory}/onomatopoeiacal/onomatocolors.png`);
+            const possibleOnomatoColors: {
+                text: number,
+                border: number,
+                shadow: number
+            }[] = parseHorizontalSpriteSheet(onomatoColorsImage, onomatoColorsImage.bitmap.width).map(frame => {
+                return {
+                    text: frame.getPixelColor(0, 0),
+                    border: frame.getPixelColor(0, 1),
+                    shadow: frame.getPixelColor(0, 2)
+                }
+            });
+
+            const onomatoDistance = 10;
+            const onomatoCount = Math.ceil(seedGen() * Math.ceil(iconFrames[0].bitmap.height / onomatoDistance));
+            const onomatos: {
+                word: number,
+                colors: number,
+                position: CCOIcons.coordinate
+            }[] = [];
+            let iter = 0;
+            while (onomatos.length < onomatoCount && iter < 100) {
+                iter++;
+                let constructedOnomato = {
+                    word: Math.floor(seedGen() * possibleOnomatos.length),
+                    colors: Math.floor(seedGen() * possibleOnomatoColors.length),
+                    position: {
+                        x: Math.round(seedGen() * iconFrames[0].bitmap.width),
+                        y: Math.round(seedGen() * iconFrames[0].bitmap.height)
+                    }
+                }
+                if (onomatos.findIndex(onomato => {
+                    return onomato.word === constructedOnomato.word || maths.distanceBetweenPoints({x: 0, y: onomato.position.y}, {x: 0, y: constructedOnomato.position.y}) < onomatoDistance
+                }) === -1) {
+                    onomatos.push(constructedOnomato);
+                }
+            }
+            const constructedFrontFrames: typeof prefixFrames["frontFrames"][number] = [];
+            for (let onomatoIndex = 0; onomatoIndex < onomatos.length; onomatoIndex++) {
+                const onomato = onomatos[onomatoIndex];
+                const image = strokeImage(strokeImage(await generateSmallWordImage(possibleOnomatos[onomato.word], 0x00000000, possibleOnomatoColors[onomato.colors].text, 0), possibleOnomatoColors[onomato.colors].border, 1, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]), possibleOnomatoColors[onomato.colors].shadow, 1, false, [[0, 0, 0], [0, 0, 0], [0, 0, 1]]);
+                constructedFrontFrames.push({
+                    image,
+                    compositePosition: {
+                        x: Math.round(onomato.position.x - (image.bitmap.width / 2)),
+                        y: Math.round(onomato.position.y - (image.bitmap.height / 2))
+                    }
+                })
+            }
+
+            prefixFrames.frontFrames.push(constructedFrontFrames);
+
+            return prefixFrames;
         }
     },
     "Smoked": {
-        name: "",
-        seeded: false,
+        name: "Smoked",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Smoked";
+            let seedGen = new seedrandom(`smoked${seed}`);
+
+            const smokedSide = ((seedGen() > 0.25) ? "left" : "right");
+            let smokedHatImage = await Jimp.read(`${prefixSourceDirectory}/smoked/smoked${smokedSide}.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/smoked${smokedSide}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(smokedHatImage, cacheDirectory, frameHeadPosition, { x: 6, y: 13, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Basking": {
-        name: "",
+        name: "Basking",
         seeded: false,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Basking";
+
+            let umbrellaImage = await Jimp.read(`${prefixSourceDirectory}/basking/baskingback.png`);
+            let frontSandImage = await Jimp.read(`${prefixSourceDirectory}/basking/baskingfront.png`);
+
+            let umbrellaDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/basking/umbrella/`);
+            if (!fs.existsSync(umbrellaDirectory)) fs.mkdirSync(umbrellaDirectory, { recursive: true });
+            let frontSandDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/basking/baskingfront/`);
+            if (!fs.existsSync(frontSandDirectory)) fs.mkdirSync(frontSandDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const unbrellaImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(umbrellaImage, umbrellaDirectory, frameHeadPosition, { x: 17, y: 24, width: 32 });
+                prefixFrames.backFrames.push(unbrellaImagesThisFrame);
+
+                const frontSandImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(frontSandImage, frontSandDirectory, frameHeadPosition, { x: 17, y: 24, width: 32 });
+                prefixFrames.frontFrames.push(frontSandImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Omniscient": {
-        name: "",
-        seeded: false,
+        name: "Omniscient",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Omniscient";
+
+            let seedRNG = new seedrandom(`omniscient${seed}`);
+            let omniscientSpriteSheet = await Jimp.read(`${prefixSourceDirectory}/omniscient/animation.png`);
+            let omniscientMask = await Jimp.read(`${prefixSourceDirectory}/omniscient/mask.png`);
+
+            omniscientSpriteSheet.composite(
+                omniscientSpriteSheet.clone().mask(omniscientMask, 0, 0).color([{apply: "hue", params: [360 * seedRNG()]}])    
+            , 0, 0)
+
+            let omniscientFrames = parseHorizontalSpriteSheet(omniscientSpriteSheet, 15);
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/omniscient/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(omniscientFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const omniscientFrame = omniscientFrames[animationFrameIndex % omniscientFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(omniscientFrame, cacheDirectory, frameHeadData, { x: -3, y: 29, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Sniping": {
         name: "",
         seeded: false,
@@ -4518,16 +4661,20 @@ const prefixIDApplicationOrder = [
     "Swarming", // Adds spinning cubes to the cube
     "Runic", // Adds nordic runes and an outline to the cube
     "Mathematical", // Adds LCD numbers and an outline to the cube
+    "Onomatopoeiacal", // Adds Onomatopoeia to the cube
 
     // -------------- Prefixes That Add Accessories (Props that are bound to the cube's parts)
     "Sacred", // Adds a Fancy Halo to the Cube
-    "Cuffed", // Adds a handcuff around the cube
+    "Omniscient", // Adds an eye of providence to the Cube
+    "Cuffed", // Adds a handcuff around the Cube
     "Marvelous", // Adds a Hand holding the Cube
     "Incarcerated", // Adds a Jail around the Cube
+    "Basking", // Adds sand and an umbrella to the cube
     "Emburdening", // Adds a statue of Atlas holding up the cube
     "Royal", // Adds a crown to the cube
     "Kramped", // Adds a pair of krampus horns to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Smoked", // Adds a GET SMOKED hat to the cube
     "Serving", // Adds a french-maid-style skirt and bonnet to the cube
     "Angelic", // Adds a halo to the cube
     "Dandy", // Adds space dandy hair to the cube
