@@ -1,5 +1,7 @@
 import * as CCOIcons from './../../typedefs';
 
+const devmode = process.argv.findIndex(arg => arg === "--dev") !== -1;
+
 /**
  * Controls how many cube pattern indices there can be, it's pretty arbitrary.
  */
@@ -21,14 +23,9 @@ const shownPrefixLimit = 4;
 const patternAtlasRoot = Math.ceil(Math.sqrt(cubePatternIndexLimit));
 
 /**
- * How much padding is in-between the images in the pattern atlas
- */
-const patternAtlasPadding = 1;
-
-/**
  * How large cubes can be resized to with the ?size= URL parameter
  */
-const resizeMax = 512;
+const resizeMax = (devmode) ? 512 : 128;
 
 /**
  * How small cubes can be resized to with the ?size= URL parameter
@@ -122,34 +119,35 @@ const sourceImagesDirectory = './sourceicons/';
 /**
  * Whether or not to regenerate prefix images each time they are requested. Used for debugging and prefix programming
  */
-const usePrefixImageCache = false;
+const usePrefixImageCache = !devmode;
 
 /**
  * Whether or not to regenerate resized images each time they are requested. Used for debugging.
  */
-const useResizeCache = false;
+const useResizeCache = !devmode;
 
 /**
  * Whether or not to retrieve cubes from source upon each request. Used for debugging.
  */
-const useBaseCubeCache = false;
+const useBaseCubeCache = true;
 
 /**
  * Whether or not to regenerate tallying images each time they are requested. Used for debugging.
  */
-const useTallyingImageCache = false;
+const useTallyingImageCache = !devmode;
 
 /**
  * The maximum % of tallies that the server will generate
  */
 const maxTallyPercent = 999;
 
+console.log("DEVMODE: ", devmode)
+
 export {
     cubePatternIndexLimit,
     prefixPatternIndexLimit,
     shownPrefixLimit,
     patternAtlasRoot,
-    patternAtlasPadding,
     resizeMax,
     resizeMin,
     divineConfig,

@@ -16,11 +16,11 @@ const route: CCOIcons.documentedRoute = {
         subtitle: "GETs custom images with the B-Side algorithm applied.",
         resolves: "image",
         author: "AspectQuote",
-        description: "I will write more about how this works... later.",
+        description: "Generates a B-Side version of an icon in the /sourceicons/images directory. Do not supply a file extension, the server assumes the PNG extension.",
         examples: [{
-            name: "Large Green Cube Icon",
-            example: "/custombsideicon/green?size=512",
-            description: "Will resolve into a 512x512 version of the Green Cube icon."
+            name: "Death and The Soldier",
+            example: "/custombsideicon/deathandthesoldier",
+            description: "Will resolve into the B-Side version of deathandthesoldier.png from /sourceicons/images."
         }],
         parameterDocs: [
             {
@@ -36,7 +36,8 @@ const route: CCOIcons.documentedRoute = {
                         example: "/custombsideicon/may",
                         description: "Will return the custom b-side variant of the may background image."
                     }
-                ]
+                ],
+                requestBuilderPossibs: fs.readdirSync(sourceDirectory).map(item => item.split('.')[0])
             }
         ],
         queryDocs: []

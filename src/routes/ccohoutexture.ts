@@ -631,8 +631,19 @@ const route: CCOIcons.documentedRoute = {
         subtitle: "GETs custom texture that matches a CCOHou UV map.",
         resolves: "image",
         author: "AspectQuote",
-        description: "I will write more about how this works... later.",
-        examples: [],
+        description: "Uses basic linear maths to map cube icons to 3D Model UVs. These icons are used in a project that hasn't been released yet.",
+        examples: [
+            {
+                name: "Red Cube UV",
+                example: "/ccohoutexture/red",
+                description: "Retrieves the generated UV for the red cube from the server."
+            },
+            {
+                name: "Event Horizon Cube UV",
+                example: "/ccohoutexture/eventhorizon",
+                description: "Retrieves the generated UV for the event horizon cube from the server."
+            }
+        ],
         parameterDocs: [
             {
                 parameter: ':cubeid',
@@ -641,7 +652,19 @@ const route: CCOIcons.documentedRoute = {
                 description: "Only certain IDs are valid.",
                 required: true,
                 requiredNote: "You need a cube ID to get a cube's image, obviously.",
-                examples: []
+                examples: [
+                    {
+                        name: "Green Cube UV",
+                        example: "/ccohoutexture/green",
+                        description: "Retrieves the generated UV for the green cube from the server."
+                    },
+                    {
+                        name: "Australian Cube UV",
+                        example: "/ccohoutexture/australian",
+                        description: "Retrieves the generated UV for the australian cube from the server."
+                    }
+                ],
+                requestBuilderPossibs: validCubeIDS
             }
         ],
         queryDocs: []

@@ -2,9 +2,10 @@
   "name": "ccoicons",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/app.ts",
   "scripts": {
-    "dev": "tsx watch src/app.ts"
+    "dev": "tsx watch src/app.ts --dev",
+    "prod": "tsx src/app.ts"
   },
   "keywords": [],
   "author": "",

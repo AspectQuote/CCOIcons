@@ -97,7 +97,7 @@ function getNeededPaddingFromCompiledFrames(frames: CCOIcons.compiledPrefixFrame
         resizeTarget.below = maxYPosition - baseHeight;
     }
 
-    console.log("Resize Target: ", resizeTarget)
+    // console.log("Resize Target: ", resizeTarget)
 
     // If we are no longer at a 1:1 aspect ratio, then add padding to each side evenly to reach it.
     if ((resizeTarget.left + resizeTarget.right) !== (resizeTarget.above + resizeTarget.below)) {
@@ -295,6 +295,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: false,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Divine";
@@ -335,6 +336,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: false,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Slated";
@@ -364,6 +366,45 @@ const prefixes = {
             return prefixFrames;
         }
     },
+    "Contraband": {
+        name: "Contraband",
+        seeded: false,
+        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: true,
+            mouths: false
+        },
+        countsTowardsPrefixCap: false,
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Slated";
+            let accentFrames = anchorPoints.accents;
+            let patternRNG = new seedrandom(`${cubeData.name}`);
+            
+            const contrabandEffectImage = await Jimp.read(`./sourceicons/attributeeffects/contraband.png`);
+            const cropX = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.width - iconFrames[0].bitmap.width));
+            const cropY = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.height - iconFrames[0].bitmap.height));
+            contrabandEffectImage.crop(cropX, cropY, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
+
+            const contrabandOutlineThickness = 1;
+            for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                let contrabandEffectClone = contrabandEffectImage.clone();
+                contrabandEffectClone.mask(accentFrames[frameIndex % accentFrames.length].image, 0, 0);
+                prefixFrames.frontFrames.push([{
+                    image: strokeImage(contrabandEffectClone, 0x000000ff, contrabandOutlineThickness, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),
+                    compositePosition: {
+                        x: -contrabandOutlineThickness,
+                        y: -contrabandOutlineThickness
+                    }
+                }]) ;
+            }
+
+            return prefixFrames;
+        }
+    },
     "Sacred": {
         name: "Sacred",
         seeded: false,
@@ -375,6 +416,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -404,6 +446,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Bugged";
@@ -441,6 +484,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let eyePositions = anchorPoints.eyes;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -483,8 +527,9 @@ const prefixes = {
             accents: true,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
-            let accentPositions = anchorPoints.accents;
+            let accentFrames = anchorPoints.accents;
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Glitchy";
 
@@ -518,14 +563,14 @@ const prefixes = {
             for (let neededIconFrameIndex = 0; neededIconFrameIndex < neededIconFrames; neededIconFrameIndex++) {
                 let iconFrameIndex = neededIconFrameIndex % iconFrames.length;
                 let prefixFrameIndex = neededIconFrameIndex % animationFrameCount;
-                let accentFrameIndex = neededIconFrameIndex % accentPositions.length;
+                let accentFrameIndex = neededIconFrameIndex % accentFrames.length;
 
                 const iconFrame = iconFrames[iconFrameIndex];
 
                 const prefixFrame = new Jimp(iconFrame.bitmap.width, iconFrame.bitmap.height, maskColor);
 
-                accentPositions[accentFrameIndex].coordinates.forEach(coordinate => {
-                    prefixFrame.setPixelColor(accentMaskImage.getPixelColor(coordinate.x % accentMaskImage.bitmap.width, coordinate.y % accentMaskImage.bitmap.height), coordinate.x, coordinate.y);
+                accentFrames[accentFrameIndex].image.scan(0, 0, accentFrames[accentFrameIndex].image.bitmap.width, accentFrames[accentFrameIndex].image.bitmap.height, function(x, y, idx) {
+                    prefixFrame.setPixelColor(accentMaskImage.getPixelColor(x % accentMaskImage.bitmap.width, y % accentMaskImage.bitmap.height), x, y)
                 });
 
                 const fallingFrame = new Jimp(iconFrame.bitmap.width, iconFrame.bitmap.height, 0x00000000);
@@ -561,6 +606,7 @@ const prefixes = {
             accents: false,
             mouths: true
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let mouthPositions = anchorPoints.mouths;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -594,6 +640,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Leafy";
@@ -660,6 +707,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -695,6 +743,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let seedRNG = new seedrandom(`orbital${seed}`);
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -851,6 +900,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -917,6 +967,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -946,6 +997,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let seedRNG = new seedrandom(`cursed${seed}`);
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -987,6 +1039,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             const frontLayer = await Jimp.read(`${prefixSourceDirectory}/emburdening/front.png`);
             const backLayer = await Jimp.read(`${prefixSourceDirectory}/emburdening/back.png`);
@@ -1021,6 +1074,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             const frontLayer = await Jimp.read(`${prefixSourceDirectory}/cuffed/front.png`);
             const backLayer = await Jimp.read(`${prefixSourceDirectory}/cuffed/back.png`);
@@ -1055,6 +1109,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Endangered";
@@ -1085,6 +1140,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             const frontLayer = await Jimp.read(`${prefixSourceDirectory}/marvelous/front.png`);
             const backLayer = await Jimp.read(`${prefixSourceDirectory}/marvelous/back.png`);
@@ -1119,6 +1175,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             const phasingFrames = 20;
             let seedRNG = new seedrandom(`phasing${seed}`);
@@ -1164,6 +1221,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             const phasingFrames = 20;
             let seedRNG = new seedrandom(`evanescent${seed}`);
@@ -1209,6 +1267,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             const ravingFrames = 15;
             let seedRNG = new seedrandom(`raving${seed}`);
@@ -1237,6 +1296,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             let seedRNG = new seedrandom(`royal${seed}`);
@@ -1279,6 +1339,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Captain";
@@ -1309,6 +1370,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Insignificant";
@@ -1342,6 +1404,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
 
@@ -1412,6 +1475,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Snowy";
@@ -1478,6 +1542,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             const prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Tentacular";
@@ -1639,6 +1704,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             let seedGen = new seedrandom(`summoning${seed}`);
@@ -1749,6 +1815,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             let seedGen = new seedrandom(`swarming${seed}`);
@@ -1862,6 +1929,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -1891,6 +1959,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -1925,6 +1994,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -1959,6 +2029,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let desiredFrames = 30;
             const maxSinMovement = 2;
@@ -2000,6 +2071,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Runic";
@@ -2088,6 +2160,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -2132,6 +2205,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             const prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Chained";
@@ -2264,6 +2338,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             const prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Adduced";
@@ -2391,6 +2466,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -2425,6 +2501,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Menacing";
@@ -2484,6 +2561,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             let headPositions = anchorPoints.heads;
@@ -2525,6 +2603,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -2567,6 +2646,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -2609,6 +2689,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -2677,6 +2758,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -2721,6 +2803,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -2798,6 +2881,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Mathematical";
@@ -2908,6 +2992,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Wanted";
@@ -3057,6 +3142,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Onomatopoeiacal";
@@ -3148,6 +3234,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -3179,6 +3266,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             let headPositions = anchorPoints.heads;
@@ -3216,6 +3304,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
             let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
@@ -3246,52 +3335,102 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Sniping": {
-        name: "",
-        seeded: false,
+        name: "Sniping",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Sniping";
+            
+            let headPositions = anchorPoints.heads;
+            let seedRNG = new seedrandom(`sniping${seed}`);
+
+            const rifles = ["tf2", "cs2"]
+            const rifleType = rifles[Math.floor(seedRNG() * rifles.length)];
+
+            let sacredHeadImage = await Jimp.read(`${prefixSourceDirectory}/sniping/${rifleType}rifle.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/sniping/${rifleType}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(sacredHeadImage, cacheDirectory, frameHeadPosition, { x: 28, y: 16, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Beboppin'": {
-        name: "",
+        name: "Beboppin'",
         seeded: false,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Beboppin'";
+
+            let cowboyWigImage = await Jimp.read(`${prefixSourceDirectory}/beboppin/hair.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/beboppin/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(cowboyWigImage, cacheDirectory, frameHeadPosition, { x: 12, y: 24, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Hard-Boiled": {
-        name: "",
+        name: "Hard-Boiled",
         seeded: false,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Hard-Boiled";
+
+            let holmesHatImage = await Jimp.read(`${prefixSourceDirectory}/hardboiled/hat.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/hardboiled/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(holmesHatImage, cacheDirectory, frameHeadPosition, { x: 6, y: 18, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Angry": {
         name: "",
         seeded: false,
@@ -3303,6 +3442,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3318,6 +3458,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3333,6 +3474,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3348,6 +3490,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3363,6 +3506,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3378,6 +3522,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3393,6 +3538,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3408,6 +3554,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3423,6 +3570,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3438,6 +3586,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3453,6 +3602,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3468,6 +3618,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3483,6 +3634,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3498,6 +3650,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3513,6 +3666,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3528,6 +3682,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3543,6 +3698,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3558,6 +3714,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3573,6 +3730,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3588,6 +3746,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3603,6 +3762,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3618,6 +3778,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3633,6 +3794,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3648,6 +3810,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3663,6 +3826,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3678,6 +3842,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3693,6 +3858,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3708,6 +3874,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3723,6 +3890,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3738,6 +3906,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3753,6 +3922,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3768,6 +3938,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3783,6 +3954,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3798,6 +3970,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3813,6 +3986,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3828,6 +4002,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3843,6 +4018,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3858,6 +4034,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3873,6 +4050,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3888,6 +4066,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3903,6 +4082,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3918,6 +4098,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3933,6 +4114,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3948,6 +4130,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3963,6 +4146,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3978,6 +4162,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -3993,6 +4178,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4008,6 +4194,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4023,6 +4210,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4038,6 +4226,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4053,6 +4242,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4068,6 +4258,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4083,6 +4274,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4098,6 +4290,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4113,6 +4306,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4128,6 +4322,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4143,6 +4338,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4158,6 +4354,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4173,6 +4370,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4188,6 +4386,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4203,6 +4402,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4218,6 +4418,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4233,6 +4434,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4248,6 +4450,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4263,6 +4466,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4278,6 +4482,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4293,6 +4498,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4308,6 +4514,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4323,6 +4530,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4338,6 +4546,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4353,6 +4562,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4368,6 +4578,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4383,6 +4594,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4398,6 +4610,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4413,6 +4626,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4428,6 +4642,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4443,6 +4658,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4458,6 +4674,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4473,6 +4690,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4488,6 +4706,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4503,6 +4722,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4518,6 +4738,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4533,6 +4754,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4548,6 +4770,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4563,6 +4786,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4578,6 +4802,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4593,6 +4818,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4608,6 +4834,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4623,6 +4850,7 @@ const prefixes = {
             accents: false,
             mouths: false
         },
+        countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
             return structuredClone(basePrefixReturnObject)
         }
@@ -4667,6 +4895,7 @@ const prefixIDApplicationOrder = [
     "Sacred", // Adds a Fancy Halo to the Cube
     "Omniscient", // Adds an eye of providence to the Cube
     "Cuffed", // Adds a handcuff around the Cube
+    "Sniping", // Adds a sniper rifle to the Cube
     "Marvelous", // Adds a Hand holding the Cube
     "Incarcerated", // Adds a Jail around the Cube
     "Basking", // Adds sand and an umbrella to the cube
@@ -4674,10 +4903,12 @@ const prefixIDApplicationOrder = [
     "Royal", // Adds a crown to the cube
     "Kramped", // Adds a pair of krampus horns to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Hard-Boiled", // Adds a holmes-esque detective hat to the cube
     "Smoked", // Adds a GET SMOKED hat to the cube
     "Serving", // Adds a french-maid-style skirt and bonnet to the cube
     "Angelic", // Adds a halo to the cube
-    "Dandy", // Adds space dandy hair to the cube
+    "Dandy", // Adds dandy space hair to the cube
+    "Beboppin'", // Adds space mercenary hair to the cube
     "Foolish", // Adds a jester Hat to the Cube
     "Cruel", // Adds Cruelty Squad-Inspired Glasses to the Cube
     "Neko", // Adds cat ears and tail to the cube
@@ -4700,8 +4931,9 @@ const prefixIDApplicationOrder = [
     "Raving", // Hue shifts the cube every frame to create a 'rainbow' effect
 
     // -------------- Divine and Slated Effects should always be behind everything else
-    "Divine", // Divine Effect for the cube
-    "Slated", // Slated Effect for the cube
+    "Divine", // Divine modifier for the cube
+    "Slated", // Slated modifier for the cube
+    "Contraband" // Contraband modifier for the cube
 ] as const;
 
 /**

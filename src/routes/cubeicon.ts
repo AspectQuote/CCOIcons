@@ -135,7 +135,7 @@ if (config.slatedConfig.alwaysRegenerate || !fs.existsSync(`${config.relativeRoo
     })()
 }
 
-function clampRandomHiLo(low: number, high: number, seed: any) {
+function clampRandomHiLo(low: number, high: number, seed: number) {
     return ((high - low) * seed) + low;
 }
 
@@ -164,35 +164,22 @@ function getSeededIconRNGValues(cubeID: CCOIcons.patternedCubeID, seed: number, 
     return seedValuesObj;
 }
 
-const xAtlasTypes: ("base" | CCOIcons.cubeAnchorPoints)[] = ["base", "accents", "eyes", "heads", "mouths"] as const;
-function getPatternAtlasCoordinates(iconWidth: number, iconHeight: number, patternIndex: number, type: typeof xAtlasTypes[number]): {x: number, y: number} {
-    const xPatternTypeCoordinateAddition = xAtlasTypes.indexOf(type) * iconWidth * config.patternAtlasRoot;
-    const x = xPatternTypeCoordinateAddition + (iconWidth * (patternIndex % config.patternAtlasRoot));
-    const y = iconHeight * Math.floor(patternIndex / config.patternAtlasRoot);
-    return {x, y};
-}
+const seededIconKeys: ("base" | CCOIcons.cubeAnchorPoints)[] = ["base", "accents", "eyes", "heads", "mouths"] as const;
 
-async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jimp> {
+async function ensurePatternedIconsAreGenerated(cubeID: CCOIcons.patternedCubeID, patternIndex: number): Promise<string> {
     const patternInfo: undefined | CCOIcons.patternedCubeDefinition = patternSchema[cubeID];
-    const patternAtlasDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/patternatlases`);
-    if (!fs.existsSync(patternAtlasDirectory)) fs.mkdirSync(patternAtlasDirectory, { recursive: true });
-    const patternAtlasFilePath = path.resolve(`${patternAtlasDirectory}/${cubeID}patternatlas.png`);
-    if (fs.existsSync(patternAtlasFilePath)) {
-        return await Jimp.read(patternAtlasFilePath);
-    } else {
+    const patternAtlasDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/patternatlases/${cubeID}/${patternIndex}`);
+    if (!fs.existsSync(`${patternAtlasDirectory}/cube.png`)) {
+        console.log("Regenerating Pattern: "+patternIndex)
+        fs.mkdirSync(patternAtlasDirectory, { recursive: true });
         // Image Directory
         const imageDirectory = `./sourceicons/seededcubetextures/${cubeID}`;
         // Load the base cube image from the seeded cube directory.
         const baseImage = await Jimp.read(`${imageDirectory}/base.png`)
-
-        const iconWidth = (baseImage.bitmap.width + (config.patternAtlasPadding * 2));
-        const iconHeight = (baseImage.bitmap.height + (config.patternAtlasPadding * 2));
-        
-        const newPatternAtlas: Jimp = new Jimp((config.patternAtlasRoot * iconWidth * xAtlasTypes.length) - (config.patternAtlasPadding * 2), (config.patternAtlasRoot * iconHeight) - (config.patternAtlasPadding * 2), 0x00000000);
-        // Read mask overlay image and put that over the composite later
+        // Read overlay image and put that over the composite later
         const overlayImage = await Jimp.read(`${imageDirectory}/finaloverlay.png`);
 
-        let staticPatternImageLayers: { [key in typeof xAtlasTypes[number]]: Jimp | undefined } = {
+        let staticPatternImageLayers: { [key in typeof seededIconKeys[number]]: Jimp | undefined } = {
             base: undefined,
             accents: undefined,
             eyes: undefined,
@@ -208,119 +195,110 @@ async function getSeededIconAtlas(cubeID: CCOIcons.patternedCubeID): Promise<Jim
                 }
             }
         }
+        let patternImages: { [key in typeof seededIconKeys[number]]?: undefined | Jimp }[] = []
+        const overallPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, 0);
+        for (let patternImageIndex = 0; patternImageIndex < patternInfo.patternimages.length; patternImageIndex++) {
+            const individualPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, patternImageIndex);
+            const patternImageData = patternInfo.patternimages[patternImageIndex];
 
-        for (let patternIndex = 0; patternIndex < config.cubePatternIndexLimit; patternIndex++) {
-            let patternImages: { [key in typeof xAtlasTypes[number]]?: undefined | Jimp }[] = []
-            const overallPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, 0);
-            for (let patternImageIndex = 0; patternImageIndex < patternInfo.patternimages.length; patternImageIndex++) {
-                const individualPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, patternImageIndex);
-                const patternImageData = patternInfo.patternimages[patternImageIndex];
-
-                let patternImageLayers: typeof staticPatternImageLayers = {
-                    base: undefined,
-                    accents: ((staticPatternImageLayers.accents === undefined) ? undefined : staticPatternImageLayers.accents.clone()),
-                    eyes: ((staticPatternImageLayers.eyes === undefined) ? undefined : staticPatternImageLayers.eyes.clone()),
-                    mouths: ((staticPatternImageLayers.mouths === undefined) ? undefined : staticPatternImageLayers.mouths.clone()),
-                    heads: ((staticPatternImageLayers.heads === undefined) ? undefined : staticPatternImageLayers.heads.clone())
-                };
-                for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImageLayers).length; patternImageLayerIndex++) {
-                    const key: keyof typeof patternImageLayers = Object.keys(patternImageLayers)[patternImageLayerIndex] as keyof typeof patternImageLayers;
-                    const imageFilePath = path.resolve(`./sourceicons/textures/${patternImageData.path}/${key}.png`);
-                    if (patternImageLayers[key] === undefined && fs.existsSync(imageFilePath)) {
-                        patternImageLayers[key] = await Jimp.read(imageFilePath);
-                        if (patternImageLayers[key] !== undefined) {
-                            // I love typedefs!!!
-                            let imageManipulations: CCOIcons.JimpImgMod[] = [];
-                            if (key === "base") {
-                                // Brighten the pattern image
-                                if (patternImageData.seedbrightness) {
-                                    const brightness = clampRandomHiLo(patternImageData.seedbrightnessrange[0], patternImageData.seedbrightnessrange[1], individualPatternSeedRNG.brightness);
-                                    const manipulationMethod = brightness > 0 ? "lighten" : "darken";
-                                    imageManipulations.push({ apply: manipulationMethod, params: [Math.abs(brightness)] });
-                                }
-                                // Saturate the pattern image
-                                if (patternImageData.seedsaturate) {
-                                    const saturation = clampRandomHiLo(patternImageData.seedsaturaterange[0], patternImageData.seedsaturaterange[1], individualPatternSeedRNG.saturation);
-                                    const manipulationMethod = saturation > 0 ? "saturate" : "desaturate";
-                                    imageManipulations.push({ apply: manipulationMethod, params: [saturation] });
-                                }
-                    
-                                // Hue-Rotate the pattern image
-                                if (patternImageData.seedhuerotate) {
-                                    imageManipulations.push({ apply: "hue", params: [Math.round(individualPatternSeedRNG.hue * 360)] });
-                                }
-                            }
-                            const JimpImg: Jimp = patternImageLayers[key] as Jimp;
-                            // Scale the pattern image
-                            if (patternImageData.seedscale) {
-                                const scale = clampRandomHiLo(patternImageData.seedscalerange[0], patternImageData.seedscalerange[1], individualPatternSeedRNG.scale);
-                                JimpImg.resize(JimpImg.bitmap.width * scale, JimpImg.bitmap.height * scale, Jimp.RESIZE_NEAREST_NEIGHBOR);
-                            }
-                
-                            // Rotate pattern image
-                            if (patternImageData.seedrotate) {
-                                let degrees = Math.floor(individualPatternSeedRNG.rotation * 360);
-                                const imageSizeTarget = Math.sqrt(Math.pow((JimpImg.bitmap.width / 2), 2) + Math.pow((JimpImg.bitmap.height / 2), 2));
-                                JimpImg.rotate(degrees, false)
-                                JimpImg.crop((JimpImg.bitmap.width - imageSizeTarget) / 2, (JimpImg.bitmap.height - imageSizeTarget) / 2, imageSizeTarget, imageSizeTarget);
-                            }
-    
-                            // Create cropped pattern image to the size of the pattern mask, at a random(seeded) position
-                            const cropXPos = Math.floor(individualPatternSeedRNG.cropX * (JimpImg.bitmap.width - baseImage.bitmap.width));
-                            const cropYPos = Math.floor(individualPatternSeedRNG.cropY * (JimpImg.bitmap.height - baseImage.bitmap.height));
-                            JimpImg.crop(cropXPos, cropYPos, baseImage.bitmap.height, baseImage.bitmap.width);
-            
-                            // Apply color manimpulatons, if they exist.
-                            if (imageManipulations.length > 0) JimpImg.color(imageManipulations);
-                        }
-                    }
-                }
-
-                patternImages.push(patternImageLayers);
-            }
-            const newBaseImage = baseImage.clone();
-            for (let maskImageIndex = 0; maskImageIndex < patternInfo.masks.length; maskImageIndex++) {
-                const maskInfo = patternInfo.masks[maskImageIndex];
-                // Read random(seeded) mask image
-                let maskImage = await Jimp.read(`${imageDirectory}/${maskInfo.images[Math.floor(maskInfo.images.length * overallPatternSeedRNG.maskImage[maskImageIndex % overallPatternSeedRNG.maskImage.length])]}.png`);
-                
-                for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImages[maskInfo.patternimage]).length; patternImageLayerIndex++) {
-                    const key: keyof typeof patternImages[number] = Object.keys(patternImages[maskInfo.patternimage])[patternImageLayerIndex] as keyof typeof patternImages[number];
-                    // Mask the pattern image with the mask image and composite the modified masked image
-                    if (patternImages[maskInfo.patternimage][key] !== undefined) {
-                        // @ts-ignore 'key' is a dynamic object property... it's OK!!!
-                        const maskedImage = patternImages[maskInfo.patternimage][key].clone()
-                        if (staticPatternImageLayers[key] === undefined) {
-                            maskedImage.mask(maskImage, 0, 0);
-                        }
+            let patternImageLayers: typeof staticPatternImageLayers = {
+                base: undefined,
+                accents: ((staticPatternImageLayers.accents === undefined) ? undefined : staticPatternImageLayers.accents.clone()),
+                eyes: ((staticPatternImageLayers.eyes === undefined) ? undefined : staticPatternImageLayers.eyes.clone()),
+                mouths: ((staticPatternImageLayers.mouths === undefined) ? undefined : staticPatternImageLayers.mouths.clone()),
+                heads: ((staticPatternImageLayers.heads === undefined) ? undefined : staticPatternImageLayers.heads.clone())
+            };
+            for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImageLayers).length; patternImageLayerIndex++) {
+                const key: keyof typeof patternImageLayers = Object.keys(patternImageLayers)[patternImageLayerIndex] as keyof typeof patternImageLayers;
+                const imageFilePath = path.resolve(`./sourceicons/textures/${patternImageData.path}/${key}.png`);
+                if (patternImageLayers[key] === undefined && fs.existsSync(imageFilePath)) {
+                    patternImageLayers[key] = await Jimp.read(imageFilePath);
+                    if (patternImageLayers[key] !== undefined) {
+                        // I love typedefs!!!
+                        let imageManipulations: CCOIcons.JimpImgMod[] = [];
                         if (key === "base") {
-                            newBaseImage.composite(maskedImage, 0, 0);
-                        } else {
-                            const atlasCoordinates = getPatternAtlasCoordinates(iconWidth, iconHeight, patternIndex, key);
-                            newPatternAtlas.composite(maskedImage, atlasCoordinates.x, atlasCoordinates.y);
+                            // Brighten the pattern image
+                            if (patternImageData.seedbrightness) {
+                                const brightness = clampRandomHiLo(patternImageData.seedbrightnessrange[0], patternImageData.seedbrightnessrange[1], individualPatternSeedRNG.brightness);
+                                const manipulationMethod = brightness > 0 ? "lighten" : "darken";
+                                imageManipulations.push({ apply: manipulationMethod, params: [Math.abs(brightness)] });
+                            }
+                            // Saturate the pattern image
+                            if (patternImageData.seedsaturate) {
+                                const saturation = clampRandomHiLo(patternImageData.seedsaturaterange[0], patternImageData.seedsaturaterange[1], individualPatternSeedRNG.saturation);
+                                const manipulationMethod = saturation > 0 ? "saturate" : "desaturate";
+                                imageManipulations.push({ apply: manipulationMethod, params: [saturation] });
+                            }
+                
+                            // Hue-Rotate the pattern image
+                            if (patternImageData.seedhuerotate) {
+                                imageManipulations.push({ apply: "hue", params: [Math.round(individualPatternSeedRNG.hue * 360)] });
+                            }
                         }
+                        const JimpImg: Jimp = patternImageLayers[key] as Jimp;
+                        // Scale the pattern image
+                        if (patternImageData.seedscale) {
+                            const scale = clampRandomHiLo(patternImageData.seedscalerange[0], patternImageData.seedscalerange[1], individualPatternSeedRNG.scale);
+                            JimpImg.resize(JimpImg.bitmap.width * scale, JimpImg.bitmap.height * scale, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                        }
+            
+                        // Rotate pattern image
+                        if (patternImageData.seedrotate) {
+                            let degrees = Math.floor(individualPatternSeedRNG.rotation * 360);
+                            const imageSizeTarget = Math.sqrt(Math.pow((JimpImg.bitmap.width / 2), 2) + Math.pow((JimpImg.bitmap.height / 2), 2));
+                            JimpImg.rotate(degrees, false)
+                            JimpImg.crop((JimpImg.bitmap.width - imageSizeTarget) / 2, (JimpImg.bitmap.height - imageSizeTarget) / 2, imageSizeTarget, imageSizeTarget);
+                        }
+
+                        // Create cropped pattern image to the size of the pattern mask, at a random(seeded) position
+                        const cropXPos = Math.floor(individualPatternSeedRNG.cropX * (JimpImg.bitmap.width - baseImage.bitmap.width));
+                        const cropYPos = Math.floor(individualPatternSeedRNG.cropY * (JimpImg.bitmap.height - baseImage.bitmap.height));
+                        JimpImg.crop(cropXPos, cropYPos, baseImage.bitmap.height, baseImage.bitmap.width);
+        
+                        // Apply color manimpulatons, if they exist.
+                        if (imageManipulations.length > 0) JimpImg.color(imageManipulations);
                     }
                 }
             }
-            const atlasCoordinates = getPatternAtlasCoordinates(iconWidth, iconHeight, patternIndex, "base");
-            // console.log(`Generated atlas image for pattern index ${patternIndex} and cube ID ${cubeID}.`)
-            newBaseImage.composite(overlayImage, 0, 0);
-            newPatternAtlas.composite(newBaseImage, atlasCoordinates.x, atlasCoordinates.y);
+
+            patternImages.push(patternImageLayers);
         }
-        await newPatternAtlas.writeAsync(patternAtlasFilePath);
-        return newPatternAtlas;
+        const newBaseImage = baseImage.clone();
+        for (let maskImageIndex = 0; maskImageIndex < patternInfo.masks.length; maskImageIndex++) {
+            const maskInfo = patternInfo.masks[maskImageIndex];
+            // Read random(seeded) mask image
+            let maskImage = await Jimp.read(`${imageDirectory}/${maskInfo.images[Math.floor(maskInfo.images.length * overallPatternSeedRNG.maskImage[maskImageIndex % overallPatternSeedRNG.maskImage.length])]}.png`);
+            
+            for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImages[maskInfo.patternimage]).length; patternImageLayerIndex++) {
+                const key: keyof typeof patternImages[number] = Object.keys(patternImages[maskInfo.patternimage])[patternImageLayerIndex] as keyof typeof patternImages[number];
+                // Mask the pattern image with the mask image and composite the modified masked image
+                if (patternImages[maskInfo.patternimage][key] !== undefined) {
+                    // @ts-ignore 'key' is a dynamic object property... it's OK!!!
+                    const maskedImage = patternImages[maskInfo.patternimage][key].clone()
+                    if (staticPatternImageLayers[key] === undefined) {
+                        maskedImage.mask(maskImage, 0, 0);
+                    }
+                    if (key === "base") {
+                        newBaseImage.composite(maskedImage, 0, 0);
+                    } else {
+                        await maskedImage.writeAsync(`${patternAtlasDirectory}/${key}.png`)
+                    }
+                }
+            }
+        }
+        // console.log(`Generated atlas image for pattern index ${patternIndex} and cube ID ${cubeID}.`)
+        newBaseImage.composite(overlayImage, 0, 0);
+        await newBaseImage.writeAsync(`${patternAtlasDirectory}/cube.png`);
     }
+    return patternAtlasDirectory;
 }
 
-async function getSeededCubeIconType(cubeID: CCOIcons.patternedCubeID, seed: number, type: typeof xAtlasTypes[number]): Promise<Jimp> {
-    // Load the base cube image from the seeded cube directory, for the width/height
-    const baseImage = await Jimp.read(`./sourceicons/seededcubetextures/${cubeID}/base.png`)
-    const atlas = await getSeededIconAtlas(cubeID);
-    const iconPosition = getPatternAtlasCoordinates((baseImage.bitmap.width + (config.patternAtlasPadding * 2)), (baseImage.bitmap.height + (config.patternAtlasPadding * 2)), seed, type);
-    return atlas.crop(iconPosition.x, iconPosition.y, baseImage.bitmap.width, baseImage.bitmap.height);
+async function getSeededCubeIconType(cubeID: CCOIcons.patternedCubeID, seed: number, type: typeof seededIconKeys[number]): Promise<Jimp> {
+    const iconDirectory = await ensurePatternedIconsAreGenerated(cubeID, seed);
+    return await Jimp.read(`${iconDirectory}/${((type === "base") ? "cube" : type)}.png`);
 }
 
-async function getCubeIconPart(cubeID: CCOIcons.cubeID, seed: number, type: typeof xAtlasTypes[number]): Promise<Jimp[]> {
+async function getCubeIconPart(cubeID: CCOIcons.cubeID, seed: number, type: typeof seededIconKeys[number]): Promise<Jimp[]> {
     if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === cubeID) !== undefined) {
         return [await getSeededCubeIconType(cubeID as CCOIcons.patternedCubeID, seed, type)];
     } else {
@@ -392,43 +370,6 @@ const iconModifiers = {
             return {
                 directoryAddition: `/ccicons/`,
                 newFileName: fileNameOverride
-            };
-        }
-    },
-    contraband: {
-        directory: '/contraband',
-        modificationFunction: async function(modifyingPath, modifyingID, fileName, data: { seed: number }) {
-            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
-            // Create the directory path of the outcome of this modification
-            const outcomePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}/contraband`);
-            // Create the outcome path of the file
-            const outcomeFile = `${outcomePath}/${fileName}`;
-            // If the path to the directory doesn't exist, create it.
-            if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
-            // If the icon hasn't been generated yet, then generate it (in this case, it's masking the accent image with a 'contraband' image, then compositing the original image with the masked accent image.)
-            if (!fs.existsSync(outcomeFile)) {
-                let iconFrames: Jimp[] = [];
-                let frameMasks: Jimp[] = [];
-                frameMasks = await getCubeIconPart(modifyingID, data.seed, "accents");
-                iconFrames = await loadAnimatedCubeIcon(`${originalImagePath}`);
-                const contrabandEffectImage = await Jimp.read(`./sourceicons/attributeeffects/contraband.png`);
-                var patternRNG = new seedrandom(`${modifyingID}`);
-                const cropX = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.width - iconFrames[0].bitmap.width));
-                const cropY = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.height - iconFrames[0].bitmap.height));
-                contrabandEffectImage.crop(cropX, cropY, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
-
-                const contrabandOutlineThickness = 1;
-                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
-                    let contrabandEffectClone = contrabandEffectImage.clone();
-                    contrabandEffectClone.mask(frameMasks[frameIndex % frameMasks.length], 0, 0);
-                    // let accentImage = strokeImage(contrabandEffectClone, 0x000000ff, contrabandOutlineThickness);
-                    
-                    iconFrames[frameIndex] = strokeImage(iconFrames[frameIndex].composite(contrabandEffectClone, 0, 0), 0x000000ff, contrabandOutlineThickness, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]);
-                }
-                await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
-            }
-            return {
-                directoryAddition: `/contraband/`
             };
         }
     },
@@ -509,8 +450,13 @@ const iconModifiers = {
             const baseDirectory = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}`);
             const originalImagePath = path.resolve(`${baseDirectory}/${fileName}`);
 
-            const shownPrefixes = [...data.prefixes].sort(sortPrefixesByApplicationOrder).slice(0, config.shownPrefixLimit);
-            console.log(shownPrefixes)
+            let shownPrefixes = [...data.prefixes].sort(sortPrefixesByApplicationOrder);
+            if (shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true).length > config.shownPrefixLimit) {
+                let exemptedPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === false);
+                let cutPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true);
+                shownPrefixes = [...exemptedPrefixes, ...cutPrefixes.slice(0, config.shownPrefixLimit)];
+            }
+            console.log("Prefixes: ", shownPrefixes)
             const usingSeed = shownPrefixes.findIndex(prefix => prefixes[prefix].seeded === true) != -1;
 
             let newDirectoryName = `prefix${usingSeed ? data.prefixSeed : ''}${shownPrefixes.join('').toLowerCase()}/`;
@@ -539,13 +485,8 @@ const iconModifiers = {
                     for (let accentFrameIndex = 0; accentFrameIndex < accentFrames.length; accentFrameIndex++) {
                         const currentFrame = accentFrames[accentFrameIndex];
                         let accentCoordinates: CCOIcons.anchorPointSchema["accents"][number] = {
-                            coordinates: []
+                            image: currentFrame
                         };
-                        currentFrame.scan(0, 0, currentFrame.bitmap.width, currentFrame.bitmap.height, function (x, y, idx) {
-                            if (this.bitmap.data[idx + 3] > 0) {
-                                accentCoordinates.coordinates.push({ x, y });
-                            }
-                        });
                         retrievedParts.accents.push(accentCoordinates);
                     }
                 }
@@ -860,12 +801,6 @@ const iconModifiers = {
 }}
 
 interface cubeIconGenerationParameters {
-    contraband: {
-        use: boolean,
-        data: {
-            seed: number
-        }
-    },
     bSide: {
         use: boolean,
             data: any
@@ -908,10 +843,6 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     if (iconAttributes.tallying !== undefined && iconAttributes.tallying.use === true) {
         imageDirectories.push((await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.tallying.data)).directoryAddition);
     }
-    
-    if (iconAttributes.contraband !== undefined && iconAttributes.contraband.use === true) {
-        imageDirectories.push((await iconModifiers.contraband.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.contraband.data)).directoryAddition);
-    }
 
     if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
         imageDirectories.push((await iconModifiers.bSide.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.bSide.data)).directoryAddition);
@@ -936,7 +867,7 @@ const route: CCOIcons.documentedRoute = {
         subtitle: "GETs icons for cubes, generates them if needed.",
         resolves: "image",
         author: "AspectQuote",
-        description: "Blurb about icons and what this does",
+        description: "Endpoint that returns a constructed cube icon based on given parameters.",
         examples: [{
             name: "Large Green Cube Icon",
             example: "/cubeicon/green?size=512",
@@ -966,7 +897,8 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/random",
                         description: "Will return the icon for a random cube."
                     }
-                ]
+                ],
+                requestBuilderPossibs: Object.keys(cubes)
             }
         ],
         queryDocs: [
@@ -986,7 +918,14 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/cardboardbox?size=16",
                         description: "Will return the cardboard box icon at a size of 16x16px. Note: This is the smallest version of any icon you can request."
                     }
-                ]
+                ],
+                requestBuilderPossibs: [1].map(() => {
+                    let validArray: number[] = [Math.log2(config.resizeMin)];
+                    while (2 ** validArray[validArray.length-1] < config.resizeMax) {
+                        validArray.push(validArray[validArray.length - 1] + 1);
+                    }
+                    return validArray.map(power => String(2 ** power))
+                }).flat(1)
             },
             {
                 query: 'tallying',
@@ -1004,7 +943,14 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/orange?tallying=1182",
                         description: "Will return the 'orange' cubeID icon with 1182% tally completion."
                     },
-                ]
+                ],
+                requestBuilderPossibs: [1].map(() => {
+                    let validArray: string[] = [];
+                    while (validArray.length < config.maxTallyPercent) {
+                        validArray.push(`${validArray.length}`);
+                    }
+                    return validArray;
+                }).flat(1)
             },
             {
                 query: 'bside',
@@ -1022,25 +968,8 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/eclipse?bside&pattern=45",
                         description: "Will return the 'eclipse' icon, with pattern ID 45, along with the B-Side attribute modifier applied."
                     }
-                ]
-            },
-            {
-                query: 'contraband',
-                name: "Contraband Attribute",
-                subtitle: "Whether or not you want the contraband attribute modification to be applied.",
-                description: "You don't have to include anything as part of this parameter, simply including 'contraband' as a query modifier in the URL is enough.",
-                examples: [
-                    {
-                        name: "Contraband Green Cube Icon",
-                        example: "/cubeicon?contraband",
-                        description: "Will return the 'green' cubeID icon in its contraband variant."
-                    },
-                    {
-                        name: "512x512 Contraband Red Cube Icon",
-                        example: "/cubeicon/red?contraband&size=512",
-                        description: "Will return the contraband red cube icon at a size of 512x512px. Note: 'contraband' is simply provided without any value in the URL."
-                    }
-                ]
+                ],
+                requestBuilderPossibs: ['true']
             },
             {
                 query: 'spritesheet',
@@ -1058,7 +987,8 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/sublime?contraband&spritesheet",
                         description: "Will return the 'sublime' cubeID's contraband variant spritesheet image."
                     }
-                ]
+                ],
+                requestBuilderPossibs: ['true']
             },
             {
                 query: 'pattern',
@@ -1076,7 +1006,14 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/chalkboard?pattern=random",
                         description: "Will return a random Chalkboard Cube icon at a size of 512x512px. Note: 'pattern' is supplied 'random' instead of a pattern index."
                     }
-                ]
+                ],
+                requestBuilderPossibs: [1].map(() => {
+                    let validArray: string[] = [];
+                    while (validArray.length < config.cubePatternIndexLimit) {
+                        validArray.push(`${validArray.length}`);
+                    }
+                    return validArray;
+                }).flat(1)
             },
             {
                 query: 'prefixes',
@@ -1094,7 +1031,8 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/red?prefixes=Flaming,Marvelous",
                         description: "Will return the 'red' cube with the 'Flaming' and 'Marvelous' prefixes applied."
                     }
-                ]
+                ],
+                requestBuilderPossibs: Object.keys(prefixes)
             },
             {
                 query: 'prefixseed',
@@ -1107,7 +1045,14 @@ const route: CCOIcons.documentedRoute = {
                         example: "/cubeicon/eclipse?pattern=45&prefixseed=51&prefixes=Chained",
                         description: "Will return the 45th pattern index of the eclipse cube (the 'perfect' variant), with the Chained prefix applied with its 51st pattern index."
                     }
-                ]
+                ],
+                requestBuilderPossibs: [1].map(() => {
+                    let validArray: string[] = [];
+                    while (validArray.length < config.prefixPatternIndexLimit) {
+                        validArray.push(`${validArray.length}`);
+                    }
+                    return validArray;
+                }).flat(1)
             }
         ]
     },
@@ -1122,7 +1067,7 @@ const route: CCOIcons.documentedRoute = {
         } else {
             requestedCubeID = 'green';
         }
-        console.log(requestedCubeID);
+        console.log("Cube ID: ", requestedCubeID);
         // Cube icon generation parameters storer
         const cubeIconParams: Partial<cubeIconGenerationParameters> = {};
 
@@ -1206,15 +1151,6 @@ const route: CCOIcons.documentedRoute = {
                     }
                 }
             }
-
-            if (req.query.contraband !== undefined) {
-                cubeIconParams.contraband = {
-                    use: true,
-                    data: {
-                        seed: cubeIconSeed
-                    }
-                }
-            }
             if (req.query.bside !== undefined) {
                 cubeIconParams.bSide = {
                     use: true,
@@ -1230,19 +1166,19 @@ const route: CCOIcons.documentedRoute = {
             // Create the image (if needed) and get its path
             imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);
         } catch (e) {
-            console.log(e);
+            console.log(e, requestedCubeID, cubeIconParams);
             res.status(403);
             res.send('Failed to get this image. Internal error: '+e)
         }
         // Finally, send the file.
-        console.log(imagePath);
         let endIconGeneration = performance.now();
+        console.log("Output Directory: ", imagePath);
         console.log(`Icon generation took ${endIconGeneration - startIconGeneration}ms.`)
         let imageStats = fs.statSync(imagePath);
         res.set('cubeiconattributes', JSON.stringify({
             size: imageStats.size,
             generationTime: endIconGeneration - startIconGeneration
-        }))
+        }));
         res.sendFile(imagePath);
         return;
     }

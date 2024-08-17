@@ -28,7 +28,7 @@ export type anchorPointSchema = {
         /**
          * An array of pixel coordinates that describe what pixels are accent pixels.
          */
-        coordinates: coordinate[]
+        image: Jimp
     }[]
 
     /**
@@ -115,6 +115,11 @@ export type prefixDefinition = {
      * If the prefix should only be applied after all the other prefixes have been applied. Feeds the final icon frames into the {@link prefixDefinition.compileFrames|compileFrames} function. If this boolean is set, the {@link prefixDefinition.compileFrames|compileFrames} function's maskFrames output property replaces the original output animation.
      */
     appliesDirectlyAfterAllPrefixes: boolean,
+
+    /**
+     * If the prefix counts towards the prefix generation limit (attribute modifiers that aren't necessarily prefixes)
+     */
+    countsTowardsPrefixCap: boolean,
 
     /**
      * The function that applies the prefix to each frame of the icon, returns where the icon should be composited, and what filters Jimp should apply to the icon.
@@ -459,6 +464,12 @@ export type documentedRoute = {
                  */
                 description: string
             }[]
+
+            /**
+             * Parameter Possibilities for the request builder
+             * - Some or all of the possible values for this parameter in the request builder.
+             */
+            requestBuilderPossibs: string[]
         }[]
 
         /**
@@ -513,6 +524,12 @@ export type documentedRoute = {
                  */
                 description: string
             }[]
+
+            /**
+             * Query Possibilities for the request builder
+             * - Some or all of the possible values for this query in the request builder.
+             */
+            requestBuilderPossibs: string[]
         }[]
         /**
          * Route Examples
