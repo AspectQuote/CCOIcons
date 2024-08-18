@@ -3364,7 +3364,7 @@ const prefixes = {
 
             for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
                 const frameHeadPosition = headPositions[headFrameIndex];
-                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(sacredHeadImage, cacheDirectory, frameHeadPosition, { x: 28, y: 16, width: 32 });
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(sacredHeadImage, cacheDirectory, frameHeadPosition, { x: 29, y: 14, width: 32 });
                 prefixFrames.frontFrames.push(headImagesThisFrame);
             }
 
@@ -3430,55 +3430,141 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Angry": {
-        name: "",
-        seeded: false,
+        name: "Angry",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Angry";
+
+            let omniscientFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/angry/anger.png`);
+
+            let seedRNG = new seedrandom(`angry${seed}`);
+            const animationOffset = Math.floor(omniscientFrames.length * seedRNG())
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/angry/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(omniscientFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const angryFrame = omniscientFrames[(animationFrameIndex + animationOffset) % omniscientFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(angryFrame, cacheDirectory, frameHeadData, { x: (9) - 32, y: omniscientFrames[0].bitmap.height - 3, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Gruesome": {
-        name: "",
-        seeded: false,
+        name: "Gruesome",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Gruesome";
+
+            let bloodBackImage = await Jimp.read(`${prefixSourceDirectory}/gruesome/backblood.png`);
+            let bloodFrontImage = await Jimp.read(`${prefixSourceDirectory}/gruesome/frontblood.png`);
+
+            let seedRNG = new seedrandom(`gruesome${seed}`);
+            const possibleMods: CCOIcons.JimpImgMod[][] = [
+                [], [], [], [], [
+                    {apply: "hue", params: [-61]}
+                ]
+            ];
+            const usedMod = possibleMods[Math.floor(possibleMods.length * seedRNG())]
+
+            bloodBackImage.color(usedMod);
+            bloodFrontImage.color(usedMod);
+
+            let bloodBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/gruesome/backblood${seed}/`);
+            if (!fs.existsSync(bloodBackDirectory)) fs.mkdirSync(bloodBackDirectory, { recursive: true });
+            let bloodFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/gruesome/frontblood${seed}/`);
+            if (!fs.existsSync(bloodFrontDirectory)) fs.mkdirSync(bloodFrontDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backBloodImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(bloodBackImage, bloodBackDirectory, frameHeadPosition, { x: 4, y: 11, width: 32 });
+                prefixFrames.backFrames.push(backBloodImagesThisFrame);
+
+                const frontBloodImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(bloodFrontImage, bloodFrontDirectory, frameHeadPosition, { x: 4, y: 11, width: 32 });
+                prefixFrames.frontFrames.push(frontBloodImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Outlawed": {
-        name: "",
-        seeded: false,
+        name: "Outlawed",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Outlawed";
+
+            let bandannaBackImage = await Jimp.read(`${prefixSourceDirectory}/outlawed/back.png`);
+            let bandannaFrontImage = await Jimp.read(`${prefixSourceDirectory}/outlawed/front.png`);
+
+            let seedRNG = new seedrandom(`outlawed${seed}`);
+
+            const imageMod: CCOIcons.JimpImgMod[] = [
+                { apply: "hue", params: [360 * seedRNG()] }
+            ];
+
+            bandannaBackImage.color(imageMod);
+            bandannaFrontImage.color(imageMod);
+
+            let bandannaBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/outlawed/back/`);
+            if (!fs.existsSync(bandannaBackDirectory)) fs.mkdirSync(bandannaBackDirectory, { recursive: true });
+            let bandannaFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/outlawed/front/`);
+            if (!fs.existsSync(bandannaFrontDirectory)) fs.mkdirSync(bandannaFrontDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backBandannaImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(bandannaBackImage, bandannaBackDirectory, frameHeadPosition, { x: 5, y: 8, width: 32 });
+                prefixFrames.backFrames.push(backBandannaImagesThisFrame);
+
+                const frontBandannaImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(bandannaFrontImage, bandannaFrontDirectory, frameHeadPosition, { x: 5, y: 8, width: 32 });
+                prefixFrames.frontFrames.push(frontBandannaImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Wranglin'": {
         name: "",
         seeded: false,
@@ -4877,6 +4963,7 @@ const prefixIDApplicationOrder = [
 
     // -------------- Prefixes That Add Particles That depend on the cube itself (are bound to parts of the cube)
     "Flaming", // Makes the cube on FREAKING FIRE
+    "Angry", // Adds an animated anime-esque anger icon to the cube
     "Based", // Adds Flashing Eyes to the Cube
     "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
     "Holy", // Adds an embellished animated decoration to the cube
@@ -4905,6 +4992,7 @@ const prefixIDApplicationOrder = [
     "Captain", // Adds a Team Captain hat to the cube
     "Hard-Boiled", // Adds a holmes-esque detective hat to the cube
     "Smoked", // Adds a GET SMOKED hat to the cube
+    "Outlawed", // Adds a bandanna to the cube
     "Serving", // Adds a french-maid-style skirt and bonnet to the cube
     "Angelic", // Adds a halo to the cube
     "Dandy", // Adds dandy space hair to the cube
@@ -4919,6 +5007,7 @@ const prefixIDApplicationOrder = [
     "Emphasized", // Adds a random amount of red arrows to the cube
 
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)
+    "Gruesome", // Adds blood all over the cube
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
     "95in'", // Adds a Windows 95-esque application window to the cube
     "Wanted", // Adds a wanted poster to the cube

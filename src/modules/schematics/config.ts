@@ -25,7 +25,7 @@ const patternAtlasRoot = Math.ceil(Math.sqrt(cubePatternIndexLimit));
 /**
  * How large cubes can be resized to with the ?size= URL parameter
  */
-const resizeMax = (devmode) ? 512 : 128;
+const resizeMax = (devmode) ? 1024 : 128;
 
 /**
  * How small cubes can be resized to with the ?size= URL parameter

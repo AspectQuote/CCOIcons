@@ -1168,7 +1168,7 @@ const route: CCOIcons.documentedRoute = {
         } catch (e) {
             console.log(e, requestedCubeID, cubeIconParams);
             res.status(403);
-            res.send('Failed to get this image. Internal error: '+e)
+            return res.send('Failed to get this image. Internal error: ' + e.stack);
         }
         // Finally, send the file.
         let endIconGeneration = performance.now();
