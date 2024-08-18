@@ -141,6 +141,11 @@ const useTallyingImageCache = !devmode;
  */
 const maxTallyPercent = 999;
 
+/**
+ * The limit on .gif frames that an icon can use
+ */
+const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 500;
+
 console.log("DEVMODE: ", devmode)
 
 export {
@@ -160,5 +165,6 @@ export {
     useBaseCubeCache,
     useResizeCache,
     useTallyingImageCache,
-    maxTallyPercent
+    maxTallyPercent,
+    maximumPrefixFramesPerIcon
 }

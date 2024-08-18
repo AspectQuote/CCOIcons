@@ -627,14 +627,14 @@ const iconModifiers = {
                     height: paddingValues.above + paddingValues.below + iconFrames[0].bitmap.height
                 });
 
-                const neededIconFrames = maths.leastCommonMultipleOfArray([
+                const neededIconFrames = Math.min(config.maximumPrefixFramesPerIcon, maths.leastCommonMultipleOfArray([
                     iconFrames.length,
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.frontFrames.length || 1)), 
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.backFrames.length || 1)),
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.outlineFrames.length || 1)),
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.frameModifiers.length || 1)),
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.maskFrames.length || 1))
-                ]);
+                ]));
 
                 let newFrameBase = new Jimp(
                     paddingValues.left + iconFrames[0].bitmap.width + paddingValues.right, 
