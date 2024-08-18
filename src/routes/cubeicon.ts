@@ -1162,6 +1162,7 @@ const route: CCOIcons.documentedRoute = {
             }
         }
         let imagePath = '';
+        console.log(cubeIconParams, requestedCubeID)
         try {
             // Create the image (if needed) and get its path
             imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);
