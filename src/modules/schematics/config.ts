@@ -10,12 +10,12 @@ const cubePatternIndexLimit = 1000;
 /**
  * Controls how many prefix pattern indices there can be, it's pretty arbitrary.
  */
-const prefixPatternIndexLimit = 100;
+const prefixPatternIndexLimit = 1000;
 
 /**
  * Controls how many prefixes can be displayed on a cube at once. Increasing this will GREATLY effect how many icons can be generated.
  */
-const shownPrefixLimit = 4;
+const shownPrefixLimit = 3;
 
 /**
  * The square root of the cube pattern index, this is used to generate cube pattern atlases, controls how many columns/rows there are in each atlas.

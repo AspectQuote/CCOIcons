@@ -627,14 +627,18 @@ const iconModifiers = {
                     height: paddingValues.above + paddingValues.below + iconFrames[0].bitmap.height
                 });
 
-                const neededIconFrames = Math.min(config.maximumPrefixFramesPerIcon, maths.leastCommonMultipleOfArray([
+                const animationLengths = [
                     iconFrames.length,
-                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.frontFrames.length || 1)), 
+                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.frontFrames.length || 1)),
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.backFrames.length || 1)),
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.outlineFrames.length || 1)),
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.frameModifiers.length || 1)),
                     ...allPrefixFrames.map(compiledFrames => (compiledFrames.maskFrames.length || 1))
-                ]));
+                ];
+                if (animationLengths.find(animlength => animlength % 5 !== 0 && animlength !== 1)) {
+                    console.log("An animation in this icon isn't a multiple of 5!", animationLengths);
+                }
+                const neededIconFrames = Math.min(config.maximumPrefixFramesPerIcon, maths.leastCommonMultipleOfArray(animationLengths));
 
                 let newFrameBase = new Jimp(
                     paddingValues.left + iconFrames[0].bitmap.width + paddingValues.right, 

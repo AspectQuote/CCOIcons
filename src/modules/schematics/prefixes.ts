@@ -2612,9 +2612,9 @@ const prefixes = {
 
             let allGlowFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/holy/glows.png`);
 
-            let animationLength = Math.floor(seedGen() * (allGlowFrames.length - 1)) + 2;
-            let constructedGlowAnimation: Jimp[] = allGlowFrames.slice(-animationLength, -1);
-            for (let newAnimationIndex = 1; newAnimationIndex < animationLength; newAnimationIndex++) {
+            let animationLength = allGlowFrames.length;
+            let constructedGlowAnimation: Jimp[] = allGlowFrames.slice(-animationLength, animationLength);
+            for (let newAnimationIndex = 0; newAnimationIndex < animationLength; newAnimationIndex++) {
                 const sourceIndex = animationLength - newAnimationIndex - 1;
                 constructedGlowAnimation.push(constructedGlowAnimation[sourceIndex]);
             }
@@ -2625,8 +2625,10 @@ const prefixes = {
 
             let neededAnimationFrames = maths.leastCommonMultiple(constructedGlowAnimation.length, iconFrames.length);
 
+            const animationOffset = Math.floor(constructedGlowAnimation.length * seedGen())
+            
             for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
-                const haloFrame = constructedGlowAnimation[animationFrameIndex % constructedGlowAnimation.length];
+                const haloFrame = constructedGlowAnimation[(animationFrameIndex + animationOffset) % constructedGlowAnimation.length];
                 const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
                 const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloFrame, cacheDirectory, frameHeadData, { x: 24, y: 32, width: 32 }, false);
                 prefixFrames.backFrames.push(headImagesThisFrame);
@@ -2654,10 +2656,9 @@ const prefixes = {
             let seedGen = new seedrandom(`unholy${seed}`);
 
             let allGlowFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/unholy/glows.png`);
-
-            let animationLength = Math.floor(seedGen() * (allGlowFrames.length - 1)) + 2;
-            let constructedGlowAnimation: Jimp[] = allGlowFrames.slice(-animationLength, -1);
-            for (let newAnimationIndex = 1; newAnimationIndex < animationLength; newAnimationIndex++) {
+            let animationLength = allGlowFrames.length;
+            let constructedGlowAnimation: Jimp[] = allGlowFrames.slice(-animationLength, animationLength);
+            for (let newAnimationIndex = 0; newAnimationIndex < animationLength; newAnimationIndex++) {
                 const sourceIndex = animationLength - newAnimationIndex - 1;
                 constructedGlowAnimation.push(constructedGlowAnimation[sourceIndex]);
             }
@@ -2668,8 +2669,10 @@ const prefixes = {
 
             let neededAnimationFrames = maths.leastCommonMultiple(constructedGlowAnimation.length, iconFrames.length);
 
+            const animationOffset = Math.floor(constructedGlowAnimation.length * seedGen())
+
             for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
-                const haloFrame = constructedGlowAnimation[animationFrameIndex % constructedGlowAnimation.length];
+                const haloFrame = constructedGlowAnimation[(animationOffset + animationFrameIndex) % constructedGlowAnimation.length];
                 const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
                 const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloFrame, cacheDirectory, frameHeadData, { x: 24, y: 32, width: 32 }, false);
                 prefixFrames.backFrames.push(headImagesThisFrame);
@@ -3356,7 +3359,7 @@ const prefixes = {
             let seedRNG = new seedrandom(`sniping${seed}`);
 
             const rifles = ["tf2", "cs2"]
-            const rifleType = rifles[Math.floor(seedRNG() * rifles.length)];
+            const rifleType = ((seedRNG() > 0.99) ? 'rare' : '') + rifles[Math.floor(seedRNG() * rifles.length)];
 
             let sacredHeadImage = await Jimp.read(`${prefixSourceDirectory}/sniping/${rifleType}rifle.png`);
             let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/sniping/${rifleType}/`);
