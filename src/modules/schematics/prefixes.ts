@@ -824,9 +824,10 @@ const prefixes = {
                     generatedKeyFrames: []
                 })
             }
-            const neededAnimationFrameCount = maths.leastCommonMultipleOfArray(allPlanets.map(planetData => {
-                return planetData.color.bitmap.width
-            })) * 2;
+            // const neededAnimationFrameCount = maths.leastCommonMultipleOfArray(allPlanets.map(planetData => {
+            //     return planetData.color.bitmap.width
+            // })) * 2;
+            const neededAnimationFrameCount = 60;
 
             allPlanets.forEach((planetData) => {
                 planetData.generatedKeyFrames = generateInterpolatedFramesFromKeyFrames(neededAnimationFrameCount, orbitingKeyFrames, planetData.speed, planetData.startingPercent);
@@ -1898,11 +1899,14 @@ const prefixes = {
                 compiledFrames.push(strokeImage(frame.resize(Math.round(iconFrames[iconFrames.length-1].bitmap.width/2.5), Math.round(iconFrames[iconFrames.length-1].bitmap.width/2.5), Jimp.RESIZE_NEAREST_NEIGHBOR), 0x000000ff, 1));
             })
 
+            let reverse = 0;
+            if (seedGen() > 0.5) reverse = allKeyFrames.length;
+
             for (let desiredFrameIndex = 0; desiredFrameIndex < neededFrames; desiredFrameIndex++) {
                 let constructedFrame: typeof prefixFrames.frontFrames[number] = [];
                 for (let summoningCountIndex = 0; summoningCountIndex < summoningCount; summoningCountIndex++) {
                     const offset = (summoningCountIndex * Math.ceil(desiredFrames / summoningCount)) + globalOffset;
-                    const keyFrame = allKeyFrames[(desiredFrameIndex + offset) % allKeyFrames.length];
+                    const keyFrame = allKeyFrames[(Math.abs(reverse - desiredFrameIndex) + offset) % allKeyFrames.length];
                     const summoningFrame = compiledFrames[(desiredFrameIndex + offset) % compiledFrames.length];
                     constructedFrame.push({
                         image: summoningFrame,
@@ -3567,23 +3571,37 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Wranglin'": {
-        name: "",
+        name: "Wranglin'",
         seeded: false,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Wranglin'";
+
+            let wranglinHatImage = await Jimp.read(`${prefixSourceDirectory}/wranglin/hat.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/wranglin/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(wranglinHatImage, cacheDirectory, frameHeadPosition, { x: 8, y: 21, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Canoodled": {
         name: "",
         seeded: false,
@@ -4992,6 +5010,7 @@ const prefixIDApplicationOrder = [
     "Emburdening", // Adds a statue of Atlas holding up the cube
     "Royal", // Adds a crown to the cube
     "Kramped", // Adds a pair of krampus horns to the cube
+    "Wranglin'", // Adds a cowboy hat to the cube
     "Captain", // Adds a Team Captain hat to the cube
     "Hard-Boiled", // Adds a holmes-esque detective hat to the cube
     "Smoked", // Adds a GET SMOKED hat to the cube
