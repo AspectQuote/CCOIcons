@@ -25,7 +25,7 @@ const patternAtlasRoot = Math.ceil(Math.sqrt(cubePatternIndexLimit));
 /**
  * How large cubes can be resized to with the ?size= URL parameter
  */
-const resizeMax = (devmode) ? 1024 : 128;
+const resizeMax = (devmode) ? 2048 : 64;
 
 /**
  * How small cubes can be resized to with the ?size= URL parameter
@@ -149,6 +149,7 @@ const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 500;
 console.log("DEVMODE: ", devmode)
 
 export {
+    devmode,
     cubePatternIndexLimit,
     prefixPatternIndexLimit,
     shownPrefixLimit,

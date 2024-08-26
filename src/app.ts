@@ -7,8 +7,10 @@ import Jimp from 'jimp';
 import * as GifWrap from 'gifwrap';
 import * as fs from 'fs-extra';
 import * as documentationUtils from './documentationUtils';
+import cors from 'cors';
 
 var app: ExpressJS.Application = express();
+app.use(cors());
 const networkPort = process.env.PORT ?? 80;
 
 let totalRequests = 0;

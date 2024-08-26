@@ -782,13 +782,14 @@ const iconModifiers = {
             // If the icon hasn't been generated yet, then generate it (in this case, it's simply reading the original image then resizing it.)
             if (!fs.existsSync(outcomeFile) || !config.useResizeCache) {
                 // Read the original icon
-                let iconFrames = await loadAnimatedCubeIcon(originalImagePath)
+
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
 
                 for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
                     // Resize the icon
                     iconFrames[frameIndex].resize(data.size, data.size, Jimp.RESIZE_NEAREST_NEIGHBOR)
                 }
-                
+
                 // Write the icon
                 await saveAnimatedCubeIcon(iconFrames, fileName, outcomeDirectory, config.getCubeAnimationDelay(modifyingID));
             }
@@ -841,19 +842,27 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     // These IF..ELSE statements are set up in this order to enforce the image application filter order... obviously we don't want 'b-side' to be applied after 'size' and stuff like that... it wouldn't look quite right
 
     if (iconAttributes.prefixes !== undefined && iconAttributes.prefixes.use === true) {
+        let beforePrefixes = performance.now();
         imageDirectories.push((await iconModifiers.prefixes.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.prefixes.data)).directoryAddition);
+        if (config.devmode) console.log('Prefixes took '+(performance.now() - beforePrefixes)+ 'ms.');
     }
 
     if (iconAttributes.tallying !== undefined && iconAttributes.tallying.use === true) {
+        let beforeTallying = performance.now();
         imageDirectories.push((await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.tallying.data)).directoryAddition);
+        if (config.devmode) console.log('Tallying took '+(performance.now() - beforeTallying)+ 'ms.');
     }
 
     if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
+        let beforeBSide = performance.now();
         imageDirectories.push((await iconModifiers.bSide.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.bSide.data)).directoryAddition);
+        if (config.devmode) console.log('B-Side took '+(performance.now() - beforeBSide)+ 'ms.');
     }
 
     if (iconAttributes.size !== undefined && iconAttributes.size.use === true) {
+        let newBeforeResize = performance.now();
         imageDirectories.push((await iconModifiers.size.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.size.data)).directoryAddition);
+        if (config.devmode) console.log('Resize took '+(performance.now() - newBeforeResize)+ 'ms.');
     }
 
     if (!returnSpriteSheet && fs.existsSync(`${config.relativeRootDirectory}${imageDirectories.join('')}${fileName.replace('.png', '.gif')}`)) {
@@ -1177,7 +1186,7 @@ const route: CCOIcons.documentedRoute = {
         }
         // Finally, send the file.
         let endIconGeneration = performance.now();
-        console.log("Output Directory: ", imagePath);
+        if (config.devmode) console.log("Output Directory: ", imagePath);
         console.log(`Icon generation took ${endIconGeneration - startIconGeneration}ms.`)
         let imageStats = fs.statSync(imagePath);
         res.set('cubeiconattributes', JSON.stringify({
