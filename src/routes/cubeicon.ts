@@ -381,10 +381,10 @@ const iconModifiers = {
             if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
             const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
             if (!fs.existsSync(newIconPath)) {
-                    let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
-                    for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
-                        iconFrames[frameIndex] = await createBSideImage(iconFrames[frameIndex]);
-                    }
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    iconFrames[frameIndex] = await createBSideImage(iconFrames[frameIndex]);
+                }
                 await saveAnimatedCubeIcon(iconFrames, fileName, `${newImagePath}/`, config.getCubeAnimationDelay(modifyingID));
             }
             return {
@@ -1080,6 +1080,7 @@ const route: CCOIcons.documentedRoute = {
         } else {
             requestedCubeID = 'green';
         }
+
         console.log("Cube ID: ", requestedCubeID);
         // Cube icon generation parameters storer
         const cubeIconParams: Partial<cubeIconGenerationParameters> = {};
@@ -1175,7 +1176,7 @@ const route: CCOIcons.documentedRoute = {
             }
         }
         let imagePath = '';
-        console.log(cubeIconParams, requestedCubeID)
+        if (config.devmode) console.log(cubeIconParams, requestedCubeID)
         try {
             // Create the image (if needed) and get its path
             imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);

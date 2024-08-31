@@ -5,7 +5,8 @@
   "main": "src/app.ts",
   "scripts": {
     "dev": "tsx watch src/app.ts --dev",
-    "prod": "tsx src/app.ts --max-old-space-size=1536"
+    "prod": "tsx src/app.ts --max-old-space-size=1536",
+    "update": "tsx src/update.ts"
   },
   "keywords": [],
   "author": "",

@@ -29,6 +29,7 @@ const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = 
 import { cubeIconRoute } from './routes/cubeicon';
 import { customBSideIconRoute } from './routes/custombsideicon';
 import { CCOHouTextureRoute } from './routes/ccohoutexture';
+import { loadAnimatedCubeIcon } from './modules/imageutils';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -107,6 +108,6 @@ routes.forEach((routeInformation) => {
 
 app.use(express.static('./documentation'))
 
-const expressServer = app.listen(networkPort, function () {
+const expressServer = app.listen(networkPort, async function () {
     console.log(`[SERVER] Listening on port ${networkPort}.`)
 })

@@ -1713,72 +1713,22 @@ const prefixes = {
 
             const desiredFrames = 30;
             const rainbowFrames = 30;
-            const desiredPoints = 32;
             const summoningCount = Math.ceil(seedGen() * 4) * 2;
             const globalOffset = Math.ceil(desiredFrames * seedGen());
-            const centerPoint = Math.round(iconFrames[0].bitmap.width/2);
-            function f(x: number) {
-                return {x, y: Math.round(Math.sqrt(-Math.pow(x-centerPoint, 2)+(Math.pow(centerPoint, 2)/2)) + centerPoint)}
+            const centerPoint = Math.ceil(iconFrames[0].bitmap.width/2);
+            const radius = centerPoint * ((1.2 * seedGen()) + 1);
+
+            let allKeyFrames: animationKeyFrame[] = [];
+
+            const angleIncrement = 360/desiredFrames;
+            for (let frameIndex = 0; frameIndex < desiredFrames; frameIndex++) {
+                const trigInput = ((frameIndex * angleIncrement)/180) * Math.PI;
+                allKeyFrames.push({
+                    layer: "front",
+                    x: (radius * Math.cos(trigInput)) + centerPoint,
+                    y: (radius * Math.sin(trigInput)) + centerPoint
+                });
             }
-            const radius = Math.sqrt(Math.pow(centerPoint, 2) / 2);
-            const circumference = radius * Math.PI * 2
-            const rightPoint = f(centerPoint + radius - 0.00001);
-            const leftPoint = {x: rightPoint.x - (radius * 2), y: rightPoint.y};
-            const domain = [
-                leftPoint.x,
-                rightPoint.x
-            ];
-
-            const padding = 2;
-            let prefixImage = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
-
-            prefixImage.setPixelColor(0xffffffff, rightPoint.x + padding, rightPoint.y + padding);
-            prefixImage.setPixelColor(0xffffffff, leftPoint.x + padding, leftPoint.y + padding);
-
-            let startingKeyFrames: animationKeyFrame[] = [
-                {
-                    x: leftPoint.x + padding,
-                    y: leftPoint.y + padding,
-                    layer: "front"
-                }
-            ];
-            let endingKeyFrames: animationKeyFrame[] = [
-                {
-                    x: rightPoint.x + padding,
-                    y: rightPoint.y + padding,
-                    layer: "front"
-                }
-            ]
-
-            // I know this implementation is stupid. I haven't taken a trigonometry class yet so I don't know circle-related functions yet.
-            const pointsNeeded = Math.round(desiredPoints/2);
-            const normalizedDomain = domain[1] - domain[0];
-            const res = 15;
-            const xIncrementPerIndex = normalizedDomain/(pointsNeeded * res);
-            const neededDistance = circumference/(pointsNeeded * 2);
-            const lastPoint = {x: leftPoint.x, y: leftPoint.y};
-            for (let loopIndex = 0; loopIndex < (iconFrames[0].bitmap.width * res * (pointsNeeded/2)); loopIndex++) {
-                const xPosition = domain[0] + (xIncrementPerIndex * (loopIndex / res));
-                const yPosition = f(xPosition).y;
-                if (!Number.isNaN(yPosition) && maths.distanceBetweenPoints(lastPoint, {x: xPosition, y: yPosition}) > neededDistance) {
-                    lastPoint.x = xPosition;
-                    lastPoint.y = yPosition;
-                    startingKeyFrames.push({
-                        x: xPosition + padding,
-                        y: yPosition + padding,
-                        layer: "front"
-                    });
-                    startingKeyFrames.unshift({
-                        x: xPosition + padding,
-                        y: centerPoint - (yPosition - centerPoint) + padding,
-                        layer: "front"
-                    });
-                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, yPosition + padding);
-                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, centerPoint - (yPosition - centerPoint) + padding);
-                }
-            }
-
-            const allKeyFrames = generateInterpolatedFramesFromKeyFrames(desiredFrames, [...startingKeyFrames, ...endingKeyFrames], 1, 0);
 
             const summoningFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/summoning/cube.png`)
 
@@ -1794,8 +1744,8 @@ const prefixes = {
                     constructedFrame.push({
                         image: summoningFrame.clone().color(rainbowMod),
                         compositePosition: {
-                            x: Math.round(keyFrame.x) - Math.ceil(summoningFrame.bitmap.width/2) - padding,
-                            y: Math.round(keyFrame.y) - Math.ceil(summoningFrame.bitmap.height/2) - padding
+                            x: Math.round(keyFrame.x) - Math.ceil(summoningFrame.bitmap.width/2),
+                            y: Math.round(keyFrame.y) - Math.ceil(summoningFrame.bitmap.height/2)
                         }
                     })
                 }
@@ -1823,74 +1773,23 @@ const prefixes = {
             prefixFrames.sourceID = "Swarming";
 
             const desiredFrames = 30;
-            const desiredPoints = 15;
-            const possibleSummoningCounts = [1, 1, 1, 2, 2, 2, 3, 3, 3, 5, 5, 5, 6, 6, 10];
+            const possibleSummoningCounts = [1, 2, 2, 2, 3, 3, 3, 5, 5, 5, 6, 6, 10];
             const summoningCount = possibleSummoningCounts[Math.floor(possibleSummoningCounts.length*seedGen())];
             const globalOffset = Math.ceil(desiredFrames * seedGen());
             const centerPoint = Math.round(iconFrames[0].bitmap.width / 2);
-            const radiusAddition = Math.round(iconFrames[0].bitmap.width * 0.6);
-            function f(x: number) {
-                return { x, y: Math.round(Math.sqrt(-Math.pow(x - centerPoint, 2) + (Math.pow(centerPoint + radiusAddition, 2) / 2)) + centerPoint) }
+            const radius = Math.round(iconFrames[0].bitmap.width * 0.9);
+
+            let allKeyFrames: animationKeyFrame[] = [];
+
+            const angleIncrement = 360 / desiredFrames;
+            for (let frameIndex = 0; frameIndex < desiredFrames; frameIndex++) {
+                const trigInput = ((frameIndex * angleIncrement) / 180) * Math.PI;
+                allKeyFrames.push({
+                    layer: "front",
+                    x: (radius * Math.cos(trigInput)) + centerPoint,
+                    y: (radius * Math.sin(trigInput)) + centerPoint
+                });
             }
-            const radius = Math.sqrt(Math.pow(centerPoint + radiusAddition, 2) / 2);
-            const circumference = radius * Math.PI * 2
-            const rightPoint = f(centerPoint + radius - 0.00001);
-            const leftPoint = { x: rightPoint.x - (radius * 2), y: rightPoint.y };
-            const domain = [
-                leftPoint.x,
-                rightPoint.x
-            ];
-
-            const padding = 2;
-            let prefixImage = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
-
-            prefixImage.setPixelColor(0xffffffff, rightPoint.x + padding, rightPoint.y + padding);
-            prefixImage.setPixelColor(0xffffffff, leftPoint.x + padding, leftPoint.y + padding);
-
-            let startingKeyFrames: animationKeyFrame[] = [
-                {
-                    x: leftPoint.x + padding,
-                    y: leftPoint.y + padding,
-                    layer: "front"
-                }
-            ];
-            let endingKeyFrames: animationKeyFrame[] = [
-                {
-                    x: rightPoint.x + padding,
-                    y: rightPoint.y + padding,
-                    layer: "front"
-                }
-            ]
-
-            // I know this implementation is stupid. I haven't taken a trigonometry class yet so I don't know circle-related functions yet.
-            const pointsNeeded = Math.round(desiredPoints / 2);
-            const normalizedDomain = domain[1] - domain[0];
-            const res = 15;
-            const xIncrementPerIndex = normalizedDomain / (pointsNeeded * res);
-            const neededDistance = circumference / (pointsNeeded * 2);
-            const lastPoint = { x: leftPoint.x, y: leftPoint.y };
-            for (let loopIndex = 0; loopIndex < (iconFrames[0].bitmap.width * res * (pointsNeeded / 2)); loopIndex++) {
-                const xPosition = domain[0] + (xIncrementPerIndex * (loopIndex / res));
-                const yPosition = f(xPosition).y;
-                if (!Number.isNaN(yPosition) && maths.distanceBetweenPoints(lastPoint, { x: xPosition, y: yPosition }) > neededDistance) {
-                    lastPoint.x = xPosition;
-                    lastPoint.y = yPosition;
-                    startingKeyFrames.push({
-                        x: xPosition + padding,
-                        y: yPosition + padding,
-                        layer: "front"
-                    });
-                    startingKeyFrames.unshift({
-                        x: xPosition + padding,
-                        y: centerPoint - (yPosition - centerPoint) + padding,
-                        layer: "front"
-                    });
-                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, yPosition + padding);
-                    prefixImage.setPixelColor(0x000000ff, xPosition + padding, centerPoint - (yPosition - centerPoint) + padding);
-                }
-            }
-
-            const allKeyFrames = generateInterpolatedFramesFromKeyFrames(desiredFrames, [...startingKeyFrames, ...endingKeyFrames], 1, 0);
 
             const neededFrames = maths.leastCommonMultipleOfArray([desiredFrames, iconFrames.length]);
 
@@ -1905,14 +1804,14 @@ const prefixes = {
             for (let desiredFrameIndex = 0; desiredFrameIndex < neededFrames; desiredFrameIndex++) {
                 let constructedFrame: typeof prefixFrames.frontFrames[number] = [];
                 for (let summoningCountIndex = 0; summoningCountIndex < summoningCount; summoningCountIndex++) {
-                    const offset = (summoningCountIndex * Math.ceil(desiredFrames / summoningCount)) + globalOffset;
+                    const offset = (summoningCountIndex * Math.ceil(desiredFrames / summoningCount));
                     const keyFrame = allKeyFrames[(Math.abs(reverse - desiredFrameIndex) + offset) % allKeyFrames.length];
                     const summoningFrame = compiledFrames[(desiredFrameIndex + offset) % compiledFrames.length];
                     constructedFrame.push({
                         image: summoningFrame,
                         compositePosition: {
-                            x: Math.round(keyFrame.x) - Math.ceil(summoningFrame.bitmap.width / 2) - padding,
-                            y: Math.round(keyFrame.y) - Math.ceil(summoningFrame.bitmap.height / 2) - padding
+                            x: Math.round(keyFrame.x) - Math.ceil(summoningFrame.bitmap.width / 2),
+                            y: Math.round(keyFrame.y) - Math.ceil(summoningFrame.bitmap.height / 2)
                         }
                     })
                 }
