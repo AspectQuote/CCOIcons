@@ -1,10 +1,7 @@
 import * as CCOIcons from './typedefs';
 // Express doesn't have built-in types...
 import * as ExpressJS from 'express';
-const express = require('express');
-import * as path from 'path';
-import Jimp from 'jimp';
-import * as GifWrap from 'gifwrap';
+import express from 'express';
 import * as fs from 'fs-extra';
 import * as documentationUtils from './documentationUtils';
 import cors from 'cors';
@@ -22,14 +19,9 @@ app.use((req, res, next) => {
     next();
 })
 
-const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
-let allCubeIDs = (Object.keys(cubes) as CCOIcons.cubeID[]);
-const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityconfig.json')
-
 import { cubeIconRoute } from './routes/cubeicon';
 import { customBSideIconRoute } from './routes/custombsideicon';
 import { CCOHouTextureRoute } from './routes/ccohoutexture';
-import { loadAnimatedCubeIcon } from './modules/imageutils';
 
 const routes: CCOIcons.documentedRoute[] = [
     {

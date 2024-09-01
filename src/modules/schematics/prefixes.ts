@@ -3500,10 +3500,10 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Canoodled": {
-        name: "",
-        seeded: false,
+        name: "Canoodled",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
@@ -3514,25 +3514,106 @@ const prefixes = {
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Canoodled";
+
+            let baseFrame = new Jimp(iconFrames[0].bitmap.width, iconFrames[0].bitmap.height, 0x00000000);
+
+            let seedRNG = new seedrandom(`canoodled${seed}`);
+            const validHueShifts = [0, 0, 0, 0, 0,
+                77,
+                -159,
+                -86
+            ];
+
+            let baseKissImage = await Jimp.read(`${prefixSourceDirectory}/canoodled/kissmask.png`);
+            baseKissImage.color([{
+                apply: "hue",
+                params: [validHueShifts[Math.floor(validHueShifts.length * seedRNG())]]
+            }])
+
+            const baseKisses = Math.ceil(((iconFrames[0].bitmap.width * iconFrames[0].bitmap.height) / 1024) * 2);
+            const kissesOnFrame = baseKisses + Math.round(seedRNG() * baseKisses);
+
+            const kissPositionDeadZone = 0.1;
+            const kissPositionOffset = baseFrame.bitmap.width * kissPositionDeadZone;
+            const kissPositionRange = baseFrame.bitmap.width * (1-(kissPositionDeadZone * 2));
+            const maxRotation = 60;
+
+            const kissPositions: CCOIcons.coordinate[] = [];
+            const minKissDistance = 15;
+            let loopTimes = 0;
+            for (let kissIndex = 0; kissIndex < kissesOnFrame && loopTimes < 100; kissIndex++) {
+                loopTimes++;
+                let newKissPosition = {
+                    x: Math.round(kissPositionOffset + (seedRNG() * kissPositionRange) - (baseKissImage.bitmap.width / 2)),
+                    y: Math.round(kissPositionOffset + (seedRNG() * kissPositionRange) - (baseKissImage.bitmap.width / 2))
+                };
+                if (kissPositions.find(position => maths.distanceBetweenPoints(position, newKissPosition) < minKissDistance)) {
+                    kissIndex--;
+                } else {
+                    kissPositions.push(newKissPosition);
+                    let newKissImage = baseKissImage.clone().rotate(Math.round((maxRotation * seedRNG()) - (maxRotation / 2)));
+                    baseFrame.composite(newKissImage, newKissPosition.x, newKissPosition.y);
+                }
+            }
+            const shadowSize = 1;
+            baseFrame = strokeImage(baseFrame, 0x00000022, shadowSize, false, [[0, 1, 0], [1, 0, 1], [0, 1, 0]]);
+            baseFrame.crop(shadowSize, shadowSize, baseFrame.bitmap.width-(shadowSize*2), baseFrame.bitmap.height-(shadowSize*2));
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex];
+                const maskedKissFrame = baseFrame.clone();
+                iconFrame.scan(0, 0, iconFrame.bitmap.width, iconFrame.bitmap.height, function(x, y, idx) {
+                    if (this.bitmap.data[idx + 3] === 0) {
+                        maskedKissFrame.setPixelColor(0x00000000, x, y);
+                    }
+                });
+                prefixFrames.frontFrames.push([{
+                    image: maskedKissFrame,
+                    compositePosition: {
+                        x: 0,
+                        y: 0
+                    }
+                }]);
+            }
+            return prefixFrames;
         }
     },
     "Saiyan": {
-        name: "",
+        name: "Saiyan",
         seeded: false,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Saiyan";
+
+            let saiyanFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/saiyan/glowsprites.png`), 5);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/saiyan/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(saiyanFrames.length, iconFrames.length);
+
+            const headPositions = anchorPoints.heads;
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const flamingFrame = saiyanFrames[animationFrameIndex % saiyanFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(flamingFrame, cacheDirectory, frameHeadData, { x: 16, y: 32, width: 32 }, false);
+                prefixFrames.backFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Amorous": {
         name: "",
         seeded: false,
@@ -4897,6 +4978,7 @@ const prefixIDApplicationOrder = [
     "Runic", // Adds nordic runes and an outline to the cube
     "Mathematical", // Adds LCD numbers and an outline to the cube
     "Onomatopoeiacal", // Adds Onomatopoeia to the cube
+    "Saiyan", // Makes the cube yell super loud whilst charging
 
     // -------------- Prefixes That Add Accessories (Props that are bound to the cube's parts)
     "Sacred", // Adds a Fancy Halo to the Cube
@@ -4929,6 +5011,7 @@ const prefixIDApplicationOrder = [
 
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)
     "Gruesome", // Adds blood all over the cube
+    "Canoodled", // Adds kiss-shaped lipstick to the cube in random spots
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
     "95in'", // Adds a Windows 95-esque application window to the cube
     "Wanted", // Adds a wanted poster to the cube

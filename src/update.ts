@@ -2,8 +2,8 @@ import path from "path";
 import { cubeID, prefixID } from "./typedefs";
 import fs from "fs-extra";
 
-const updatedCubes: cubeID[] = ["waterfall", "blackcircuit", "bluemonolithic", "breathingcircuit", "chemicalhazard", "circuit", "etchedcircuit", "expandingcircuit", "festivegreen", "gamingpc", "goldmonolithic", "gpu", "greenradar", "hoverboard", "koigrunt", "loading", "looking", "lunarflare", "mangospolluted", "monolithic", "neonoirmk2", "orbitingcircuit", "peekacube", "pulsingalien", "redgeode", "reworkedstormcube", "rgb", "sandstorm", "satellite", "sewage", "shortcircuit", "signaturecircuit", "snek", "terminal", "waterfall", "weirdearth", "whitehole"];
-const updatedPrefixes: prefixID[] = ["Endangered", "Emburdening"];
+const updatedCubes: cubeID[] = ["blackcheckered", "red", "black", "white", "pinkgoo", "bluegoo", "greengoo", "pinkcrystal", "bluecrystal", "greencrystal", "glass", "scorpio", "sagittarius", "pisces", "obsidian", "sapphire", "rustedcube", "mossymetal", "distorted", "gilded", "hay", "ultrahd", "meaty", "greenbutton", "durasteel", "delusional", "adamantium", "sheenobsidian", "ruby", "goldrusted"];
+const updatedPrefixes: prefixID[] = [];
 
 const iconDirectory = `./../ccicons/`
 const allFiles = fs.readdirSync(iconDirectory, { recursive: true }).filter(item => typeof item === "string");

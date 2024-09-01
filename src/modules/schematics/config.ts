@@ -10,7 +10,7 @@ const cubePatternIndexLimit = 1000;
 /**
  * Controls how many prefix pattern indices there can be, it's pretty arbitrary.
  */
-const prefixPatternIndexLimit = 1000;
+const prefixPatternIndexLimit = 300;
 
 /**
  * Controls how many prefixes can be displayed on a cube at once. Increasing this will GREATLY effect how many icons can be generated.
@@ -127,6 +127,11 @@ const usePrefixImageCache = !devmode;
 const useResizeCache = !devmode;
 
 /**
+ * Whether or not to regenerate B-Side images each time they are requested. Used for debugging.
+ */
+const useBSideCache = !devmode;
+
+/**
  * Whether or not to retrieve cubes from source upon each request. Used for debugging.
  */
 const useBaseCubeCache = true;
@@ -165,6 +170,7 @@ export {
     usePrefixImageCache,
     useBaseCubeCache,
     useResizeCache,
+    useBSideCache,
     useTallyingImageCache,
     maxTallyPercent,
     maximumPrefixFramesPerIcon

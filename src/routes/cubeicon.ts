@@ -3,6 +3,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import Jimp from 'jimp';
 import * as gifwrap from 'gifwrap';
+import { Response } from 'express';
 
 import { createBSideImage } from './../modules/bside';
 import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
@@ -307,6 +308,20 @@ async function getCubeIconPart(cubeID: CCOIcons.cubeID, seed: number, type: type
     }
 }
 
+function generateAndValidatePrefixDirectory(suppliedPrefixes: CCOIcons.prefixID[], prefixSeed: number): {shownPrefixes: CCOIcons.prefixID[], newDirectoryName: string} {
+    let shownPrefixes = [...suppliedPrefixes].sort(sortPrefixesByApplicationOrder);
+    if (shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true).length > config.shownPrefixLimit) {
+        let exemptedPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === false);
+        let cutPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true);
+        shownPrefixes = [...exemptedPrefixes, ...cutPrefixes.slice(0, config.shownPrefixLimit)];
+    }
+    const usingSeed = shownPrefixes.findIndex(prefix => prefixes[prefix].seeded === true) != -1;
+
+    let newDirectoryName = `prefix${usingSeed ? prefixSeed : ''}${shownPrefixes.join('').toLowerCase()}/`;
+
+    return {shownPrefixes, newDirectoryName};
+}
+
 const iconModifiers = {
     baseIcon: {
         directory: '/ccicons',
@@ -380,7 +395,7 @@ const iconModifiers = {
             const newImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}/bside`);
             if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
             const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
-            if (!fs.existsSync(newIconPath)) {
+            if (!fs.existsSync(newIconPath) || !config.useBSideCache) {
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
                 for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
                     iconFrames[frameIndex] = await createBSideImage(iconFrames[frameIndex]);
@@ -450,17 +465,9 @@ const iconModifiers = {
             const baseDirectory = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}`);
             const originalImagePath = path.resolve(`${baseDirectory}/${fileName}`);
 
-            let shownPrefixes = [...data.prefixes].sort(sortPrefixesByApplicationOrder);
-            if (shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true).length > config.shownPrefixLimit) {
-                let exemptedPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === false);
-                let cutPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true);
-                shownPrefixes = [...exemptedPrefixes, ...cutPrefixes.slice(0, config.shownPrefixLimit)];
-            }
-            console.log("Prefixes: ", shownPrefixes)
-            const usingSeed = shownPrefixes.findIndex(prefix => prefixes[prefix].seeded === true) != -1;
+            const validatedPrefixData = generateAndValidatePrefixDirectory(data.prefixes, data.prefixSeed);
 
-            let newDirectoryName = `prefix${usingSeed ? data.prefixSeed : ''}${shownPrefixes.join('').toLowerCase()}/`;
-            let targetOutputDirectory = path.resolve(`${baseDirectory}/${newDirectoryName}`);
+            let targetOutputDirectory = path.resolve(`${baseDirectory}/${validatedPrefixData.newDirectoryName}`);
 
             if (!fs.existsSync(targetOutputDirectory)) fs.mkdirSync(targetOutputDirectory);
 
@@ -468,10 +475,10 @@ const iconModifiers = {
 
             if (!fs.existsSync(targetOutputFile) || !config.usePrefixImageCache) {
                 const neededParts: { [key in CCOIcons.cubeAnchorPoints]: boolean } = {
-                    accents: shownPrefixes.findIndex(prefix => prefixes[prefix].needs.accents === true) != -1,
-                    eyes: shownPrefixes.findIndex(prefix => prefixes[prefix].needs.eyes === true) != -1,
-                    heads: shownPrefixes.findIndex(prefix => prefixes[prefix].needs.heads === true) != -1,
-                    mouths: shownPrefixes.findIndex(prefix => prefixes[prefix].needs.mouths === true) != -1
+                    accents: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.accents === true) != -1,
+                    eyes: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.eyes === true) != -1,
+                    heads: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.heads === true) != -1,
+                    mouths: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.mouths === true) != -1
                 }
                 const retrievedParts: CCOIcons.anchorPointSchema = {
                     accents: [],
@@ -589,8 +596,8 @@ const iconModifiers = {
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
 
                 async function compilePrefixFrames(masks: boolean, sizeOverride?: {width: number, height: number}) {
-                    for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
-                        const compilingPrefixID = shownPrefixes[shownPrefixIndex];
+                    for (let shownPrefixIndex = 0; shownPrefixIndex < validatedPrefixData.shownPrefixes.length; shownPrefixIndex++) {
+                        const compilingPrefixID = validatedPrefixData.shownPrefixes[shownPrefixIndex];
                         if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === false) {
                             if (prefixes[compilingPrefixID].maskOnly === masks) {
                                 if (sizeOverride) {
@@ -744,8 +751,8 @@ const iconModifiers = {
                     newAnimation.push(newFrame);
                 }
 
-                for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
-                    const compilingPrefixID = shownPrefixes[shownPrefixIndex];
+                for (let shownPrefixIndex = 0; shownPrefixIndex < validatedPrefixData.shownPrefixes.length; shownPrefixIndex++) {
+                    const compilingPrefixID = validatedPrefixData.shownPrefixes[shownPrefixIndex];
                     if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === true) {
                         newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, data.prefixSeed, cubes[modifyingID])).maskFrames;
                     }
@@ -754,7 +761,7 @@ const iconModifiers = {
                 await saveAnimatedCubeIcon(newAnimation, fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
             }
             return {
-                directoryAddition: `${newDirectoryName}`
+                directoryAddition: `${validatedPrefixData.newDirectoryName}`
             };
         }
     },
@@ -871,6 +878,52 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     }
 
     return path.resolve(`${config.relativeRootDirectory}${imageDirectories.join('')}${fileName}`);
+}
+
+function determineFullOutputPath(params: Partial<cubeIconGenerationParameters>, cubeID: CCOIcons.cubeID, cubeIconSeed: number): {gifPath: string, pngPath: string} {
+    let prefixString = ``;
+    if (params?.prefixes?.use === true) {
+        const prefixData = generateAndValidatePrefixDirectory(params.prefixes?.data.prefixes ?? [], params.prefixes?.data.prefixSeed ?? 1);
+        prefixString = prefixData.newDirectoryName;
+    }
+    let bSideString = ``;
+    if (params.bSide?.use === true) {
+        bSideString = `bside/`;
+    }
+    let sizeString = ``;
+    if (params.size?.use === true) {
+        if (Number.isNaN(params.size.data.size) || params.size.data.size > config.resizeMax || params.size.data.size < config.resizeMin || (Math.log(params.size.data.size) / Math.log(2)) % 1 !== 0) {
+            sizeString = ``;
+        } else {
+            sizeString = `sizex${params.size.data.size}/`
+        }
+    }
+    let iconFileName = ``;
+
+    if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === cubeID) !== undefined) {
+        iconFileName = `${cubeID}${cubeIconSeed}`
+    } else {
+        iconFileName = `${cubeID}`
+    }
+    
+    const basePath = `./../ccicons/${prefixString}${bSideString}${sizeString}${iconFileName}`
+    let pngPath = path.resolve(`${basePath}.png`);
+    let gifPath = path.resolve(`${basePath}.gif`);
+
+    return {gifPath, pngPath};
+}
+
+function finishServingIcon(res: Response, imagePath: string, predictedDirectory: string, genTime: number) {
+    // Finally, send the file.
+    if (config.devmode) console.log("Output Directory: ", imagePath);
+    if (config.devmode) console.log("Predicted Output Directory: ", predictedDirectory);
+    console.log(`Icon generation took ${genTime}ms.`)
+    let imageStats = fs.statSync(imagePath);
+    res.set('cubeiconattributes', JSON.stringify({
+        size: imageStats.size,
+        generationTime: genTime
+    }));
+    res.sendFile(imagePath);
 }
 
 const route: CCOIcons.documentedRoute = {
@@ -1177,25 +1230,28 @@ const route: CCOIcons.documentedRoute = {
         }
         let imagePath = '';
         if (config.devmode) console.log(cubeIconParams, requestedCubeID)
-        try {
-            // Create the image (if needed) and get its path
-            imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);
-        } catch (e) {
-            console.log(e, requestedCubeID, cubeIconParams);
-            res.status(403);
-            return res.send('Failed to get this image. Internal error: ' + e.stack);
+        const predictedDirectory = determineFullOutputPath(cubeIconParams, requestedCubeID, cubeIconSeed);
+        if (!config.devmode && fs.existsSync(predictedDirectory.pngPath)) {
+            if (fs.existsSync(predictedDirectory.gifPath) && !returnSpriteSheet) {
+                imagePath = predictedDirectory.gifPath;
+            } else {
+                imagePath = predictedDirectory.pngPath;
+            }
+            console.log('Served using prediction.');
+            return finishServingIcon(res, imagePath, predictedDirectory.pngPath, performance.now() - startIconGeneration);
+        } else {
+            console.log('Created waiting storage.');
+            try {
+                // Create the image (if needed) and get its path
+                imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);
+            } catch (e) {
+                console.log(e, requestedCubeID, cubeIconParams);
+                res.status(403);
+                return res.send('Failed to get this image. Internal error: ' + e.stack);
+            }
+            finishServingIcon(res, imagePath, predictedDirectory.pngPath, performance.now() - startIconGeneration);
+            return;
         }
-        // Finally, send the file.
-        let endIconGeneration = performance.now();
-        if (config.devmode) console.log("Output Directory: ", imagePath);
-        console.log(`Icon generation took ${endIconGeneration - startIconGeneration}ms.`)
-        let imageStats = fs.statSync(imagePath);
-        res.set('cubeiconattributes', JSON.stringify({
-            size: imageStats.size,
-            generationTime: endIconGeneration - startIconGeneration
-        }));
-        res.sendFile(imagePath);
-        return;
     }
 }
 
