@@ -3734,9 +3734,11 @@ const prefixes = {
             })
 
             let heartOffsets: number[] = [];
+            let failsafe = 0;
             while (heartOffsets.length < 4) {
                 let possibleOffset = Math.floor(heartFrames.length * seedRNG());
-                if (!heartOffsets.find(offset => Math.abs(offset - possibleOffset) <= 2)) {
+                failsafe++;
+                if (!heartOffsets.find(offset => Math.abs(offset - possibleOffset) <= 2) || failsafe > 100) {
                     heartOffsets.push(possibleOffset);
                 }
             }
@@ -3795,9 +3797,11 @@ const prefixes = {
             })
 
             let dazedOffsets: number[] = [];
+            let failsafe = 0;
             while (dazedOffsets.length < 4) {
                 let possibleOffset = Math.floor(dazedFrames.length * seedRNG());
-                if (!dazedOffsets.find(offset => Math.abs(offset - possibleOffset) <= 2)) {
+                failsafe++;
+                if (!dazedOffsets.find(offset => Math.abs(offset - possibleOffset) <= 2) || failsafe > 100) {
                     dazedOffsets.push(possibleOffset);
                 }
             }
