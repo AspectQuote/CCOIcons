@@ -32,7 +32,7 @@ const route: CCOIcons.documentedRoute = {
                 requiredNote: "You need an image to get a custom b-side image, obviously.",
                 examples: [
                     {
-                        name: "Red Cube Icon",
+                        name: "May Icon",
                         example: "/custombsideicon/may",
                         description: "Will return the custom b-side variant of the may background image."
                     }

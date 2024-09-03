@@ -8,6 +8,7 @@ import { Response } from 'express';
 import { createBSideImage } from './../modules/bside';
 import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
 import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder } from '../modules/schematics/prefixes';
+import { getSeededCubeIconType, generateAndValidatePrefixDirectory, generatePrefixedCube } from '../modules/cubeiconutils';
 import * as config from '../modules/schematics/config';
 import * as maths from '../modules/maths';
 let seedrandom = require('seedrandom');
@@ -136,192 +137,6 @@ if (config.slatedConfig.alwaysRegenerate || !fs.existsSync(`${config.relativeRoo
     })()
 }
 
-function clampRandomHiLo(low: number, high: number, seed: number) {
-    return ((high - low) * seed) + low;
-}
-
-type cubeSeedValues = {
-    brightness: number
-    saturation: number
-    scale: number
-    hue: number
-    rotation: number
-    cropX: number
-    cropY: number
-    maskImage: number[]
-}
-function getSeededIconRNGValues(cubeID: CCOIcons.patternedCubeID, seed: number, offset: number): cubeSeedValues {
-    const RNGenerator = new seedrandom(`${cubeID}${seed.toString()}${offset.toString()}`);
-    const seedValuesObj: cubeSeedValues = {
-        brightness: RNGenerator(),
-        saturation: RNGenerator(),
-        scale: RNGenerator(),
-        hue: RNGenerator(),
-        rotation: RNGenerator(),
-        cropX: RNGenerator(),
-        cropY: RNGenerator(),
-        maskImage: [RNGenerator(), RNGenerator(), RNGenerator(), RNGenerator(), RNGenerator(), RNGenerator(), RNGenerator(), RNGenerator(), RNGenerator(), RNGenerator()]
-    }
-    return seedValuesObj;
-}
-
-const seededIconKeys: ("base" | CCOIcons.cubeAnchorPoints)[] = ["base", "accents", "eyes", "heads", "mouths"] as const;
-
-async function ensurePatternedIconsAreGenerated(cubeID: CCOIcons.patternedCubeID, patternIndex: number): Promise<string> {
-    const patternInfo: undefined | CCOIcons.patternedCubeDefinition = patternSchema[cubeID];
-    const patternAtlasDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/patternatlases/${cubeID}/${patternIndex}`);
-    if (!fs.existsSync(`${patternAtlasDirectory}/cube.png`)) {
-        console.log("Regenerating Pattern: "+patternIndex)
-        fs.mkdirSync(patternAtlasDirectory, { recursive: true });
-        // Image Directory
-        const imageDirectory = `./sourceicons/seededcubetextures/${cubeID}`;
-        // Load the base cube image from the seeded cube directory.
-        const baseImage = await Jimp.read(`${imageDirectory}/base.png`)
-        // Read overlay image and put that over the composite later
-        const overlayImage = await Jimp.read(`${imageDirectory}/finaloverlay.png`);
-
-        let staticPatternImageLayers: { [key in typeof seededIconKeys[number]]: Jimp | undefined } = {
-            base: undefined,
-            accents: undefined,
-            eyes: undefined,
-            mouths: undefined,
-            heads: undefined
-        }
-
-        for (let staticPatternKeyIndex = 0; staticPatternKeyIndex < Object.keys(staticPatternImageLayers).length; staticPatternKeyIndex++) {
-            const staticPatternKey: keyof typeof staticPatternImageLayers = Object.keys(staticPatternImageLayers)[staticPatternKeyIndex] as keyof typeof staticPatternImageLayers;
-            if (staticPatternKey !== "base") {
-                if (fs.existsSync(`${imageDirectory}/${staticPatternKey}.png`)) {
-                    staticPatternImageLayers[staticPatternKey] = await Jimp.read(`${imageDirectory}/${staticPatternKey}.png`);
-                }
-            }
-        }
-        let patternImages: { [key in typeof seededIconKeys[number]]?: undefined | Jimp }[] = []
-        const overallPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, 0);
-        for (let patternImageIndex = 0; patternImageIndex < patternInfo.patternimages.length; patternImageIndex++) {
-            const individualPatternSeedRNG = getSeededIconRNGValues(cubeID, patternIndex, patternImageIndex);
-            const patternImageData = patternInfo.patternimages[patternImageIndex];
-
-            let patternImageLayers: typeof staticPatternImageLayers = {
-                base: undefined,
-                accents: ((staticPatternImageLayers.accents === undefined) ? undefined : staticPatternImageLayers.accents.clone()),
-                eyes: ((staticPatternImageLayers.eyes === undefined) ? undefined : staticPatternImageLayers.eyes.clone()),
-                mouths: ((staticPatternImageLayers.mouths === undefined) ? undefined : staticPatternImageLayers.mouths.clone()),
-                heads: ((staticPatternImageLayers.heads === undefined) ? undefined : staticPatternImageLayers.heads.clone())
-            };
-            for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImageLayers).length; patternImageLayerIndex++) {
-                const key: keyof typeof patternImageLayers = Object.keys(patternImageLayers)[patternImageLayerIndex] as keyof typeof patternImageLayers;
-                const imageFilePath = path.resolve(`./sourceicons/textures/${patternImageData.path}/${key}.png`);
-                if (patternImageLayers[key] === undefined && fs.existsSync(imageFilePath)) {
-                    patternImageLayers[key] = await Jimp.read(imageFilePath);
-                    if (patternImageLayers[key] !== undefined) {
-                        // I love typedefs!!!
-                        let imageManipulations: CCOIcons.JimpImgMod[] = [];
-                        if (key === "base") {
-                            // Brighten the pattern image
-                            if (patternImageData.seedbrightness) {
-                                const brightness = clampRandomHiLo(patternImageData.seedbrightnessrange[0], patternImageData.seedbrightnessrange[1], individualPatternSeedRNG.brightness);
-                                const manipulationMethod = brightness > 0 ? "lighten" : "darken";
-                                imageManipulations.push({ apply: manipulationMethod, params: [Math.abs(brightness)] });
-                            }
-                            // Saturate the pattern image
-                            if (patternImageData.seedsaturate) {
-                                const saturation = clampRandomHiLo(patternImageData.seedsaturaterange[0], patternImageData.seedsaturaterange[1], individualPatternSeedRNG.saturation);
-                                const manipulationMethod = saturation > 0 ? "saturate" : "desaturate";
-                                imageManipulations.push({ apply: manipulationMethod, params: [saturation] });
-                            }
-                
-                            // Hue-Rotate the pattern image
-                            if (patternImageData.seedhuerotate) {
-                                imageManipulations.push({ apply: "hue", params: [Math.round(individualPatternSeedRNG.hue * 360)] });
-                            }
-                        }
-                        const JimpImg: Jimp = patternImageLayers[key] as Jimp;
-                        // Scale the pattern image
-                        if (patternImageData.seedscale) {
-                            const scale = clampRandomHiLo(patternImageData.seedscalerange[0], patternImageData.seedscalerange[1], individualPatternSeedRNG.scale);
-                            JimpImg.resize(JimpImg.bitmap.width * scale, JimpImg.bitmap.height * scale, Jimp.RESIZE_NEAREST_NEIGHBOR);
-                        }
-            
-                        // Rotate pattern image
-                        if (patternImageData.seedrotate) {
-                            let degrees = Math.floor(individualPatternSeedRNG.rotation * 360);
-                            const imageSizeTarget = Math.sqrt(Math.pow((JimpImg.bitmap.width / 2), 2) + Math.pow((JimpImg.bitmap.height / 2), 2));
-                            JimpImg.rotate(degrees, false)
-                            JimpImg.crop((JimpImg.bitmap.width - imageSizeTarget) / 2, (JimpImg.bitmap.height - imageSizeTarget) / 2, imageSizeTarget, imageSizeTarget);
-                        }
-
-                        // Create cropped pattern image to the size of the pattern mask, at a random(seeded) position
-                        const cropXPos = Math.floor(individualPatternSeedRNG.cropX * (JimpImg.bitmap.width - baseImage.bitmap.width));
-                        const cropYPos = Math.floor(individualPatternSeedRNG.cropY * (JimpImg.bitmap.height - baseImage.bitmap.height));
-                        JimpImg.crop(cropXPos, cropYPos, baseImage.bitmap.height, baseImage.bitmap.width);
-        
-                        // Apply color manimpulatons, if they exist.
-                        if (imageManipulations.length > 0) JimpImg.color(imageManipulations);
-                    }
-                }
-            }
-
-            patternImages.push(patternImageLayers);
-        }
-        const newBaseImage = baseImage.clone();
-        for (let maskImageIndex = 0; maskImageIndex < patternInfo.masks.length; maskImageIndex++) {
-            const maskInfo = patternInfo.masks[maskImageIndex];
-            // Read random(seeded) mask image
-            let maskImage = await Jimp.read(`${imageDirectory}/${maskInfo.images[Math.floor(maskInfo.images.length * overallPatternSeedRNG.maskImage[maskImageIndex % overallPatternSeedRNG.maskImage.length])]}.png`);
-            
-            for (let patternImageLayerIndex = 0; patternImageLayerIndex < Object.keys(patternImages[maskInfo.patternimage]).length; patternImageLayerIndex++) {
-                const key: keyof typeof patternImages[number] = Object.keys(patternImages[maskInfo.patternimage])[patternImageLayerIndex] as keyof typeof patternImages[number];
-                // Mask the pattern image with the mask image and composite the modified masked image
-                if (patternImages[maskInfo.patternimage][key] !== undefined) {
-                    // @ts-ignore 'key' is a dynamic object property... it's OK!!!
-                    const maskedImage = patternImages[maskInfo.patternimage][key].clone()
-                    if (staticPatternImageLayers[key] === undefined) {
-                        maskedImage.mask(maskImage, 0, 0);
-                    }
-                    if (key === "base") {
-                        newBaseImage.composite(maskedImage, 0, 0);
-                    } else {
-                        await maskedImage.writeAsync(`${patternAtlasDirectory}/${key}.png`)
-                    }
-                }
-            }
-        }
-        // console.log(`Generated atlas image for pattern index ${patternIndex} and cube ID ${cubeID}.`)
-        newBaseImage.composite(overlayImage, 0, 0);
-        await newBaseImage.writeAsync(`${patternAtlasDirectory}/cube.png`);
-    }
-    return patternAtlasDirectory;
-}
-
-async function getSeededCubeIconType(cubeID: CCOIcons.patternedCubeID, seed: number, type: typeof seededIconKeys[number]): Promise<Jimp> {
-    const iconDirectory = await ensurePatternedIconsAreGenerated(cubeID, seed);
-    return await Jimp.read(`${iconDirectory}/${((type === "base") ? "cube" : type)}.png`);
-}
-
-async function getCubeIconPart(cubeID: CCOIcons.cubeID, seed: number, type: typeof seededIconKeys[number]): Promise<Jimp[]> {
-    if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === cubeID) !== undefined) {
-        return [await getSeededCubeIconType(cubeID as CCOIcons.patternedCubeID, seed, type)];
-    } else {
-        const customMaskImagePath = `${config.sourceImagesDirectory}/cubes/${cubeID}/${type}.png`;
-        return await loadAnimatedCubeIcon((!fs.existsSync(customMaskImagePath)) ? `${config.sourceImagesDirectory}_DEFAULT_/${type}.png` : customMaskImagePath);
-    }
-}
-
-function generateAndValidatePrefixDirectory(suppliedPrefixes: CCOIcons.prefixID[], prefixSeed: number): {shownPrefixes: CCOIcons.prefixID[], newDirectoryName: string} {
-    let shownPrefixes = [...suppliedPrefixes].sort(sortPrefixesByApplicationOrder);
-    if (shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true).length > config.shownPrefixLimit) {
-        let exemptedPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === false);
-        let cutPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true);
-        shownPrefixes = [...exemptedPrefixes, ...cutPrefixes.slice(0, config.shownPrefixLimit)];
-    }
-    const usingSeed = shownPrefixes.findIndex(prefix => prefixes[prefix].seeded === true) != -1;
-
-    let newDirectoryName = `prefix${usingSeed ? prefixSeed : ''}${shownPrefixes.join('').toLowerCase()}/`;
-
-    return {shownPrefixes, newDirectoryName};
-}
-
 const iconModifiers = {
     baseIcon: {
         directory: '/ccicons',
@@ -338,8 +153,8 @@ const iconModifiers = {
             if (modifyingID === "badass") {
                 // Create the outcome path of the file
                 const outcomeFile = `${outcomePath}/${modifyingID}.png`;
-                if (!fs.existsSync(outcomeFile)) {
-                    let badassFrameCount = 100;
+                if (!fs.existsSync(outcomeFile) || !config.useBaseCubeCache) {
+                    let badassFrameCount = 60;
                     let badassRNG = new seedrandom(`badass`);
                     let usedIDs: CCOIcons.cubeID[] = [];
                     let allBadassFrames: Jimp[] = [];
@@ -354,7 +169,7 @@ const iconModifiers = {
                         const cubeDirectory = `${config.relativeRootDirectory}/CCOIcons/sourceicons/cubes/${newCubeID}`;
                         if (fs.existsSync(cubeDirectory)) {
                             let newCubeFrame = await loadAnimatedCubeIcon(`${cubeDirectory}/cube.png`);
-                            allBadassFrames.push(newCubeFrame[Math.ceil(newCubeFrame.length * badassRNG()) - 1].resize(32, 32, Jimp.RESIZE_NEAREST_NEIGHBOR));
+                            allBadassFrames.push(newCubeFrame[Math.floor(newCubeFrame.length * badassRNG())].resize(32, 32, Jimp.RESIZE_NEAREST_NEIGHBOR));
                         }
                     }
                     await saveAnimatedCubeIcon(allBadassFrames, `badass`, outcomePath, config.getCubeAnimationDelay(modifyingID));
@@ -364,8 +179,7 @@ const iconModifiers = {
                 // Create the outcome path of the file
                 fileNameOverride = `${modifyingID}${cubeSeed}.png`;
                 const outcomeFile = `${outcomePath}/${fileNameOverride}`;
-                // getSeededIconAtlas(modifyingID as CCOIcons.patternedCubeID);
-                if (!fs.existsSync(outcomeFile)) {
+                if (!fs.existsSync(outcomeFile) || !config.useBaseCubeCache) {
                     let iconFile = await getSeededCubeIconType(modifyingID as CCOIcons.patternedCubeID, cubeSeed, "base");
                     await saveAnimatedCubeIcon([iconFile], fileNameOverride, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
                 }
@@ -397,6 +211,9 @@ const iconModifiers = {
             const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
             if (!fs.existsSync(newIconPath) || !config.useBSideCache) {
                 let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                if (iconFrames.length > config.bSideAnimationLimit) {
+                    iconFrames = iconFrames.slice(0, config.bSideAnimationLimit);
+                }
                 for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
                     iconFrames[frameIndex] = await createBSideImage(iconFrames[frameIndex]);
                 }
@@ -474,289 +291,7 @@ const iconModifiers = {
             let targetOutputFile = path.resolve(`${targetOutputDirectory}/${fileName}`);
 
             if (!fs.existsSync(targetOutputFile) || !config.usePrefixImageCache) {
-                const neededParts: { [key in CCOIcons.cubeAnchorPoints]: boolean } = {
-                    accents: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.accents === true) != -1,
-                    eyes: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.eyes === true) != -1,
-                    heads: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.heads === true) != -1,
-                    mouths: validatedPrefixData.shownPrefixes.findIndex(prefix => prefixes[prefix].needs.mouths === true) != -1
-                }
-                const retrievedParts: CCOIcons.anchorPointSchema = {
-                    accents: [],
-                    eyes: [],
-                    heads: [],
-                    mouths: []
-                }
-
-                if (neededParts.accents) {
-                    let accentFrames = await getCubeIconPart(modifyingID, data.cubeSeed, "accents");
-                    for (let accentFrameIndex = 0; accentFrameIndex < accentFrames.length; accentFrameIndex++) {
-                        const currentFrame = accentFrames[accentFrameIndex];
-                        let accentCoordinates: CCOIcons.anchorPointSchema["accents"][number] = {
-                            image: currentFrame
-                        };
-                        retrievedParts.accents.push(accentCoordinates);
-                    }
-                }
-
-                if (neededParts.eyes) {
-                    let eyeFrames = await getCubeIconPart(modifyingID, data.cubeSeed, "eyes");
-                    for (let eyeFrameIndex = 0; eyeFrameIndex < eyeFrames.length; eyeFrameIndex++) {
-                        const currentFrame = eyeFrames[eyeFrameIndex];
-                        let eyeCoordinates: CCOIcons.anchorPointSchema["eyes"][number] = {
-                            coordinates: []
-                        };
-                        currentFrame.scan(0, 0, currentFrame.bitmap.width, currentFrame.bitmap.height, function (x, y, idx) {
-                            if (this.bitmap.data[idx + 3] > 0) {
-                                eyeCoordinates.coordinates.push({ x, y });
-                            }
-                        });
-                        retrievedParts.eyes.push(eyeCoordinates);
-                    }
-                }
-
-                if (neededParts.mouths) {
-                    let mouthFrames = await getCubeIconPart(modifyingID, data.cubeSeed, "mouths");
-                    for (let mouthFrameIndex = 0; mouthFrameIndex < mouthFrames.length; mouthFrameIndex++) {
-                        const currentFrame = mouthFrames[mouthFrameIndex];
-                        let mouthsFound: CCOIcons.anchorPointSchema["mouths"][number] = {
-                            positions: []
-                        };
-                        let onMouth = false;
-                        let currentMouthSize = 0;
-                        let currentMouthStartPosition: CCOIcons.coordinate = {x: 0, y: 0};
-                        currentFrame.scan(0, 0, currentFrame.bitmap.width, currentFrame.bitmap.height, function (x, y, idx) {
-                            if (this.bitmap.data[idx + 3] > 0 && y == currentMouthStartPosition.y) {
-                                if (onMouth == true) {
-                                    currentMouthSize++;
-                                } else {
-                                    onMouth = true;
-                                    currentMouthStartPosition = {x, y};
-                                    currentMouthSize = 1;
-                                }
-                            } else {
-                                if (onMouth == true) {
-                                    mouthsFound.positions.push(structuredClone({
-                                        startPosition: currentMouthStartPosition,
-                                        width: currentMouthSize
-                                    }))
-                                    onMouth = false;
-                                }
-                                currentMouthStartPosition.y = y;
-                                if (this.bitmap.data[idx + 3] > 0) {
-                                    onMouth = true;
-                                    currentMouthStartPosition = { x, y };
-                                    currentMouthSize = 1;
-                                }
-                            }
-                        });
-                        retrievedParts.mouths.push(mouthsFound);
-                    }
-                }
-
-                if (neededParts.heads) {
-                    let headFrames = await getCubeIconPart(modifyingID, data.cubeSeed, "heads");
-                    for (let headFrameIndex = 0; headFrameIndex < headFrames.length; headFrameIndex++) {
-                        const currentFrame = headFrames[headFrameIndex];
-                        let headsFound: CCOIcons.anchorPointSchema["heads"][number] = {
-                            positions: []
-                        };
-                        let onHead = false;
-                        let currentHeadSize = 0;
-                        let currentHeadStartPosition: CCOIcons.coordinate = { x: 0, y: 0 };
-                        currentFrame.scan(0, 0, currentFrame.bitmap.width, currentFrame.bitmap.height, function (x, y, idx) {
-                            if (this.bitmap.data[idx + 3] > 0 && y == currentHeadStartPosition.y) {
-                                if (onHead == true) {
-                                    currentHeadSize++;
-                                } else {
-                                    onHead = true;
-                                    currentHeadStartPosition = { x, y };
-                                    currentHeadSize = 1;
-                                }
-                            } else {
-                                if (onHead == true) {
-                                    headsFound.positions.push(structuredClone({
-                                        startPosition: currentHeadStartPosition,
-                                        width: currentHeadSize
-                                    }))
-                                    onHead = false;
-                                }
-                                currentHeadStartPosition.y = y;
-                                if (this.bitmap.data[idx + 3] > 0) {
-                                    onHead = true;
-                                    currentHeadStartPosition = { x, y };
-                                    currentHeadSize = 1;
-                                }
-                            }
-                        });
-                        retrievedParts.heads.push(headsFound);
-                    }
-                }
-
-                let allPrefixFrames: CCOIcons.compiledPrefixFrames[] = [];
-                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
-
-                async function compilePrefixFrames(masks: boolean, sizeOverride?: {width: number, height: number}) {
-                    for (let shownPrefixIndex = 0; shownPrefixIndex < validatedPrefixData.shownPrefixes.length; shownPrefixIndex++) {
-                        const compilingPrefixID = validatedPrefixData.shownPrefixes[shownPrefixIndex];
-                        if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === false) {
-                            if (prefixes[compilingPrefixID].maskOnly === masks) {
-                                if (sizeOverride) {
-                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), data.prefixSeed, cubes[modifyingID]));
-                                } else {
-                                    allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), data.prefixSeed, cubes[modifyingID]));
-                                }
-                            }
-                        }
-                    }
-                }
-
-                await compilePrefixFrames(false);
-
-                const paddingValues = getNeededPaddingFromCompiledFrames([...allPrefixFrames, {
-                    frontFrames: iconFrames.map((frame): CCOIcons.compiledPrefixFrames["frontFrames"][number] => {
-                        return [{
-                            image: frame,
-                            compositePosition: {
-                                x: 0,
-                                y: 0
-                            }
-                        }]
-                    }),
-                    backFrames: [],
-                    frameModifiers: [],
-                    outlineFrames: [],
-                    maskFrames: [],
-                    sourceID: "Sacred"
-                }], iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
-                
-                await compilePrefixFrames(true, {
-                    width: paddingValues.left + paddingValues.right + iconFrames[0].bitmap.width,
-                    height: paddingValues.above + paddingValues.below + iconFrames[0].bitmap.height
-                });
-
-                const animationLengths = [
-                    iconFrames.length,
-                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.frontFrames.length || 1)),
-                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.backFrames.length || 1)),
-                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.outlineFrames.length || 1)),
-                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.frameModifiers.length || 1)),
-                    ...allPrefixFrames.map(compiledFrames => (compiledFrames.maskFrames.length || 1))
-                ];
-                if (animationLengths.find(animlength => animlength % 5 !== 0 && animlength !== 1)) {
-                    console.log("An animation in this icon isn't a multiple of 5!", animationLengths);
-                }
-                const neededIconFrames = Math.min(config.maximumPrefixFramesPerIcon, maths.leastCommonMultipleOfArray(animationLengths));
-
-                let newFrameBase = new Jimp(
-                    paddingValues.left + iconFrames[0].bitmap.width + paddingValues.right, 
-                    paddingValues.above + iconFrames[0].bitmap.height + paddingValues.below,
-                    0x00000000
-                );
-
-                let newAnimation: Jimp[] = [];
-
-                for (let newIconIndex = 0; newIconIndex < neededIconFrames; newIconIndex++) {
-                    const oldIconIndex = newIconIndex % iconFrames.length;
-
-                    let newFrame = newFrameBase.clone();
-
-                    let frameOutlines: {
-                        [key in ("front" | "back" | "icon")]: {
-                            color: number,
-                            width: number,
-                            origin: CCOIcons.prefixID,
-                            matrix: CCOIcons.strokeMatrix | undefined
-                        }[]
-                    } = {
-                        front: [],
-                        icon: [],
-                        back: []
-                    }
-
-                    allPrefixFrames.forEach((compiledPrefixFrames) => {
-                        if (compiledPrefixFrames.outlineFrames.length > 0) {
-                            const outlineIndex = newIconIndex % compiledPrefixFrames.outlineFrames.length;
-                            const outlineFrames = compiledPrefixFrames.outlineFrames[outlineIndex];
-                            outlineFrames.forEach(outlinesOnFrame => {
-                                outlinesOnFrame.layers.forEach(layerKey => {
-                                    frameOutlines[layerKey].push({
-                                        color: outlinesOnFrame.color,
-                                        width: outlinesOnFrame.width,
-                                        origin: compiledPrefixFrames.sourceID,
-                                        matrix: outlinesOnFrame.matrix ?? undefined
-                                    })
-                                })
-                            })
-                        }
-                    })
-
-                    allPrefixFrames.forEach((compiledPrefixFrames) => {
-                        if (compiledPrefixFrames.backFrames.length > 0) {
-                            const backIndex = newIconIndex % compiledPrefixFrames.backFrames.length;
-                            const backFrame = compiledPrefixFrames.backFrames[backIndex];
-                            const outlinePadding = frameOutlines.back.reduce((prev, curr) => {return prev + ((curr.origin === compiledPrefixFrames.sourceID) ? 0 : curr.width)}, 0);
-                            backFrame.forEach(partOfFrame => {
-                                let strokedBackFrame = partOfFrame.image;
-                                frameOutlines.back.forEach(outline => {
-                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedBackFrame = strokeImage(strokedBackFrame, outline.color, outline.width, false, outline.matrix);
-                                })
-                                newFrame.composite(strokedBackFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding)
-                            })
-                        }
-                    })
-
-                    // Composite the icon in the 'center layer'
-                    let strokedIconFrame = iconFrames[oldIconIndex];
-                    const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
-                    frameOutlines.icon.forEach(outline => {
-                        strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width, false, outline.matrix);
-                    })
-                    newFrame.composite(strokedIconFrame, paddingValues.left - outlinePadding, paddingValues.above - outlinePadding);
-
-                    allPrefixFrames.forEach(compiledPrefixFrames => {
-                        if (compiledPrefixFrames.frontFrames.length > 0) {
-                            const frontIndex = newIconIndex % compiledPrefixFrames.frontFrames.length;
-                            const frontFrame = compiledPrefixFrames.frontFrames[frontIndex];
-                            const outlinePadding = frameOutlines.front.reduce((prev, curr) => { return prev + ((curr.origin === compiledPrefixFrames.sourceID) ? 0 : curr.width) }, 0);
-                            frontFrame.forEach(partOfFrame => {
-                                let strokedFrontFrame = partOfFrame.image;
-                                frameOutlines.front.forEach(outline => {
-                                    if (outline.origin !== compiledPrefixFrames.sourceID) strokedFrontFrame = strokeImage(strokedFrontFrame, outline.color, outline.width, false, outline.matrix);
-                                })
-                                newFrame.composite(strokedFrontFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding)
-                            })
-                        }
-                    })
-
-                    let doMask = false;
-                    let compiledMask = new Jimp(newFrame.bitmap.width, newFrame.bitmap.height, 0x00000000);
-                    allPrefixFrames.forEach(compiledPrefixFrames => {
-                        if (compiledPrefixFrames.maskFrames.length > 0) {
-                            const modifierIndex = newIconIndex % compiledPrefixFrames.maskFrames.length;
-                            const modifierFrame = compiledPrefixFrames.maskFrames[modifierIndex].clone().resize(newFrame.bitmap.width, newFrame.bitmap.height, Jimp.RESIZE_NEAREST_NEIGHBOR);
-                            compiledMask.composite(modifierFrame, 0, 0);
-                            doMask = true;
-                        }
-                    })
-                    if (doMask) newFrame.mask(compiledMask, 0, 0);
-
-                    allPrefixFrames.forEach(compiledPrefixFrames => {
-                        if (compiledPrefixFrames.frameModifiers.length > 0) {
-                            const modifierIndex = newIconIndex % compiledPrefixFrames.frameModifiers.length;
-                            const modifierFrame = compiledPrefixFrames.frameModifiers[modifierIndex];
-                            newFrame.color(modifierFrame);
-                        }
-                    })
-
-                    newAnimation.push(newFrame);
-                }
-
-                for (let shownPrefixIndex = 0; shownPrefixIndex < validatedPrefixData.shownPrefixes.length; shownPrefixIndex++) {
-                    const compilingPrefixID = validatedPrefixData.shownPrefixes[shownPrefixIndex];
-                    if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === true) {
-                        newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, data.prefixSeed, cubes[modifyingID])).maskFrames;
-                    }
-                }
+                const newAnimation = await generatePrefixedCube(await loadAnimatedCubeIcon(originalImagePath), modifyingID, validatedPrefixData.shownPrefixes, data.prefixSeed, data.cubeSeed, true);
 
                 await saveAnimatedCubeIcon(newAnimation, fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
             }
@@ -1218,12 +753,14 @@ const route: CCOIcons.documentedRoute = {
                     }
                 }
             }
+            
             if (req.query.bside !== undefined) {
                 cubeIconParams.bSide = {
                     use: true,
                     data: {}
                 }
             }
+
             if (req.query.spritesheet !== undefined) {
                 returnSpriteSheet = true;
             }

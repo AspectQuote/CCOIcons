@@ -383,7 +383,7 @@ const prefixes = {
             prefixFrames.sourceID = "Slated";
             let accentFrames = anchorPoints.accents;
             let patternRNG = new seedrandom(`${cubeData.name}`);
-            
+
             const contrabandEffectImage = await Jimp.read(`./sourceicons/attributeeffects/contraband.png`);
             const cropX = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.width - iconFrames[0].bitmap.width));
             const cropY = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.height - iconFrames[0].bitmap.height));
@@ -399,8 +399,88 @@ const prefixes = {
                         x: -contrabandOutlineThickness,
                         y: -contrabandOutlineThickness
                     }
-                }]) ;
+                }]);
             }
+
+            return prefixFrames;
+        }
+    },
+    "Collectors": {
+        name: "Collectors",
+        seeded: false,
+        maskOnly: false,
+        appliesDirectlyAfterAllPrefixes: false,
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        countsTowardsPrefixCap: false,
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Collectors";
+
+            const collectorsOutlineThickness = 1;
+            const collectorsColor = 0x660808ff;
+            const collectorsStrokeColor = 0xa50d0dff;
+            
+            prefixFrames.outlineFrames.push([{
+                width: collectorsOutlineThickness,
+                color: collectorsColor,
+                layers: ['icon'],
+                matrix: [
+                    [0, 1, 0],
+                    [1, 0, 1],
+                    [0, 1, 0]
+                ]
+            }]);
+
+            const cornerSize = Math.ceil(iconFrames[0].bitmap.width * 0.55);
+            const baseCollectorsCornerImage = new Jimp(cornerSize, cornerSize, 0x00000000);
+            const cornerDistance = Math.ceil(iconFrames[0].bitmap.width * 0.2);
+            const cornerOffset = Math.ceil(cornerSize * 0.5)
+
+            fillRect(baseCollectorsCornerImage, 0, 0, cornerSize, 1, collectorsColor);
+            fillRect(baseCollectorsCornerImage, 0, 0, 1, cornerSize, collectorsColor);
+
+            const additionalCollectorsStrokeWidth = 1;
+            const collectorsCornerImage = strokeImage(baseCollectorsCornerImage, collectorsStrokeColor, additionalCollectorsStrokeWidth, false, [
+                [0, 0, 0],
+                [0, 0, 1],
+                [0, 1, 0]
+            ]);
+
+            prefixFrames.frontFrames.push([
+                { // Top-Left
+                    image: collectorsCornerImage,
+                    compositePosition: {
+                        x: -cornerDistance - cornerOffset,
+                        y: -cornerDistance - cornerOffset
+                    }
+                },
+                { // Top-Right
+                    image: collectorsCornerImage.clone().flip(true, false),
+                    compositePosition: {
+                        x: iconFrames[0].bitmap.width + cornerDistance - cornerOffset,
+                        y: -cornerDistance - cornerOffset
+                    }
+                },
+                { // Bottom-Left
+                    image: collectorsCornerImage.clone().flip(false, true),
+                    compositePosition: {
+                        x: -cornerDistance - cornerOffset,
+                        y: iconFrames[0].bitmap.height + cornerDistance - cornerOffset
+                    }
+                },
+                { // Bottom-Right
+                    image: collectorsCornerImage.clone().flip(true, true),
+                    compositePosition: {
+                        x: iconFrames[0].bitmap.width + cornerDistance - cornerOffset,
+                        y: iconFrames[0].bitmap.height + cornerDistance - cornerOffset
+                    }
+                }
+            ])
 
             return prefixFrames;
         }
@@ -1377,15 +1457,17 @@ const prefixes = {
             prefixFrames.sourceID = "Insignificant";
             const wingsImage = await Jimp.read(`${prefixSourceDirectory}/insignificant/wings.png`);
             const haloImage = await Jimp.read(`${prefixSourceDirectory}/insignificant/halo.png`);
-            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/insignificant/`);
-            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            const haloCacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/insignificant/halo/`);
+            if (!fs.existsSync(haloCacheDirectory)) fs.mkdirSync(haloCacheDirectory, { recursive: true });
+            const wingsCacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/insignificant/wings/`);
+            if (!fs.existsSync(wingsCacheDirectory)) fs.mkdirSync(wingsCacheDirectory, { recursive: true });
 
             const headPositions = anchorPoints.heads;
 
             for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
                 const headFrame = headPositions[newAnimationIndex % headPositions.length];
-                const halosThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloImage, cacheDirectory, headFrame, { x: 74, y: 54, width: 32 });
-                const wingsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(wingsImage, cacheDirectory, headFrame, { x: 74, y: 54, width: 32 });
+                const halosThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloImage, haloCacheDirectory, headFrame, { x: 74, y: 54, width: 32 });
+                const wingsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(wingsImage, wingsCacheDirectory, headFrame, { x: 74, y: 54, width: 32 });
 
                 prefixFrames.frontFrames.push([...halosThisFrame]);
                 prefixFrames.backFrames.push([...wingsThisFrame]);
@@ -3262,7 +3344,7 @@ const prefixes = {
             let seedRNG = new seedrandom(`sniping${seed}`);
 
             const rifles = ["tf2", "cs2"]
-            const rifleType = ((seedRNG() > 0.99) ? 'rare' : '') + rifles[Math.floor(seedRNG() * rifles.length)];
+            const rifleType = ((seedRNG() > 0.98) ? 'rare' : '') + rifles[Math.floor(seedRNG() * rifles.length)];
 
             let sacredHeadImage = await Jimp.read(`${prefixSourceDirectory}/sniping/${rifleType}rifle.png`);
             let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/sniping/${rifleType}/`);
@@ -3415,10 +3497,16 @@ const prefixes = {
                 const frameHeadPosition = headPositions[headFrameIndex];
 
                 const backBloodImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(bloodBackImage, bloodBackDirectory, frameHeadPosition, { x: 4, y: 11, width: 32 });
-                prefixFrames.backFrames.push(backBloodImagesThisFrame);
+                prefixFrames.backFrames.push(backBloodImagesThisFrame.map(item => {
+                    item.preventOutline = true;
+                    return item;
+                }));
 
                 const frontBloodImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(bloodFrontImage, bloodFrontDirectory, frameHeadPosition, { x: 4, y: 11, width: 32 });
-                prefixFrames.frontFrames.push(frontBloodImagesThisFrame);
+                prefixFrames.frontFrames.push(frontBloodImagesThisFrame.map(item => {
+                    item.preventOutline = true;
+                    return item;
+                }));
             }
 
             return prefixFrames;
@@ -3573,7 +3661,8 @@ const prefixes = {
                     compositePosition: {
                         x: 0,
                         y: 0
-                    }
+                    },
+                    preventOutline: true
                 }]);
             }
             return prefixFrames;
@@ -3613,42 +3702,135 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Amorous": {
-        name: "",
-        seeded: false,
+        name: "Amorous",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Amorous";
+
+            let seedRNG = new seedrandom(`amorous${seed}`);
+            
+            let heartFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/amorous/heartanim.png`), 15);
+            
+            const validHueShifts = [0, 0, 0, 0, 0,
+                77,
+                -159,
+                -86
+            ];
+            const usingShift = validHueShifts[Math.floor(validHueShifts.length * seedRNG())];
+            heartFrames.forEach(frame => {
+                frame.color([{apply: "hue", params: [usingShift]}])
+            })
+
+            let heartOffsets: number[] = [];
+            while (heartOffsets.length < 4) {
+                let possibleOffset = Math.floor(heartFrames.length * seedRNG());
+                if (!heartOffsets.find(offset => Math.abs(offset - possibleOffset) <= 2)) {
+                    heartOffsets.push(possibleOffset);
+                }
+            }
+
+            let neededAnimationFrames = maths.leastCommonMultiple(heartFrames.length, iconFrames.length);
+
+            const headPositions = anchorPoints.heads;
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/amorous${seed}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const rightHeartImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(heartFrames[(animationFrameIndex + heartOffsets[0]) % heartFrames.length], cacheDirectory, frameHeadData, { x: 6 - 32, y: 11, width: 32 }, false);
+                const centerHeartImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(heartFrames[(animationFrameIndex + heartOffsets[1]) % heartFrames.length], cacheDirectory, frameHeadData, { x: 16 - 32, y: 15, width: 32 }, false);
+                const otherCenterHeartImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(heartFrames[(animationFrameIndex + heartOffsets[2]) % heartFrames.length], cacheDirectory, frameHeadData, { x: 27 - 32, y: 15, width: 32 }, false);
+                const leftHeartImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(heartFrames[(animationFrameIndex + heartOffsets[3]) % heartFrames.length], cacheDirectory, frameHeadData, { x: 37 - 32, y: 11, width: 32 }, false);
+                prefixFrames.frontFrames.push([...rightHeartImages, ...centerHeartImages, ...otherCenterHeartImages, ...leftHeartImages]);
+            }
+
+            return prefixFrames
         }
     },
     "Dazed": {
-        name: "",
-        seeded: false,
+        name: "Dazed",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Dazed";
+
+            let seedRNG = new seedrandom(`dazed${seed}`);
+            const validRotations = [0, 90, 180, 270];
+
+            let dazedFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/dazed/dazedanim.png`), 15);
+
+            const validHueShifts = [0,
+                47,
+                135,
+                180,
+                -120,
+                -80,
+                -50
+            ];
+            const usingShift = validHueShifts[Math.floor(validHueShifts.length * seedRNG())];
+            dazedFrames.forEach(frame => {
+                frame.color([{ apply: "hue", params: [usingShift] }])
+            })
+
+            let dazedOffsets: number[] = [];
+            while (dazedOffsets.length < 4) {
+                let possibleOffset = Math.floor(dazedFrames.length * seedRNG());
+                if (!dazedOffsets.find(offset => Math.abs(offset - possibleOffset) <= 2)) {
+                    dazedOffsets.push(possibleOffset);
+                }
+            }
+
+            const dazedRotations = [
+                validRotations[Math.floor(validRotations.length * seedRNG())],
+                validRotations[Math.floor(validRotations.length * seedRNG())],
+                validRotations[Math.floor(validRotations.length * seedRNG())],
+                validRotations[Math.floor(validRotations.length * seedRNG())]
+            ]
+
+            let neededAnimationFrames = maths.leastCommonMultiple(dazedFrames.length, iconFrames.length);
+
+            const headPositions = anchorPoints.heads;
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/amorous${seed}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const rightDazedImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(dazedFrames[(animationFrameIndex + dazedOffsets[0]) % dazedFrames.length].clone().rotate(dazedRotations[0]), cacheDirectory, frameHeadData, { x: 6 - 32, y: 11, width: 32 }, false);
+                const centerDazedImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(dazedFrames[(animationFrameIndex + dazedOffsets[1]) % dazedFrames.length].clone().rotate(dazedRotations[1]), cacheDirectory, frameHeadData, { x: 16 - 32, y: 15, width: 32 }, false);
+                const otherCenterDazedImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(dazedFrames[(animationFrameIndex + dazedOffsets[2]) % dazedFrames.length].clone().rotate(dazedRotations[2]), cacheDirectory, frameHeadData, { x: 27 - 32, y: 15, width: 32 }, false);
+                const leftDazedImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(dazedFrames[(animationFrameIndex + dazedOffsets[3]) % dazedFrames.length].clone().rotate(dazedRotations[3]), cacheDirectory, frameHeadData, { x: 37 - 32, y: 11, width: 32 }, false);
+                prefixFrames.frontFrames.push([...rightDazedImages, ...centerDazedImages, ...otherCenterDazedImages, ...leftDazedImages]);
+            }
+
+            return prefixFrames
         }
     },
     "Frosty": {
-        name: "",
-        seeded: false,
+        name: "Frosty",
+        seeded: true,
         maskOnly: false,
         appliesDirectlyAfterAllPrefixes: false,
         needs: {
@@ -3659,9 +3841,45 @@ const prefixes = {
         },
         countsTowardsPrefixCap: true,
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Frosty";
+
+            let frostImage = await Jimp.read(`${prefixSourceDirectory}/frosty/frost.png`);
+            let seedRNG = new seedrandom(`frosty${seed}`);
+            const Xoffset = Math.floor(seedRNG() * frostImage.bitmap.width);
+            const Yoffset = Math.floor(seedRNG() * frostImage.bitmap.height);
+
+            iconFrames.forEach(frame => {
+                let newFrostFrame = new Jimp(frame.bitmap.width, frame.bitmap.height, 0x00000000);
+                frame.scan(0, 0, frame.bitmap.width, frame.bitmap.height, function(x, y, idx) {
+                    if (this.bitmap.data[idx + 3] > 0) {
+                        newFrostFrame.setPixelColor(frostImage.getPixelColor((x + Xoffset) % frostImage.bitmap.width, (y + Yoffset) % frostImage.bitmap.height), x, y);
+                        newFrostFrame.bitmap.data[idx + 3] = Math.ceil(this.bitmap.data[idx + 3] * 0.25);
+                    }
+                })
+                prefixFrames.frontFrames.push([{image: newFrostFrame, preventOutline: true, compositePosition: {x: 0, y: 0}}]);
+            })
+
+            let possibleOutlines = [
+                0x2bc2daff,
+                0x8cdeeaff,
+                0x197f8fff
+            ];
+
+            prefixFrames.outlineFrames.push([{
+                width: 1,
+                color: possibleOutlines[Math.floor(possibleOutlines.length * seedRNG())],
+                matrix: [
+                    [1, 1, 1],
+                    [1, 0, 1],
+                    [1, 1, 1],
+                ],
+                layers: ["icon"]
+            }])
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Cowling": {
         name: "",
         seeded: false,
@@ -4965,6 +5183,8 @@ const prefixIDApplicationOrder = [
     // -------------- Prefixes That Add Particles That depend on the cube itself (are bound to parts of the cube)
     "Flaming", // Makes the cube on FREAKING FIRE
     "Angry", // Adds an animated anime-esque anger icon to the cube
+    "Dazed", // Adds 'dazed' particles around the cube (I don't know what I was thinking when I created this prefix in 2020)
+    "Amorous", // Adds hearts around the head of the cube
     "Based", // Adds Flashing Eyes to the Cube
     "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
     "Holy", // Adds an embellished animated decoration to the cube
@@ -5012,6 +5232,7 @@ const prefixIDApplicationOrder = [
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)
     "Gruesome", // Adds blood all over the cube
     "Canoodled", // Adds kiss-shaped lipstick to the cube in random spots
+    "Frosty", // Adds frost all over the cube
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
     "95in'", // Adds a Windows 95-esque application window to the cube
     "Wanted", // Adds a wanted poster to the cube
@@ -5026,7 +5247,8 @@ const prefixIDApplicationOrder = [
     // -------------- Divine and Slated Effects should always be behind everything else
     "Divine", // Divine modifier for the cube
     "Slated", // Slated modifier for the cube
-    "Contraband" // Contraband modifier for the cube
+    "Contraband", // Contraband modifier for the cube
+    "Collectors" // Collectors modifier for the cube
 ] as const;
 
 /**

@@ -134,7 +134,12 @@ const useBSideCache = !devmode;
 /**
  * Whether or not to retrieve cubes from source upon each request. Used for debugging.
  */
-const useBaseCubeCache = true;
+const useBaseCubeCache = !devmode;
+
+/**
+ * The limit to the amount of frames the B-Side filter can apply to for one animation, used to keep server loads down at the cost of gif loop quality
+ */
+const bSideAnimationLimit = 60;
 
 /**
  * Whether or not to regenerate tallying images each time they are requested. Used for debugging.
@@ -173,5 +178,6 @@ export {
     useBSideCache,
     useTallyingImageCache,
     maxTallyPercent,
-    maximumPrefixFramesPerIcon
+    maximumPrefixFramesPerIcon,
+    bSideAnimationLimit
 }

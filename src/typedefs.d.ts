@@ -148,7 +148,12 @@ export type compiledPrefixFrames = {
         /**
          * Where this layer should be composited. This is declared separately because prefixes can exceed the bounds of the base icon.
          */
-        compositePosition: coordinate
+        compositePosition: coordinate,
+
+        /**
+         * Whether to prevent outlines to this frame part
+         */
+        preventOutline?: true
     }[][],
 
     /**
@@ -163,7 +168,12 @@ export type compiledPrefixFrames = {
         /**
          * Where this layer should be composited. This is declared separately because prefixes can exceeed the bounds of the base icon.
          */
-        compositePosition: coordinate
+        compositePosition: coordinate,
+
+        /**
+         * Whether to prevent outlines to this frame part
+         */
+        preventOutline?: true
     }[][],
 
     /**

@@ -22,6 +22,7 @@ app.use((req, res, next) => {
 import { cubeIconRoute } from './routes/cubeicon';
 import { customBSideIconRoute } from './routes/custombsideicon';
 import { CCOHouTextureRoute } from './routes/ccohoutexture';
+import { prefixIconRoute } from './routes/prefixicon';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -85,7 +86,8 @@ const routes: CCOIcons.documentedRoute[] = [
     },
     cubeIconRoute,
     customBSideIconRoute,
-    CCOHouTextureRoute
+    CCOHouTextureRoute,
+    prefixIconRoute
 ];
 
 routes.forEach((routeInformation) => {

@@ -19,9 +19,14 @@ function distanceBetweenPoints(one: coordinate, two: coordinate) {
     return Math.sqrt(((one.x-two.x) ** 2) + ((one.y-two.y) ** 2))
 }
 
+function clampRandomHiLo(low: number, high: number, seed: number) {
+    return ((high - low) * seed) + low;
+}
+
 export {
     gcd as greatestCommonDenominator,
     lcm as leastCommonMultiple,
     leastCommonMultipleOfArray,
-    distanceBetweenPoints
+    distanceBetweenPoints,
+    clampRandomHiLo
 }
