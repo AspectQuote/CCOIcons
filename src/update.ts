@@ -2,44 +2,16 @@ import path from "path";
 import { cubeID, prefixID } from "./typedefs";
 import fs from "fs-extra";
 
-const updatedCubes: cubeID[] = [
-    "purple",
-    "green",
-    "blue",
-    "pinkmushroom",
-    "pinkeye",
-    "redgoo",
-    "aquarium",
-    "ghostly",
-    "rock",
-    "redcrystal",
-    "virgo",
-    "taurus",
-    "valentines",
-    "olive",
-    "corn",
-    "arcade",
-    "supreme",
-    "melting",
-    "tabby",
-    "upsidedown",
-    "broken",
-    "foursided",
-    "cowardly",
-    "terrarium",
-    "deathly",
-    "psychedelic",
-    "neonoir",
-    "neonoirmk2",
-    "illuminati"
-];
-const updatedPrefixes: prefixID[] = ["Endangered", "Canoodled", "Gruesome"];
+const updatedCubes: cubeID[] = [];
+const updatedPrefixes: prefixID[] = [];
 
 const iconDirectory = `./../ccicons/`
 const allFiles = fs.readdirSync(iconDirectory, { recursive: true }).filter(item => typeof item === "string");
 const fileMapFunc = (item: string) => {
     return path.resolve(`${iconDirectory}${item}`);
 };
+
+console.log(allFiles)
 
 const updatedCubeFiles = [...allFiles].filter(file => updatedCubes.find(cubeID => file.includes(`${cubeID}.png`) || file.includes(`${cubeID}.gif`) ) !== undefined).map(fileMapFunc);
 
@@ -49,7 +21,7 @@ const updatedPrefixCacheDirs = [...allFiles].filter(file => file.startsWith('pre
 
 updatedCubeFiles.forEach(filePath => {
     fs.unlinkSync(filePath);
-    console.log(`Deleted: ${filePath}`);
+    console.log(`Deleted Image: ${filePath}`);
 });
 
 updatedPrefixFiles.forEach(filePath => {
