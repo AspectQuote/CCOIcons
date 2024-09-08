@@ -3,7 +3,7 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import Jimp from 'jimp';
 import { loadAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
-import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder } from './../modules/schematics/prefixes';
+import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder, prefixHasTag } from './../modules/schematics/prefixes';
 import * as config from '../modules/schematics/config';
 import * as maths from '../modules/maths';
 let seedrandom = require('seedrandom');
@@ -209,12 +209,12 @@ async function getCubeIconPart(cubeID: CCOIcons.cubeID, seed: number, type: type
  */
 function generateAndValidatePrefixDirectory(suppliedPrefixes: CCOIcons.prefixID[], prefixSeed: number): { shownPrefixes: CCOIcons.prefixID[], newDirectoryName: string } {
     let shownPrefixes = [...suppliedPrefixes].sort(sortPrefixesByApplicationOrder);
-    if (shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true).length > config.shownPrefixLimit) {
-        let exemptedPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === false);
-        let cutPrefixes = shownPrefixes.filter(prefixID => prefixes[prefixID].countsTowardsPrefixCap === true);
+    if (shownPrefixes.filter(prefixID => prefixes[prefixID].tags.length > 0 && !prefixHasTag(prefixID, "ignoresPrefixCap")).length > config.shownPrefixLimit) {
+        let exemptedPrefixes = shownPrefixes.filter(prefixID => prefixHasTag(prefixID, "ignoresPrefixCap"));
+        let cutPrefixes = shownPrefixes.filter(prefixID => !prefixHasTag(prefixID, "ignoresPrefixCap"));
         shownPrefixes = [...exemptedPrefixes, ...cutPrefixes.slice(0, config.shownPrefixLimit)];
     }
-    const usingSeed = shownPrefixes.findIndex(prefix => prefixes[prefix].seeded === true) != -1;
+    const usingSeed = shownPrefixes.findIndex(prefix => prefixHasTag(prefix, "seeded")) != -1;
 
     let newDirectoryName = `prefix${usingSeed ? prefixSeed : ''}${shownPrefixes.join('').toLowerCase()}/`;
 
@@ -350,15 +350,15 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
         }
     }
 
-    const useCubeIcon = showCubeIcon || shownPrefixes.find(prefix => prefixes[prefix].appliesDirectlyAfterAllPrefixes === true || prefixes[prefix].maskOnly === true);
+    const useCubeIcon = showCubeIcon || shownPrefixes.find(prefix => prefixHasTag(prefix, "appliesDirectlyAfterAllPrefixes") || prefixHasTag(prefix, "maskOnly"));
 
     let allPrefixFrames: CCOIcons.compiledPrefixFrames[] = [];
 
     async function compilePrefixFrames(masks: boolean, sizeOverride?: { width: number, height: number }) {
         for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
             const compilingPrefixID = shownPrefixes[shownPrefixIndex];
-            if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === false) {
-                if (prefixes[compilingPrefixID].maskOnly === masks) {
+            if (!prefixHasTag(compilingPrefixID, "appliesDirectlyAfterAllPrefixes")) {
+                if (prefixHasTag(compilingPrefixID, "maskOnly") === masks) {
                     if (sizeOverride) {
                         allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), prefixSeed, cubes[cubeID]));
                     } else {
@@ -518,7 +518,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
 
     for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
         const compilingPrefixID = shownPrefixes[shownPrefixIndex];
-        if (prefixes[compilingPrefixID].appliesDirectlyAfterAllPrefixes === true) {
+        if (prefixHasTag(compilingPrefixID, "appliesDirectlyAfterAllPrefixes") === true) {
             newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, prefixSeed, cubes[cubeID])).maskFrames;
         }
     }

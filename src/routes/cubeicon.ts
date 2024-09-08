@@ -440,8 +440,13 @@ function determineFullOutputPath(params: Partial<cubeIconGenerationParameters>, 
     } else {
         iconFileName = `${cubeID}`
     }
+
+    let tallyingString = ``;
+    if (params.tallying?.use) {
+        tallyingString = `tallying${params.tallying.data.tallies}/`;
+    }
     
-    const basePath = `./../ccicons/${prefixString}${bSideString}${sizeString}${iconFileName}`
+    const basePath = `./../ccicons/${prefixString}${tallyingString}${bSideString}${sizeString}${iconFileName}`
     let pngPath = path.resolve(`${basePath}.png`);
     let gifPath = path.resolve(`${basePath}.gif`);
 
@@ -781,7 +786,7 @@ const route: CCOIcons.documentedRoute = {
             try {
                 // Create the image (if needed) and get its path
                 imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);
-            } catch (e) {
+            } catch (e: any) {
                 console.log(e, requestedCubeID, cubeIconParams);
                 res.status(403);
                 return res.send('Failed to get this image. Internal error: ' + e.stack);

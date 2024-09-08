@@ -2,7 +2,37 @@ import path from "path";
 import { cubeID, prefixID } from "./typedefs";
 import fs from "fs-extra";
 
-const updatedCubes: cubeID[] = [];
+const updatedCubes: cubeID[] = [
+    "purple",
+    "green",
+    "blue",
+    "pinkmushroom",
+    "pinkeye",
+    "redgoo",
+    "aquarium",
+    "ghostly",
+    "rock",
+    "redcrystal",
+    "virgo",
+    "taurus",
+    "valentines",
+    "olive",
+    "corn",
+    "arcade",
+    "supreme",
+    "melting",
+    "tabby",
+    "upsidedown",
+    "broken",
+    "foursided",
+    "cowardly",
+    "terrarium",
+    "deathly",
+    "psychedelic",
+    "neonoir",
+    "neonoirmk2",
+    "illuminati"
+];
 const updatedPrefixes: prefixID[] = ["Endangered", "Canoodled", "Gruesome"];
 
 const iconDirectory = `./../ccicons/`

@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import * as Jimp from 'jimp';
 import * as fs from 'fs-extra';
 
-import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder } from './../modules/schematics/prefixes';
+import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder, prefixHasTag } from './../modules/schematics/prefixes';
 import { createBSideImage } from './../modules/bside';
 import { loadAnimatedCubeIcon, saveAnimatedCubeIcon } from 'src/modules/imageutils';
 import { generatePrefixedCube } from 'src/modules/cubeiconutils';
@@ -102,7 +102,7 @@ const route: CCOIcons.documentedRoute = {
                 seed = possiblePrefixSeed;
             }
             try {
-                const fileName = `${iconName.toLowerCase()}${((prefixes[iconName].seeded) ? seed : '')}`;
+                const fileName = `${iconName.toLowerCase()}${((prefixHasTag(iconName, "seeded")) ? seed : '')}`;
                 let outputFile = `${outputDirectory}/${fileName}.png`;
                 if (!fs.existsSync(outputFile) || !config.usePrefixImageCache) {
                     // Create the image (if needed)
@@ -123,7 +123,11 @@ const route: CCOIcons.documentedRoute = {
             return res.send('Invalid Prefix ID.');
         }
         // Finally, send the file.
-        res.sendFile(imagePath);
+        if (fs.existsSync(imagePath.replace('.png', '.gif'))) {
+            res.sendFile(imagePath.replace('.png', '.gif'));
+        } else {
+            res.sendFile(imagePath);
+        }
         return;
     }
 }

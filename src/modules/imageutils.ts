@@ -4,6 +4,7 @@ import path from 'path';
 import * as gifwrap from 'gifwrap';
 import { coordinate, strokeMatrix } from 'src/typedefs';
 import * as config from './schematics/config';
+import { distanceBetweenPoints, leastCommonMultiple } from './maths';
 
 /**
  * Get the RGBA representation of a hex literal
@@ -277,7 +278,14 @@ async function assembleWordImage(word: string, alphabetLetters: Jimp[], backgrou
 }
 
 function drawLine(image: Jimp, color: number, startPoint: coordinate, endPoint: coordinate, thickness: number) {
-
+    const yChange = endPoint.y - startPoint.y;
+    const xChange = endPoint.x - startPoint.x;
+    const loopTimes = Math.ceil(distanceBetweenPoints(startPoint, endPoint));
+    for (let linePositionIndex = 0; linePositionIndex < loopTimes; linePositionIndex++) {
+        const x = Math.round(startPoint.x + ((xChange/loopTimes) * linePositionIndex));
+        const y = Math.round(startPoint.y + ((yChange/loopTimes) * linePositionIndex));
+        image.setPixelColor(color, x, y);
+    }
 }
 
 export {

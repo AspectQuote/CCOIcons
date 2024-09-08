@@ -102,30 +102,20 @@ export type prefixDefinition = {
     }
 
     /**
-     * If the prefix needs a seed to function
+     * The tags this prefix uses for icon generation.
+     * - `"seeded"`: If the prefix needs a seed to function.
+     * - `"maskOnly"`: If the prefix only generates a mask, then it should be compiled after other prefixes. (to account for the case that those prefixes change the icon's size)
+     * - `"appliesDirectlyAfterAllPrefixes"`: If the prefix should only be applied after all the other prefixes have been applied. Feeds the final icon frames into the {@link prefixDefinition.compileFrames|compileFrames} function. If this is set, the {@link prefixDefinition.compileFrames|compileFrames} function's maskFrames output property replaces the original output animation.
+     * - `"ignoresPrefixCap"`: If the prefix counts towards the prefix generation limit (attribute modifiers that aren't necessarily prefixes)
      */
-    seeded: boolean,
-
-    /**
-     * If the prefix only generates a mask, then it should be compiled after other prefixes (to account for the case that those prefixes change the icon's size)
-     */
-    maskOnly: boolean,
-
-    /**
-     * If the prefix should only be applied after all the other prefixes have been applied. Feeds the final icon frames into the {@link prefixDefinition.compileFrames|compileFrames} function. If this boolean is set, the {@link prefixDefinition.compileFrames|compileFrames} function's maskFrames output property replaces the original output animation.
-     */
-    appliesDirectlyAfterAllPrefixes: boolean,
-
-    /**
-     * If the prefix counts towards the prefix generation limit (attribute modifiers that aren't necessarily prefixes)
-     */
-    countsTowardsPrefixCap: boolean,
-
+    tags: prefixTags[],
     /**
      * The function that applies the prefix to each frame of the icon, returns where the icon should be composited, and what filters Jimp should apply to the icon.
      */
     compileFrames(anchorPoints: anchorPointSchema, cubeFrames: Jimp[], seed: number, cubeData: cubeDefinition): Promise<compiledPrefixFrames>
 }
+
+export type prefixTags = "seeded" | "maskOnly" | "appliesDirectlyAfterAllPrefixes" | "ignoresPrefixCap";
 
 /**
  * What should be applied to each frame of the icon to apply the prefix.
