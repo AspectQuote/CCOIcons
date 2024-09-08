@@ -1,4 +1,5 @@
 import * as CCOIcons from './../typedefs';
+import * as config from '../modules/schematics/config';
 import { readDirectoryRecursively } from './../modules/miscutils'
 
 const route: CCOIcons.documentedRoute = {
@@ -14,6 +15,7 @@ const route: CCOIcons.documentedRoute = {
         queryDocs: []
     },
     responseFunction: async (req, res) => {
+        if (config.devmode) return res.json({ message: "devmode must be enabled for this to function"})
         const structure = {
             filePaths: readDirectoryRecursively('./../ccicons')
         };
