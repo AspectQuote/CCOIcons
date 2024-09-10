@@ -1524,7 +1524,7 @@ const prefixes = {
     },
     "Snowy": {
         name: "Snowy",
-        tags: ["seeded"],
+        tags: ["seeded", "appliesDirectlyAfterAllPrefixes"],
         needs: {
             heads: false,
             eyes: false,
@@ -1817,18 +1817,18 @@ const prefixes = {
             let seedGen = new seedrandom(`swarming${seed}`);
             prefixFrames.sourceID = "Swarming";
 
-            const desiredFrames = 30;
             const possibleSummoningCounts = [1, 2, 2, 2, 3, 3, 3, 5, 5, 5, 6, 6, 10];
             const summoningCount = possibleSummoningCounts[Math.floor(possibleSummoningCounts.length*seedGen())];
+            const desiredFrames = 30;
             const globalOffset = Math.ceil(desiredFrames * seedGen());
             const centerPoint = Math.round(iconFrames[0].bitmap.width / 2);
             const radius = Math.round(iconFrames[0].bitmap.width * 0.9);
 
             let allKeyFrames: animationKeyFrame[] = [];
 
-            const angleIncrement = 360 / desiredFrames;
+            const angleIncrement = (360) / desiredFrames;
             for (let frameIndex = 0; frameIndex < desiredFrames; frameIndex++) {
-                const trigInput = ((frameIndex * angleIncrement) / 180) * Math.PI;
+                const trigInput = (((frameIndex * angleIncrement) / 180) * Math.PI);
                 allKeyFrames.push({
                     layer: "front",
                     x: (radius * Math.cos(trigInput)) + centerPoint,
@@ -3994,46 +3994,99 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Sophisticated": {
-        name: "",
+        name: "Sophisticated",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Sophisticated";
+            let headPositions = anchorPoints.heads;
+
+            let hatImage = await Jimp.read(`${prefixSourceDirectory}/sophisticated/tophat.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/sophisticated/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(hatImage, cacheDirectory, frameHeadPosition, { x: 8, y: 24, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Culinary": {
-        name: "",
+        name: "Culinary",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Culinary";
+            let headPositions = anchorPoints.heads;
+
+            let hatImage = await Jimp.read(`${prefixSourceDirectory}/culinary/toque.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/culinary/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(hatImage, cacheDirectory, frameHeadPosition, { x: 8, y: 34, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Eudaemonic": {
-        name: "",
+        name: "Eudaemonic",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Eudaemonic";
+            let headPositions = anchorPoints.heads;
+
+            let animation = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/eudaemonic/speechbubble.png`), 10);
+
+            const bubbleDistance = 7;
+            for (let animationFrameIndex = 0; animationFrameIndex < animation.length; animationFrameIndex++) {
+                const animationFrame = animation[animationFrameIndex];
+                const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
+                for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                    const headFrame = headPositions[headFrameIndex];
+                    headFrame.positions.forEach(head => {
+                        constructedFrames.push({
+                            image: animationFrame,
+                            compositePosition: {
+                                x: head.startPosition.x + head.width + Math.round(head.width / bubbleDistance),
+                                y: head.startPosition.y - Math.round(head.width / bubbleDistance) - animation[0].bitmap.height
+                            }
+                        })
+                    })
+                }
+                prefixFrames.frontFrames.push(constructedFrames)
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Magical": {
         name: "",
         tags: [],
@@ -4993,6 +5046,7 @@ const prefixIDApplicationOrder = [
     // -------------- Prefixes That Add Particles That depend on the cube itself (are bound to parts of the cube)
     "Flaming", // Makes the cube on FREAKING FIRE
     "Angry", // Adds an animated anime-esque anger icon to the cube
+    "Eudaemonic", // Adds an animated happy face speech bubble to the cube
     "Dazed", // Adds 'dazed' particles around the cube (I don't know what I was thinking when I created this prefix in 2020)
     "Amorous", // Adds hearts around the head of the cube
     "Based", // Adds Flashing Eyes to the Cube
@@ -5025,6 +5079,8 @@ const prefixIDApplicationOrder = [
     "Royal", // Adds a crown to the cube
     "Kramped", // Adds a pair of krampus horns to the cube
     "Wranglin'", // Adds a cowboy hat to the cube
+    "Sophisticated", // Adds a top hat to the cube
+    "Culinary", // Adds a chef's toque to the cube
     "Captain", // Adds a Team Captain hat to the cube
     "Jolly", // Adds a Santa hat to the cube
     "Partying", // Adds a party hat to the cube
