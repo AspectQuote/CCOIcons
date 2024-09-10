@@ -9,6 +9,7 @@ function readDirectoryRecursively(directory: fs.PathLike): string[] {
             const item = path.resolve(`${directory}/${file}`);
             if (fs.statSync(item).isDirectory()) {
                 readDirectory(item);
+                foundFiles.push(item);
             } else {
                 foundFiles.push(item);
             }
