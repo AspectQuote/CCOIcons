@@ -3241,13 +3241,13 @@ const prefixes = {
             const rifles = ["tf2", "cs2"]
             const rifleType = ((seedGen() > 0.98) ? 'rare' : '') + rifles[Math.floor(seedGen() * rifles.length)];
 
-            let sacredHeadImage = await Jimp.read(`${prefixSourceDirectory}/sniping/${rifleType}rifle.png`);
+            let sniperRifleImage = await Jimp.read(`${prefixSourceDirectory}/sniping/${rifleType}rifle.png`);
             let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/sniping/${rifleType}/`);
             if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
 
             for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
                 const frameHeadPosition = headPositions[headFrameIndex];
-                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(sacredHeadImage, cacheDirectory, frameHeadPosition, { x: 29, y: 14, width: 32 });
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(sniperRifleImage, cacheDirectory, frameHeadPosition, { x: 29, y: 14, width: 32 });
                 prefixFrames.frontFrames.push(headImagesThisFrame);
             }
 
@@ -4086,59 +4086,121 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Magical": {
-        name: "",
-        tags: [],
+        name: "Magical",
+        tags: ["seeded"],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Magical";
+
+            let headPositions = anchorPoints.heads;
+            let seedGen = new seedrandom(`magical${seed}`);
+            const hatType = ((seedGen() > 0.98) ? 'rare' : 'common');
+
+            let wizardHatImage = await Jimp.read(`${prefixSourceDirectory}/magical/${hatType}.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/magical/${hatType}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(wizardHatImage, cacheDirectory, frameHeadPosition, { x: 12, y: 25, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+            return prefixFrames;
         }
     },
     "Blushing": {
-        name: "",
-        tags: [],
+        name: "Blushing",
+        tags: ["seeded"],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Blushing";
+
+            let headPositions = anchorPoints.heads;
+            let seedGen = new seedrandom(`blushing${seed}`);
+            const blushType = Math.floor(seedGen() * 2);
+
+            let blushMakeupImage = await Jimp.read(`${prefixSourceDirectory}/blushing/${blushType}.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/blushing/type${blushType}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(blushMakeupImage, cacheDirectory, frameHeadPosition, { x: 0, y: 0, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+            return prefixFrames;
         }
     },
     "Sweetened": {
-        name: "",
+        name: "Sweetened",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Sweetened";
+            let headPositions = anchorPoints.heads;
+
+            let cherryImage = await Jimp.read(`${prefixSourceDirectory}/sweetened/cherry.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/sweetened/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(cherryImage, cacheDirectory, frameHeadPosition, { x: 0, y: 19, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Dovey": {
-        name: "",
-        tags: [],
+        name: "Dovey",
+        tags: ["seeded"],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Dovey";
+
+            let headPositions = anchorPoints.heads;
+            let seedGen = new seedrandom(`dovey${seed}`);
+            const birdType = ((seedGen() > 0.99) ? 'rare' : 'common');
+
+            let birdImage = await Jimp.read(`${prefixSourceDirectory}/dovey/${birdType}.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/dovey/${birdType}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(birdImage, cacheDirectory, frameHeadPosition, { x: 17, y: 42, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+            return prefixFrames;
         }
-    },
+    }, /*
     "Batty": {
         name: "",
         tags: [],
@@ -5050,6 +5112,7 @@ const prefixIDApplicationOrder = [
     "Dazed", // Adds 'dazed' particles around the cube (I don't know what I was thinking when I created this prefix in 2020)
     "Amorous", // Adds hearts around the head of the cube
     "Based", // Adds Flashing Eyes to the Cube
+    "Blushing", // Adds blush to the cube
     "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
     "Holy", // Adds an embellished animated decoration to the cube
     "Unholy", // Adds an embellished animated decoration to the cube
@@ -5082,6 +5145,9 @@ const prefixIDApplicationOrder = [
     "Sophisticated", // Adds a top hat to the cube
     "Culinary", // Adds a chef's toque to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Magical", // Adds a wizard hat to the cube
+    "Sweetened", // Adds a cherry to the top of the cube
+    "Dovey", // Adds a dove perched on the cube
     "Jolly", // Adds a Santa hat to the cube
     "Partying", // Adds a party hat to the cube
     "Hard-Boiled", // Adds a holmes-esque detective hat to the cube

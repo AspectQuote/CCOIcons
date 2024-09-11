@@ -4,12 +4,10 @@ import fs from "fs-extra";
 import { readDirectoryRecursively } from "./modules/miscutils";
 
 const updatedCubes: cubeID[] = [];
-const updatedPrefixes: prefixID[] = ["Snowy", "Endangered", "Emburdening"];
+const updatedPrefixes: prefixID[] = [];
 
 const iconDirectory = `./../ccicons/`
 const allFiles = readDirectoryRecursively(iconDirectory);
-
-console.log(allFiles.filter(file => file.includes('prefix') && !file.includes('.')))
 
 const updatedCubeFiles = [...allFiles].filter(file => updatedCubes.find(cubeID => file.includes(`${cubeID}.png`) || file.includes(`${cubeID}.gif`) ) !== undefined)
 
