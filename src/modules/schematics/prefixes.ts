@@ -737,7 +737,7 @@ const prefixes = {
     },
     "Leafy": {
         name: "Leafy",
-        tags: ["seeded"],
+        tags: ["seeded", "appliesDirectlyAfterAllPrefixes"],
         needs: {
             heads: false,
             eyes: false,
@@ -3879,8 +3879,8 @@ const prefixes = {
                 const backCloudImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(backCloudsImage, backCloudsDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
                 prefixFrames.backFrames.push(backCloudImagesThisFrame);
 
-                const crontCloudImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(frontCloudsImage, frontCloudsDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
-                prefixFrames.frontFrames.push(crontCloudImagesThisFrame);
+                const frontCloudImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(frontCloudsImage, frontCloudsDirectory, frameHeadPosition, { x: 8, y: 16, width: 32 });
+                prefixFrames.frontFrames.push(frontCloudImagesThisFrame);
             }
 
             return prefixFrames;
@@ -4200,33 +4200,121 @@ const prefixes = {
             }
             return prefixFrames;
         }
-    }, /*
+    },
     "Batty": {
-        name: "",
+        name: "Batty",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Batty";
+            let headPositions = anchorPoints.heads;
+
+            let batImage = await Jimp.read(`${prefixSourceDirectory}/batty/bat.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/batty/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(batImage, cacheDirectory, frameHeadPosition, { x: 0, y: 8, width: 32 });
+                prefixFrames.backFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Streaming": {
-        name: "",
-        tags: [],
+        name: "Streaming",
+        tags: ["seeded"],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Streaming";
+
+            let seedGen = new seedrandom(`streaming${seed}`);
+
+            const headphoneVariant = Math.floor(seedGen() * 2);
+
+            let backHeadphonesImage = await Jimp.read(`${prefixSourceDirectory}/streaming/h${headphoneVariant}b.png`);
+            let frontHeadphonesImage = await Jimp.read(`${prefixSourceDirectory}/streaming/h${headphoneVariant}f.png`);
+
+            if (headphoneVariant === 1) {
+                const shift = Math.floor(seedGen() * 360);
+
+                backHeadphonesImage.color([{
+                    apply: "hue",
+                    params: [shift]
+                }])
+                frontHeadphonesImage.color([{
+                    apply: "hue",
+                    params: [shift]
+                }])
+            }
+
+            let musicImage = new Jimp(1, 1, 0x00000000);
+            let notesDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/streaming/musicnotes${seed}/`);
+            if (seedGen() > 0.9) {
+                if (!fs.existsSync(notesDirectory)) fs.mkdirSync(notesDirectory, { recursive: true });
+                musicImage = new Jimp(42, 42, 0x00000000);
+                const notes = parseHorizontalSpriteSheet((await Jimp.read(`${prefixSourceDirectory}/streaming/notes.png`)).color([{apply: "hue", params: [Math.floor(360 * seedGen())]}]), 3);
+                const positions = [
+                    {
+                        x: 29 - 7,
+                        y: 26
+                    },
+                    {
+                        x: 38 - 3,
+                        y: 20
+                    },
+                    {
+                        x: 39 - 3,
+                        y: 35
+                    }
+                ];
+                positions.forEach(pos => {
+                    musicImage.composite(notes[Math.floor(seedGen() * notes.length)], pos.x - Math.ceil(notes[0].bitmap.width/2), pos.y - Math.ceil(notes[0].bitmap.width/2))
+                });
+            }
+
+            let backHeadphonesDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/streaming/backheadphones${seed}/`);
+            if (!fs.existsSync(backHeadphonesDirectory)) fs.mkdirSync(backHeadphonesDirectory, { recursive: true });
+            let frontHeadphonesDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/streaming/frontheadphones${seed}/`);
+            if (!fs.existsSync(frontHeadphonesDirectory)) fs.mkdirSync(frontHeadphonesDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backHeadphoneImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(backHeadphonesImage, backHeadphonesDirectory, frameHeadPosition, { x: 5, y: 13, width: 32 });
+                prefixFrames.backFrames.push(backHeadphoneImagesThisFrame);
+
+                let frontFrames: CCOIcons.compiledPrefixFrames["frontFrames"][number] = [];
+                if (musicImage.bitmap.width > 1) {
+                    frontFrames.push({
+                        image: musicImage,
+                        compositePosition: {
+                            x: iconFrames[0].bitmap.width - Math.floor(musicImage.bitmap.width/2),
+                            y: -Math.floor(musicImage.bitmap.height/2)
+                        }
+                    })
+                }
+                const frontHeadphoneImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(frontHeadphonesImage, frontHeadphonesDirectory, frameHeadPosition, { x: 5, y: 13, width: 32 });
+                prefixFrames.frontFrames.push([...frontHeadphoneImagesThisFrame, ...frontFrames]);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Clapping": {
         name: "",
         tags: [],
@@ -5145,9 +5233,11 @@ const prefixIDApplicationOrder = [
     "Sophisticated", // Adds a top hat to the cube
     "Culinary", // Adds a chef's toque to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Streaming", // Adds headphones to the cube
     "Magical", // Adds a wizard hat to the cube
     "Sweetened", // Adds a cherry to the top of the cube
     "Dovey", // Adds a dove perched on the cube
+    "Batty", // Adds a bat hanging from the cube NOTE: this is super gross. I don't like bats
     "Jolly", // Adds a Santa hat to the cube
     "Partying", // Adds a party hat to the cube
     "Hard-Boiled", // Adds a holmes-esque detective hat to the cube

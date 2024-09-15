@@ -7,7 +7,7 @@ const updatedCubes: cubeID[] = [];
 const updatedPrefixes: prefixID[] = [];
 
 const iconDirectory = `./../ccicons/`
-const allFiles = readDirectoryRecursively(iconDirectory);
+const allFiles: string[] = []// readDirectoryRecursively(iconDirectory);
 
 const updatedCubeFiles = [...allFiles].filter(file => updatedCubes.find(cubeID => file.includes(`${cubeID}.png`) || file.includes(`${cubeID}.gif`) ) !== undefined)
 

@@ -24,6 +24,7 @@ import { customBSideIconRoute } from './routes/custombsideicon';
 import { CCOHouTextureRoute } from './routes/ccohoutexture';
 import { prefixIconRoute } from './routes/prefixicon';
 import { directoryStructureRoute } from './routes/directorystructure';
+import { boxIconRoute } from './routes/boxicon';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -89,7 +90,8 @@ const routes: CCOIcons.documentedRoute[] = [
     customBSideIconRoute,
     CCOHouTextureRoute,
     prefixIconRoute,
-    directoryStructureRoute
+    directoryStructureRoute,
+    boxIconRoute
 ];
 
 routes.forEach((routeInformation) => {
