@@ -3,11 +3,41 @@ import { cubeID, prefixID } from "./typedefs";
 import fs from "fs-extra";
 import { readDirectoryRecursively } from "./modules/miscutils";
 
-const updatedCubes: cubeID[] = [];
-const updatedPrefixes: prefixID[] = [];
+const updatedCubes: cubeID[] = [
+    "greenstriped",
+    "bluestriped",
+    "saltine",
+    "redwireframe",
+    "greenwireframe",
+    "purplemushroom",
+    "reallybig",
+    "redblock",
+    "blueblock",
+    "pinkblock",
+    "brick",
+    "aliengrass",
+    "demonsteel",
+    "watching",
+    "forwardfacing",
+    "battery",
+    "dragonglass",
+    "feathered2",
+    "feathered",
+    "creepy",
+    "popcorn",
+    "deductory",
+    "missing",
+    "synthesizing",
+    "fade",
+    "cardboardbox",
+    "rebar",
+    "eventhorizon",
+    'greenradar'
+];
+const updatedPrefixes: prefixID[] = ["Leafy"];
 
 const iconDirectory = `./../ccicons/`
-const allFiles: string[] = []// readDirectoryRecursively(iconDirectory);
+const allFiles: string[] = readDirectoryRecursively(iconDirectory);
 
 const updatedCubeFiles = [...allFiles].filter(file => updatedCubes.find(cubeID => file.includes(`${cubeID}.png`) || file.includes(`${cubeID}.gif`) ) !== undefined)
 
