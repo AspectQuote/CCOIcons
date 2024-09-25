@@ -7677,5 +7677,61 @@
         "icon": "Cubes/milkbrown.png",
         "desc": "Choccy melk",
         "rarity": "epic"
+    },
+    "platelet": {
+        "author": "Aspect",
+        "name": "Platelet",
+        "icon": "Cubes/platelet.png",
+        "desc": "Despite being called a platelet, it's a red blood cell.",
+        "rarity": "materialcube"
+    },
+    "cauldronfrag": {
+        "author": "Aspect",
+        "name": "Cauldron Fragment",
+        "icon": "Cubes/cauldronfrag.png",
+        "desc": "A twisted piece of metal.",
+        "rarity": "materialcube"
+    },
+    "cobweb": {
+        "author": "Aspect",
+        "name": "Cobweb",
+        "icon": "Cubes/cobweb.png",
+        "desc": "A dusty cobweb.",
+        "rarity": "materialcube"
+    },
+    "cornsyrup": {
+        "author": "Aspect",
+        "name": "Corn Syrup",
+        "icon": "Cubes/cobweb.png",
+        "desc": "High in fructose.",
+        "rarity": "materialcube"
+    },
+    "cocooned": {
+        "author": "Aspect",
+        "name": "Cocooned Cube",
+        "icon": "Cubes/cocooned.png",
+        "desc": "Wrapped up in a sticky situation.",
+        "rarity": "crafted"
+    },
+    "cauldron": {
+        "author": "Aspect",
+        "name": "Cauldron Cube",
+        "icon": "Cubes/cauldron.png",
+        "desc": "You could fit so many children in this bad boy.",
+        "rarity": "crafted"
+    },
+    "candycorn": {
+        "author": "Aspect",
+        "name": "Candy Corn Cube",
+        "icon": "Cubes/candycorn.png",
+        "desc": "Do you start eating from the white side or the orange side?",
+        "rarity": "crafted"
+    },
+    "blood": {
+        "author": "Aspect",
+        "name": "Hemoglobin Cube",
+        "icon": "Cubes/blood.png",
+        "desc": "Cube for the Cube god!",
+        "rarity": "crafted"
     }
 }
