@@ -112,7 +112,7 @@ export type prefixDefinition = {
     /**
      * The function that applies the prefix to each frame of the icon, returns where the icon should be composited, and what filters Jimp should apply to the icon.
      */
-    compileFrames(anchorPoints: anchorPointSchema, cubeFrames: Jimp[], seed: number, cubeData: cubeDefinition): Promise<compiledPrefixFrames>
+    compileFrames(anchorPoints: anchorPointSchema, cubeFrames: Jimp[], seed: number, cubeData: cubeDefinition, allPrefixes: string[]): Promise<compiledPrefixFrames>
 }
 
 export type prefixTags = "seeded" | "maskOnly" | "appliesDirectlyAfterAllPrefixes" | "ignoresPrefixCap";

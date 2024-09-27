@@ -360,9 +360,9 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
             if (!prefixHasTag(compilingPrefixID, "appliesDirectlyAfterAllPrefixes")) {
                 if (prefixHasTag(compilingPrefixID, "maskOnly") === masks) {
                     if (sizeOverride) {
-                        allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), prefixSeed, cubes[cubeID]));
+                        allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone().resize(sizeOverride.width, sizeOverride.height, Jimp.RESIZE_NEAREST_NEIGHBOR)), prefixSeed, cubes[cubeID], shownPrefixes));
                     } else {
-                        allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), prefixSeed, cubes[cubeID]));
+                        allPrefixFrames.push(await prefixes[compilingPrefixID].compileFrames(retrievedParts, iconFrames.map(frame => frame.clone()), prefixSeed, cubes[cubeID], shownPrefixes));
                     }
                 }
             }
@@ -519,7 +519,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
     for (let shownPrefixIndex = 0; shownPrefixIndex < shownPrefixes.length; shownPrefixIndex++) {
         const compilingPrefixID = shownPrefixes[shownPrefixIndex];
         if (prefixHasTag(compilingPrefixID, "appliesDirectlyAfterAllPrefixes") === true) {
-            newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, prefixSeed, cubes[cubeID])).maskFrames;
+            newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, prefixSeed, cubes[cubeID], shownPrefixes)).maskFrames;
         }
     }
 
