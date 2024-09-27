@@ -3,7 +3,38 @@ import { cubeID, prefixID } from "./typedefs";
 import fs from "fs-extra";
 import { readDirectoryRecursively } from "./modules/miscutils";
 
-const updatedCubes: cubeID[] = [];
+const updatedCubes: cubeID[] = [
+    "purplestriped",
+    "pinkstriped",
+    "pink",
+    "orangewireframe",
+    "purplewireframe",
+    "pinkwireframe",
+    "greenfabric",
+    "bluefabric",
+    "mountainous",
+    "sunny",
+    "pinkice",
+    "ice",
+    "cinderblock",
+    "bluebook",
+    "brownbook",
+    "leadbasedpaint",
+    "refracting",
+    "shoji3",
+    "shoji2",
+    "shoji1",
+    "opal2",
+    "opal1",
+    "feathered3",
+    "polyphemus",
+    "working",
+    "shimmering",
+    "hilbert",
+    "unpossible",
+    "impossible",
+    "goldworkingcube"
+];
 const updatedPrefixes: prefixID[] = [];
 
 const iconDirectory = `./../ccicons/`

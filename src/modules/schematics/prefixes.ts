@@ -4314,23 +4314,41 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Clapping": {
-        name: "",
+        name: "Clapping",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Clapping";
+
+            let clappingFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/clapping/clap.png`), 5);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/clapping/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(clappingFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const clappingFrame = clappingFrames[animationFrameIndex % clappingFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(clappingFrame, cacheDirectory, frameHeadData, { x: 16, y: -7, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Musical": {
-        name: "",
-        tags: [],
+        name: "Musical",
+        tags: ["seeded", "appliesDirectlyAfterAllPrefixes"],
         needs: {
             heads: false,
             eyes: false,
@@ -4338,126 +4356,407 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Musical";
+
+            let seedGen = new seedrandom(`musical${seed}`);
+            const prefixFrameLength = 30;
+            const colorRotation = 360 * seedGen();
+            const noteImages = parseHorizontalSpriteSheet((await Jimp.read(`${prefixSourceDirectory}/musical/notes.png`)).color([
+                { apply: "hue", params: [colorRotation] }
+            ]), 5);
+            const notes: {
+                noteImage: number,
+                track: 0 | 1 | 2
+            }[] = [];
+            const noteSpeed = ((Math.floor(seedGen() * 3)) || -1) as (-1 | 1 | 2);
+            
+            const universalNoteOffset = seedGen();
+
+            const noteCount = Math.ceil(seedGen() * ((iconFrames[0].bitmap.width)/(noteImages[0].bitmap.width * 1.3)));
+
+            while (notes.length < noteCount) {
+                notes.push({
+                    noteImage: Math.floor(seedGen() * noteImages.length),
+                    track: Math.floor(seedGen() * 3) as (0 | 1 | 2)
+                })
+            }
+
+            const size = iconFrames[0].bitmap.height/6;
+            function sinPosition(x: number, t: number) {
+                const timeScale = 1;
+                return Math.round(size * Math.sin(((x/size) - (2 * Math.PI * ((t * timeScale) % 1)))) + (iconFrames[0].bitmap.height/2));
+            }
+
+            const colorImage = new Jimp(1, 2, 0x3e3e3eff);
+            colorImage.setPixelColor(0x2c2c2cff, 0, 1);
+
+            const noteSizeCentering = noteImages[0].bitmap.width/2;
+            const neededFrames = maths.leastCommonMultiple(iconFrames.length, prefixFrameLength);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededFrames; animationFrameIndex++) {
+                const frame = iconFrames[animationFrameIndex % iconFrames.length].clone();
+                const time = ((animationFrameIndex % prefixFrameLength)/prefixFrameLength);
+                for (let frameXPosition = 0; frameXPosition < frame.bitmap.width; frameXPosition++) {
+                    const sinY = sinPosition(frameXPosition, time);
+                    // Top line
+                    frame.composite(colorImage, frameXPosition, sinY - size);
+
+                    // Middle Line
+                    frame.composite(colorImage, frameXPosition, sinY);
+
+                    // Bottom Line
+                    frame.composite(colorImage, frameXPosition, sinY + size);
+                }
+                for (let noteIndex = 0; noteIndex < notes.length; noteIndex++) {
+                    const note = notes[noteIndex];
+                    const noteImage = noteImages[note.noteImage];
+                    const noteProgress = ((((time + universalNoteOffset) * noteSpeed) + (noteIndex / notes.length)) % 1) * frame.bitmap.width;
+                    let yOffset = 0;
+                    switch (note.track) {
+                        case 0:
+                            yOffset -= size;
+                            break; 
+                        case 2:
+                            yOffset += size;
+                            break;
+                        default:
+                            break;
+                    }
+                    frame.composite(noteImage, noteProgress - noteSizeCentering, sinPosition(noteProgress, time) - noteSizeCentering + yOffset);
+                    frame.composite(noteImage, noteProgress - noteSizeCentering + frame.bitmap.width, sinPosition(noteProgress + frame.bitmap.width, time) - noteSizeCentering + yOffset);
+                    frame.composite(noteImage, noteProgress - noteSizeCentering - frame.bitmap.width, sinPosition(noteProgress - frame.bitmap.width, time) - noteSizeCentering + yOffset);
+                    frame.composite(noteImage, noteProgress - noteSizeCentering + (frame.bitmap.width * 2), sinPosition(noteProgress + (frame.bitmap.width * 2), time) - noteSizeCentering + yOffset);
+                    frame.composite(noteImage, noteProgress - noteSizeCentering - (frame.bitmap.width * 2), sinPosition(noteProgress - (frame.bitmap.width * 2), time) - noteSizeCentering + yOffset);
+                }
+                prefixFrames.maskFrames.push(frame);
+            }
+
+            return prefixFrames;
         }
     },
     "Stunned": {
-        name: "",
+        name: "Stunned",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Stunned";
+
+            let stunnedFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/stunned/stars.png`), 5);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/stunned/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(stunnedFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const stunnedFrame = stunnedFrames[animationFrameIndex % stunnedFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(stunnedFrame, cacheDirectory, frameHeadData, { x: 8, y: 17, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Lovey": {
-        name: "",
-        tags: [],
+        name: "Lovey",
+        tags: ["seeded"],
         needs: {
             heads: false,
-            eyes: false,
+            eyes: true,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Lovey";
+
+            let seedGen = new seedrandom(`amorous${seed}`); // Same seed gen as amorous so that the heart colors always match
+
+            let heartEyeImage = strokeImage(await Jimp.read(`${prefixSourceDirectory}/lovey/heart.png`), 0x00000022, 1, false, [[0, 0, 0], [0, 0, 0], [0, 1, 0]]);
+            const validHueShifts = [0, 0, 0, 0, 0,
+                77,
+                -159,
+                -86
+            ];
+            const usingShift = validHueShifts[Math.floor(validHueShifts.length * seedGen())];
+            heartEyeImage.color([{apply: "hue", params: [usingShift]}])
+
+            anchorPoints.eyes.forEach((eyesThisFrame, index) => {
+                prefixFrames.frontFrames.push([]);
+                eyesThisFrame.coordinates.forEach(coordinate => {
+                    prefixFrames.frontFrames[index].push({
+                        image: heartEyeImage,
+                        compositePosition: {
+                            x: coordinate.x - Math.floor(heartEyeImage.bitmap.width/2),
+                            y: coordinate.y - Math.floor(heartEyeImage.bitmap.width/2)
+                        }
+                    })
+                })
+            })
+
+            return prefixFrames;
         }
     },
     "Trouvaille": {
-        name: "",
-        tags: [],
+        name: "Trouvaille",
+        tags: ["seeded"],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Trouvaille";
+            let headPositions = anchorPoints.heads;
+            let seedGen = new seedrandom(`trouvaille${seed}`);
+
+            let cloverImage = await Jimp.read(`${prefixSourceDirectory}/trouvaille/${(seedGen() < 0.99) ? 'common' : 'rare'}.png`);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/${seed}trouvaille/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(cloverImage, cacheDirectory, frameHeadPosition, { x: -10, y: 11, width: 32 });
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Googly": {
-        name: "",
-        tags: [],
+        name: "Googly",
+        tags: ["seeded"],
         needs: {
             heads: false,
-            eyes: false,
+            eyes: true,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Googly";
+
+            let seedGen = new seedrandom(`googly${seed}`);
+
+            const googlyEyeRotations: {
+                flipX: boolean,
+                flipY: boolean
+            }[] = [];
+            const generatedGooglyEyeRotations = 5;
+            while (googlyEyeRotations.length < generatedGooglyEyeRotations) {
+                googlyEyeRotations.push({
+                    flipX: seedGen() > 0.5,
+                    flipY: seedGen() > 0.5
+                })
+            }
+
+            let googlyEyeImage = await Jimp.read(`${prefixSourceDirectory}/googly/googlyeye.png`);
+
+            anchorPoints.eyes.forEach((eyesThisFrame, index) => {
+                prefixFrames.frontFrames.push([]);
+                eyesThisFrame.coordinates.forEach((coordinate, coordindex) => {
+                    const flips = googlyEyeRotations[coordindex % generatedGooglyEyeRotations];
+                    const constructedEye = strokeImage(googlyEyeImage.clone().flip(flips.flipX, flips.flipY), 0x00000022, 1, false, [[0, 0, 0], [0, 0, 0], [0, 1, 0]]);
+                    prefixFrames.frontFrames[index].push({
+                        image: constructedEye,
+                        compositePosition: {
+                            x: coordinate.x - Math.floor(constructedEye.bitmap.width / 2),
+                            y: coordinate.y - Math.floor(constructedEye.bitmap.width / 2)
+                        }
+                    })
+                })
+            })
+
+            return prefixFrames;
         }
     },
     "Expressive": {
-        name: "",
-        tags: [],
+        name: "Expressive",
+        tags: ["seeded"],
         needs: {
             heads: false,
-            eyes: false,
+            eyes: true,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Expressive";
+
+            let seedGen = new seedrandom(`expressive${seed}`);
+
+            const eyebrowColors = [
+                0x6e5942ff,
+                0x1f1f1fff,
+                0x726b23ff,
+                0xab5429ff
+            ];
+
+            let eyebrowMasks = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/expressive/eyebrows.png`), 5);
+            const eyebrowImage = (new Jimp(eyebrowMasks[0].bitmap.width, eyebrowMasks[0].bitmap.height, eyebrowColors[Math.floor(seedGen() * eyebrowColors.length)]));
+            eyebrowMasks[Math.floor(seedGen() * eyebrowMasks.length)].scan(0, 0, eyebrowMasks[0].bitmap.width, eyebrowMasks[0].bitmap.height, function(x, y, idx) {
+                if (this.bitmap.data[idx + 3] <= 0) {
+                    eyebrowImage.setPixelColor(0x00000000, x, y)
+                }
+            })
+
+            anchorPoints.eyes.forEach((eyesThisFrame, index) => {
+                prefixFrames.frontFrames.push([]);
+                const averageXValue = eyesThisFrame.coordinates.reduce((prev, curr) => {
+                    return prev + curr.x
+                }, 0)/eyesThisFrame.coordinates.length;
+                console.log(averageXValue);
+                eyesThisFrame.coordinates.forEach((coordinate, coordindex) => {
+                    prefixFrames.frontFrames[index].push({
+                        image: eyebrowImage.clone().flip((coordinate.x > averageXValue), false),
+                        compositePosition: {
+                            x: coordinate.x - Math.floor(eyebrowImage.bitmap.width / 2),
+                            y: coordinate.y - 7
+                        }
+                    })
+                })
+            })
+
+            return prefixFrames;
         }
     },
     "Talkative": {
-        name: "",
+        name: "Talkative",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Talkative";
+
+            let speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/talkative/talkingindicator.png`), 5);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/talkative/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(speechFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const speechFrame = speechFrames[animationFrameIndex % speechFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(speechFrame, cacheDirectory, frameHeadData, { x: 7, y: 9, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Muscular": {
-        name: "",
+        name: "Muscular",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Muscular";
+
+            let muscleBackImage = await Jimp.read(`${prefixSourceDirectory}/muscular/back.png`);
+            let muscleFrontImage = await Jimp.read(`${prefixSourceDirectory}/muscular/front.png`);
+
+            let muscleBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/muscular/back/`);
+            if (!fs.existsSync(muscleBackDirectory)) fs.mkdirSync(muscleBackDirectory, { recursive: true });
+            let muscleFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/muscular/front/`);
+            if (!fs.existsSync(muscleFrontDirectory)) fs.mkdirSync(muscleFrontDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backMuscleImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(muscleBackImage, muscleBackDirectory, frameHeadPosition, { x: 6, y: 15, width: 32 });
+                prefixFrames.backFrames.push(backMuscleImagesThisFrame);
+
+                const frontMuscleImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(muscleFrontImage, muscleFrontDirectory, frameHeadPosition, { x: 6, y: 15, width: 32 });
+                prefixFrames.frontFrames.push(frontMuscleImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Leggendary": {
-        name: "",
+        name: "Leggendary",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Leggendary";
+
+            let legsImage = await Jimp.read(`${prefixSourceDirectory}/leggendary/legs.png`);
+
+            let bloodBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/leggendary/`);
+            if (!fs.existsSync(bloodBackDirectory)) fs.mkdirSync(bloodBackDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backBloodImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(legsImage, bloodBackDirectory, frameHeadPosition, { x: 0, y: 8, width: 32 });
+                prefixFrames.backFrames.push(backBloodImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Thinking": {
-        name: "",
+        name: "Thinking",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Thinking";
+
+            let speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/thinking/thoughts.png`), 5);
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/thinking/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(speechFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const speechFrame = speechFrames[animationFrameIndex % speechFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(speechFrame, cacheDirectory, frameHeadData, { x: -33, y: 28, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Boiled": {
         name: "",
         tags: [],
@@ -5181,6 +5480,7 @@ const prefixes = {
  */
 const prefixIDApplicationOrder = [
     "Rippling", // Adds a sine wave to the cube
+    "Musical", // Adds an animated music sheet to the cube
 
     // -------------- Prefixes That Add Environmental Stuffs (Or just super large props)
     "Orbital", // Adds 3 orbiting planets to the cube
@@ -5196,11 +5496,18 @@ const prefixIDApplicationOrder = [
     // -------------- Prefixes That Add Particles That depend on the cube itself (are bound to parts of the cube)
     "Flaming", // Makes the cube on FREAKING FIRE
     "Angry", // Adds an animated anime-esque anger icon to the cube
+    "Thinking", // Adds a thought bubble with a question mark to the cube
+    "Talkative", // Adds an animated yellow speech indicator to the cube
     "Eudaemonic", // Adds an animated happy face speech bubble to the cube
     "Dazed", // Adds 'dazed' particles around the cube (I don't know what I was thinking when I created this prefix in 2020)
     "Amorous", // Adds hearts around the head of the cube
+    "Stunned", // Adds a cartoony "seeing stars" effect to the cube
     "Based", // Adds Flashing Eyes to the Cube
+    "Lovey", // Adds Heart Eyes to the Cube
+    "Googly", // Adds Googly Eyes to the Cube
+    "Expressive", // Adds sassy eyebrows to the Cube
     "Blushing", // Adds blush to the cube
+    "Clapping", // Adds the twitch clapping emote to the cube
     "Insignificant", // Adds ULTRAKILL Gabriel-esque halo and wings to the cube
     "Holy", // Adds an embellished animated decoration to the cube
     "Unholy", // Adds an embellished animated decoration to the cube
@@ -5222,6 +5529,8 @@ const prefixIDApplicationOrder = [
     "Cuffed", // Adds a handcuff around the Cube
     "Sniping", // Adds a sniper rifle to the Cube
     "Marvelous", // Adds a Hand holding the Cube
+    "Muscular", // Adds disgusting muscly arms to the cube
+    "Leggendary", // Adds disgusting built-ass legs to the cube
     "Incarcerated", // Adds a Jail around the Cube
     "Basking", // Adds sand and an umbrella to the cube
     "Bladed", // Adds a sword to the cube
@@ -5236,6 +5545,7 @@ const prefixIDApplicationOrder = [
     "Streaming", // Adds headphones to the cube
     "Magical", // Adds a wizard hat to the cube
     "Sweetened", // Adds a cherry to the top of the cube
+    "Trouvaille", // Adds a clover to the top of the cube
     "Dovey", // Adds a dove perched on the cube
     "Batty", // Adds a bat hanging from the cube NOTE: this is super gross. I don't like bats
     "Jolly", // Adds a Santa hat to the cube
