@@ -5095,7 +5095,7 @@ const prefixes = {
             return structuredClone(basePrefixReturnObject)
         }
     },
-    "Contraband": {
+    "Conspicuous": {
         name: "",
         tags: [],
         needs: {

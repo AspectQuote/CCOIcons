@@ -49,7 +49,7 @@ const route: CCOIcons.documentedRoute = {
         if (fs.existsSync(sourceFile)) {
             try {
                 const outputFile = `${outputDirectory}/${iconName}.png`;
-                if (!fs.existsSync(outputFile)) {
+                if (!fs.existsSync(outputFile) || config.devmode) {
                     // Create the image (if needed)
                     const outputImage = await createBSideImage(await Jimp.read(sourceFile), 2);
                     await outputImage.writeAsync(outputFile);
