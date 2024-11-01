@@ -3421,9 +3421,9 @@ const prefixes = {
             bandannaBackImage.color(imageMod);
             bandannaFrontImage.color(imageMod);
 
-            let bandannaBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/outlawed/back/`);
+            let bandannaBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/outlawed${seed}/back/`);
             if (!fs.existsSync(bandannaBackDirectory)) fs.mkdirSync(bandannaBackDirectory, { recursive: true });
-            let bandannaFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/outlawed/front/`);
+            let bandannaFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/outlawed${seed}/front/`);
             if (!fs.existsSync(bandannaFrontDirectory)) fs.mkdirSync(bandannaFrontDirectory, { recursive: true });
 
             for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
@@ -4756,23 +4756,56 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Boiled": {
-        name: "",
-        tags: [],
+        name: "Boiled",
+        tags: ["seeded"],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Boiled";
+
+            let seedGen = new seedrandom(`boiled${seed}`);
+
+            let steamFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/boiled/steam.png`), 10);
+
+            let steamOffsets: number[] = [];
+            let failsafe = 0;
+            while (steamOffsets.length < 4) {
+                let possibleOffset = Math.floor(steamFrames.length * seedGen());
+                failsafe++;
+                if (!steamOffsets.find(offset => Math.abs(offset - possibleOffset) <= 2) || failsafe > 100) {
+                    steamOffsets.push(possibleOffset);
+                }
+            }
+
+            let neededAnimationFrames = maths.leastCommonMultiple(steamFrames.length, iconFrames.length);
+
+            const headPositions = anchorPoints.heads;
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/boiled${seed}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const rightSteamImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(steamFrames[(animationFrameIndex + steamOffsets[0]) % steamFrames.length], cacheDirectory, frameHeadData, { x: 2 - 32, y: 17, width: 32 }, false);
+                const centerSteamImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(steamFrames[(animationFrameIndex + steamOffsets[1]) % steamFrames.length], cacheDirectory, frameHeadData, { x: 11 - 32, y: 22, width: 32 }, false);
+                const otherCenterSteamImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(steamFrames[(animationFrameIndex + steamOffsets[2]) % steamFrames.length], cacheDirectory, frameHeadData, { x: 24 - 32, y: 22, width: 32 }, false);
+                const leftSteamImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(steamFrames[(animationFrameIndex + steamOffsets[3]) % steamFrames.length], cacheDirectory, frameHeadData, { x: 33 - 32, y: 17, width: 32 }, false);
+                prefixFrames.frontFrames.push([...rightSteamImages, ...centerSteamImages, ...otherCenterSteamImages, ...leftSteamImages]);
+            }
+
+            return prefixFrames
         }
     },
     "Typing": {
-        name: "",
-        tags: [],
+        name: "Typing",
+        tags: ["seeded"],
         needs: {
             heads: false,
             eyes: false,
@@ -4780,22 +4813,80 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Typing";
+
+            let seedGen = new seedrandom(`typing${seed}`);
+
+            const speechBubbleTail = await Jimp.read(`${prefixSourceDirectory}/typing/speechbubbletail.png`)
+
+            const characterPool = `AAAABCDEEEEFGHIIIIJKLMNOOOOPQRSTUUUUVWXYYZ`;
+
+            const characters: number[] = [];
+            const typingLength = Math.round(seedGen() * 4) + 4;
+            while (characters.length < typingLength) {
+                characters.push(characterPool.charCodeAt(Math.floor(seedGen() * characterPool.length)));
+            }
+            const typingString = String.fromCharCode(...characters);
+            const speechBubblePadding = 2;
+            const textImage = await generateSmallWordImage(typingString, 0xffffffff, 0x000000ff, speechBubblePadding);
+            console.log(typingString);
+
+            const speechBubbleX = iconFrames[0].bitmap.width - 3;
+            const speechBubbleY = -8;
+
+            prefixFrames.frontFrames.push([{
+                image: textImage,
+                compositePosition: {
+                    x: speechBubbleX,
+                    y: speechBubbleY
+                }
+            }, {
+                image: speechBubbleTail,
+                compositePosition: {
+                    x: speechBubbleX,
+                    y: speechBubbleY + (textImage.bitmap.height - speechBubblePadding)
+                }
+            }])
+
+            return prefixFrames;
         }
     },
     "Blind": {
-        name: "",
+        name: "Blind",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Blind";
+
+            let blindfoldBackImage = await Jimp.read(`${prefixSourceDirectory}/blind/back.png`);
+            let blindfoldFrontImage = await Jimp.read(`${prefixSourceDirectory}/blind/front.png`);
+
+            let blindfoldBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/blind/back/`);
+            if (!fs.existsSync(blindfoldBackDirectory)) fs.mkdirSync(blindfoldBackDirectory, { recursive: true });
+            let blindfoldFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/blind/front/`);
+            if (!fs.existsSync(blindfoldFrontDirectory)) fs.mkdirSync(blindfoldFrontDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backBlindfoldImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(blindfoldBackImage, blindfoldBackDirectory, frameHeadPosition, { x: 1, y: 8, width: 32 });
+                prefixFrames.backFrames.push(backBlindfoldImagesThisFrame);
+
+                const frontBlindfoldImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(blindfoldFrontImage, blindfoldFrontDirectory, frameHeadPosition, { x: 1, y: 8, width: 32 });
+                prefixFrames.frontFrames.push(frontBlindfoldImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Cucurbitaphilic": {
         name: "",
         tags: [],
@@ -5492,6 +5583,7 @@ const prefixIDApplicationOrder = [
     "Menacing", // Adds a jjba-style menacing effect to the cube
     "Bugged", // Adds a Glitchy 'Missing Texture' Animation to the Cube
     "Cursed", // Adds a spinning Pentagram beneath the Cube
+    "Typing", // Adds a speech bubble with a random sequence of letters to the cube
 
     // -------------- Prefixes That Add Particles That depend on the cube itself (are bound to parts of the cube)
     "Flaming", // Makes the cube on FREAKING FIRE
@@ -5500,6 +5592,7 @@ const prefixIDApplicationOrder = [
     "Talkative", // Adds an animated yellow speech indicator to the cube
     "Eudaemonic", // Adds an animated happy face speech bubble to the cube
     "Dazed", // Adds 'dazed' particles around the cube (I don't know what I was thinking when I created this prefix in 2020)
+    "Boiled", // Adds steam coming off the cube
     "Amorous", // Adds hearts around the head of the cube
     "Stunned", // Adds a cartoony "seeing stars" effect to the cube
     "Based", // Adds Flashing Eyes to the Cube
@@ -5552,6 +5645,7 @@ const prefixIDApplicationOrder = [
     "Partying", // Adds a party hat to the cube
     "Hard-Boiled", // Adds a holmes-esque detective hat to the cube
     "Smoked", // Adds a GET SMOKED hat to the cube
+    "Blind", // Adds a blindfold to the cube
     "Outlawed", // Adds a bandanna to the cube
     "Serving", // Adds a french-maid-style skirt and bonnet to the cube
     "Angelic", // Adds a halo to the cube

@@ -5,9 +5,13 @@ import { readDirectoryRecursively } from "./modules/miscutils";
 import { boxID } from "./modules/schematics/boxes";
 
 (async () => {
-    const updatedCubes: cubeID[] = [];
-    const updatedPrefixes: prefixID[] = [];
-    const updatedBoxes: boxID[] = [ "spooky" ];
+    const updatedCubes: cubeID[] = [
+        "upsidedown"
+    ];
+    const updatedPrefixes: prefixID[] = [
+        "Outlawed"
+    ];
+    const updatedBoxes: boxID[] = [];
 
     const iconDirectory = `./../ccicons/`
     const allFiles: string[] = await readDirectoryRecursively(iconDirectory);

@@ -411,7 +411,8 @@
         "author": "Aspect",
         "name": "Upside-Down Cube",
         "desc": "It's upside down. No matter which angle you view it from, it's orientation never changes.",
-        "rarity": "relic"
+        "rarity": "relic",
+        "flipY": true
     },
     "tabby": {
         "author": "Aspect",

@@ -2,15 +2,13 @@ import * as CCOIcons from './../typedefs';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import Jimp from 'jimp';
-import * as gifwrap from 'gifwrap';
 import { Response } from 'express';
 
 import { createBSideImage } from './../modules/bside';
 import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
-import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder } from '../modules/schematics/prefixes';
+import { prefixes } from '../modules/schematics/prefixes';
 import { getSeededCubeIconType, generateAndValidatePrefixDirectory, generatePrefixedCube } from '../modules/cubeiconutils';
-import * as config from '../modules/schematics/config';
-import * as maths from '../modules/maths';
+import * as config from '../modules/schematics/config'
 let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
@@ -304,7 +302,7 @@ const iconModifiers = {
         directory: '/size',
         modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { size: number }) {
             // Check if the size is a power of 2, within the bounds of set above. If not, don't resize and don't return a new nested directory
-            if (Number.isNaN(data.size) || data.size > config.resizeMax || data.size < config.resizeMin || (Math.log(data.size) / Math.log(2)) % 1 !== 0) return {directoryAddition: ''};
+            if (Number.isNaN(data.size) || data.size > config.resizeMax || data.size < config.resizeMin || (Math.log(data.size) / Math.log(2)) % 1 !== 0) return { directoryAddition: '' };
 
             // Get the path of the output of the previous modification
             const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
@@ -339,6 +337,42 @@ const iconModifiers = {
             // Return the directory to add to the icon generation function.
             return {
                 directoryAddition: resizeDirectory
+            };
+        }
+    },
+    flip: {
+        directory: '/flipped',
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { flipX: boolean, flipY: boolean }) {
+
+            // Get the path of the output of the previous modification
+            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+            const flipDirectory = `/flip/`;
+
+            // Create the directory path of the outcome of this modification
+            const outcomeDirectory = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${flipDirectory}`);
+
+            // Create the outcome path of the file
+            const outcomeFile = `${outcomeDirectory}/${fileName}`;
+
+            // If the path to the directory doesn't exist, create it.
+            if (!fs.pathExistsSync(outcomeDirectory)) fs.mkdirSync(outcomeDirectory, { recursive: true });
+
+            // If the icon hasn't been generated yet, then generate it (in this case, it's simply reading the original image then resizing it.)
+            if (!fs.existsSync(outcomeFile)) {
+                // Read the original icon
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    iconFrames[frameIndex].flip(data.flipX, data.flipY);
+                }
+
+                // Write the icon
+                await saveAnimatedCubeIcon(iconFrames, fileName, outcomeDirectory, config.getCubeAnimationDelay(modifyingID));
+            }
+
+            // Return the directory to add to the icon generation function.
+            return {
+                directoryAddition: flipDirectory
             };
         }
     }
@@ -405,6 +439,12 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
         let newBeforeResize = performance.now();
         imageDirectories.push((await iconModifiers.size.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.size.data)).directoryAddition);
         if (config.devmode) console.log('Resize took '+(performance.now() - newBeforeResize)+ 'ms.');
+    }
+
+    if (!!cubes[cubeID].flipY || !!cubes[cubeID].flipX) {
+        let beforeFlipY = performance.now();
+        imageDirectories.push((await iconModifiers.flip.modificationFunction(imageDirectories, cubeID, fileName, { flipX: cubes[cubeID]?.flipX === true, flipY: cubes[cubeID]?.flipY === true })).directoryAddition);
+        if (config.devmode) console.log('Flipping took ' + (performance.now() - beforeFlipY) + 'ms.');
     }
 
     if (!returnSpriteSheet && fs.existsSync(`${config.relativeRootDirectory}${imageDirectories.join('')}${fileName.replace('.png', '.gif')}`)) {

@@ -223,6 +223,18 @@ export type cubeDefinition = {
      * - Can be any {@link rarityID}. Describes how rare the cube is.
      */
     rarity: rarityID
+
+    /**
+     * Flip the Cube (X)
+     * - Flips the cube horizontally on render
+     */
+    flipX?: boolean
+
+    /**
+     * Flip the Cube (Y)
+     * - Flips the cube vertically on render
+     */
+    flipY?: boolean
 }
 
 /**
