@@ -15,7 +15,7 @@ const prefixPatternIndexLimit = 300;
 /**
  * Controls how many prefixes can be displayed on a cube at once. Increasing this will GREATLY effect how many icons can be generated.
  */
-const shownPrefixLimit = 3;
+const shownPrefixLimit = 2;
 
 /**
  * The square root of the cube pattern index, this is used to generate cube pattern atlases, controls how many columns/rows there are in each atlas.
@@ -139,7 +139,7 @@ const useBaseCubeCache = !devmode;
 /**
  * The limit to the amount of frames the B-Side filter can apply to for one animation, used to keep server loads down at the cost of gif loop quality
  */
-const bSideAnimationLimit = 60;
+const bSideAnimationLimit = 30;
 
 /**
  * Whether or not to regenerate tallying images each time they are requested. Used for debugging.
@@ -149,7 +149,7 @@ const useTallyingImageCache = !devmode;
 /**
  * The maximum % of tallies that the server will generate
  */
-const maxTallyPercent = 999;
+const maxTallyPercent = 101;
 
 /**
  * The limit on .gif frames that an icon can use
