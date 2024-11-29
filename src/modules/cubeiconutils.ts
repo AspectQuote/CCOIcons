@@ -458,8 +458,13 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                     let strokedBackFrame = partOfFrame.image;
                     let paddingOffset = 0;
                     frameOutlines.back.forEach(outline => {
-                        if (outline.origin !== compiledPrefixFrames.sourceID && !partOfFrame.preventOutline) strokedBackFrame = strokeImage(strokedBackFrame, outline.color, outline.width, false, outline.matrix);
-                        if (partOfFrame.preventOutline) paddingOffset += outline.width;
+                        if (outline.origin !== compiledPrefixFrames.sourceID) {
+                            if (!partOfFrame.preventOutline) {
+                                strokedBackFrame = strokeImage(strokedBackFrame, outline.color, outline.width, false, outline.matrix);
+                            } else {
+                                paddingOffset += outline.width;
+                            }
+                        }
                     })
                     newFrame.composite(strokedBackFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding + paddingOffset, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding + paddingOffset)
                 })
@@ -485,8 +490,13 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                     let strokedFrontFrame = partOfFrame.image;
                     let paddingOffset = 0;
                     frameOutlines.front.forEach(outline => {
-                        if (outline.origin !== compiledPrefixFrames.sourceID && !partOfFrame.preventOutline) strokedFrontFrame = strokeImage(strokedFrontFrame, outline.color, outline.width, false, outline.matrix);
-                        if (partOfFrame.preventOutline) paddingOffset += outline.width;
+                        if (outline.origin !== compiledPrefixFrames.sourceID) {
+                            if (!partOfFrame.preventOutline) {
+                                strokedFrontFrame = strokeImage(strokedFrontFrame, outline.color, outline.width, false, outline.matrix);
+                            } else {
+                                paddingOffset += outline.width;
+                            }
+                        }
                     })
                     newFrame.composite(strokedFrontFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding + paddingOffset, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding + paddingOffset)
                 })

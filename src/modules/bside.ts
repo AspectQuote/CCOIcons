@@ -1,3 +1,4 @@
+import { strokeMatrix } from 'src/typedefs';
 import { fillRect } from './imageutils';
 import Jimp from 'jimp';
 
@@ -102,9 +103,16 @@ function getBSideCornerCoordinates(pixelX: number, pixelY: number, scale: number
  * @param scale The scale of the B-Side output image
  * @returns An array of triangles that were found, up to 2.
  */
-function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number }, xAxisDirection: -1 | 1 | 0, yAxisDirection: -1 | 1 | 0, scale: number): roughTriangle[] {
+function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number }, xAxisDirection: -1 | 1 | 0, yAxisDirection: -1 | 1 | 0, scale: number, useAccurateColorComparison: boolean = false, edgeImage: Jimp): roughTriangle[] {
     const centerColor = image.getPixelColor(coordinate.x, coordinate.y);
+    const centerPixelRGBA = Jimp.intToRGBA(centerColor);
     const centerBSideCoordinates = getBSideCornerCoordinates(coordinate.x, coordinate.y, scale);
+    const edgesDetected: Jimp = edgeImage;
+    function checkEdge(x: number, y: number) {
+        if (edgesDetected.bitmap.width === 1) return -1;
+        return edgesDetected.getPixelColor(x % edgesDetected.bitmap.width, y % edgesDetected.bitmap.height);
+    }
+    const centerEdge = checkEdge(coordinate.x, coordinate.y);
     // Each pixel from the original image is checked for triangles in one direction at a time, therefore we can assume there are at max two triangles branching from it.
     let primaryTriangle: roughTriangle = {
         start: { x: 0, y: 0 },
@@ -190,9 +198,11 @@ function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number },
         const adjacentPixelCoordinate = { x: coordinate.x + xAxisOffset, y: coordinate.y + yAxisOffset };
         const adjacentPixelColor = image.getPixelColor(adjacentPixelCoordinate.x, adjacentPixelCoordinate.y);
         const adjacentPixelIndex = image.getPixelIndex(adjacentPixelCoordinate.x, adjacentPixelCoordinate.y);
+        const adjacentPixelRGBA = Jimp.intToRGBA(adjacentPixelColor);
+        const adjacentEdge = checkEdge(adjacentPixelCoordinate.x, adjacentPixelCoordinate.y);
 
         // If the color across is the same color as the center color, stop looping
-        if (adjacentPixelColor === centerColor) {
+        if (adjacentPixelColor === centerColor || (useAccurateColorComparison && deltaE([adjacentPixelRGBA.r, adjacentPixelRGBA.g, adjacentPixelRGBA.b], [centerPixelRGBA.r, centerPixelRGBA.g, centerPixelRGBA.b]) <= 20)) {
             if (axisOffset === 1) {
                 // Additionaly, if it was the first loop, then don't use either triangle (they were never changed.)
                 primaryTriangle.use = false;
@@ -212,7 +222,7 @@ function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number },
             // Determine that pixel's bitmap index
             const primaryCheckingPixelColorIndex = image.getPixelIndex(primaryCheckingPixelCoordinate.x, primaryCheckingPixelCoordinate.y);
             // If we're still working with the primary triangle, and if the pixel is the same as the center pixel, OR, if it's attached to a transparent pixel and is on axis loop 1, and the pixel is within bounds, then we can push the triangle's end coordinate farther from the start.
-            if (countingPrimary === true && (primaryCheckingPixelColor === centerColor || ((image.bitmap.data[primaryCheckingPixelColorIndex + 3] > 0) && (image.bitmap.data[adjacentPixelIndex + 3] === 0)) && axisOffset === 1) && primaryCheckingPixelCoordinate.x < image.bitmap.width && primaryCheckingPixelCoordinate.x > 0 && primaryCheckingPixelCoordinate.y < image.bitmap.height && primaryCheckingPixelCoordinate.y > 0) {
+            if (countingPrimary === true && ((checkEdge(primaryCheckingPixelCoordinate.x, primaryCheckingPixelCoordinate.y) === centerEdge && adjacentEdge !== centerEdge && centerEdge === 0 && axisOffset === 1) || primaryCheckingPixelColor === centerColor || ((image.bitmap.data[primaryCheckingPixelColorIndex + 3] > 0) && (image.bitmap.data[adjacentPixelIndex + 3] === 0)) && axisOffset === 1) && primaryCheckingPixelCoordinate.x < image.bitmap.width && primaryCheckingPixelCoordinate.x > 0 && primaryCheckingPixelCoordinate.y < image.bitmap.height && primaryCheckingPixelCoordinate.y > 0) {
                 primaryTriangle.end.x += endMovement * xAxisDirection;
                 primaryTriangle.end.y += endMovement * yAxisDirection;
             } else {
@@ -225,7 +235,7 @@ function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number },
             const secondaryCheckingPixelCoordinate = { x: adjacentPixelCoordinate.x + (checkingPixelCoordinateChange.x), y: adjacentPixelCoordinate.y + (checkingPixelCoordinateChange.y) };
             const secondaryCheckingPixelColor = image.getPixelColor(secondaryCheckingPixelCoordinate.x, secondaryCheckingPixelCoordinate.y);
             const secondaryCheckingPixelColorIndex = image.getPixelIndex(secondaryCheckingPixelCoordinate.x, secondaryCheckingPixelCoordinate.y);
-            if (countingSecondary === true && (secondaryCheckingPixelColor === centerColor || ((image.bitmap.data[secondaryCheckingPixelColorIndex + 3] > 0) && (image.bitmap.data[adjacentPixelIndex + 3] === 0)) && axisOffset === 1) && secondaryCheckingPixelCoordinate.x < image.bitmap.width && secondaryCheckingPixelCoordinate.x > 0 && secondaryCheckingPixelCoordinate.y < image.bitmap.height && secondaryCheckingPixelCoordinate.y > 0) {
+            if (countingSecondary === true && ((checkEdge(secondaryCheckingPixelCoordinate.x, secondaryCheckingPixelCoordinate.y) === centerEdge && adjacentEdge !== centerEdge && centerEdge === 0 && axisOffset === 1) || secondaryCheckingPixelColor === centerColor || ((image.bitmap.data[secondaryCheckingPixelColorIndex + 3] > 0) && (image.bitmap.data[adjacentPixelIndex + 3] === 0)) && axisOffset === 1) && secondaryCheckingPixelCoordinate.x < image.bitmap.width && secondaryCheckingPixelCoordinate.x > 0 && secondaryCheckingPixelCoordinate.y < image.bitmap.height && secondaryCheckingPixelCoordinate.y > 0) {
                 secondaryTriangle.end.x += endMovement * xAxisDirection;
                 secondaryTriangle.end.y += endMovement * yAxisDirection;
             } else {
@@ -244,9 +254,11 @@ function createBSideTriangles(image: Jimp, coordinate: { x: number, y: number },
 /**
  * Creates a B-Side image from an input image, returns the new image
  * @param originalJimp The Jimp image you want to be turned B-Side. This won't be modified, instead, the function will return a new image with the algorithm applied.
- * @param [qualityScale=1] How much more resolution you want to scale with the B-Side config, only really used to generate custom images with higher quality.
+ * @param qualityScale How much more resolution you want to scale with the B-Side config, only really used to generate custom images with higher quality.
+ * @param useAccurateColorComparison Whether or not to use accurate color comparisons when creating the triangles. Has moderate performance impact.
+ * @param edgeImage An image with a black background that shows where the edges on the image are. The algorithm will use these as additions for edge detection.
  */
-async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1): Promise<Jimp> {
+async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1, useAccurateColorComparison: boolean = false, edgeImage: Jimp | false = false, minutia: (-1 | 1) = 1): Promise<Jimp> {
     // Read the original icon
     const originalIcon = originalJimp;
 
@@ -284,10 +296,11 @@ async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1): P
             }
 
             // Find the triangles related to this pixel in each direction.
-            const trianglesToTheRight: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 1, 0, computedScale);
-            const trianglesToTheLeft: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, -1, 0, computedScale);
-            const trianglesBelow: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, 1, computedScale);
-            const trianglesAbove: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, -1, computedScale);
+            const passedEdgeImage = edgeImage ? edgeImage : new Jimp(1, 1, 0);
+            const trianglesToTheRight: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 1, 0, computedScale, useAccurateColorComparison, passedEdgeImage);
+            const trianglesToTheLeft: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, -1, 0, computedScale, useAccurateColorComparison, passedEdgeImage);
+            const trianglesBelow: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, 1, computedScale, useAccurateColorComparison, passedEdgeImage);
+            const trianglesAbove: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, -1, computedScale, useAccurateColorComparison, passedEdgeImage);
 
             // Merge all the arrays and filter them all out based on whether they should be used or not.
             let newTriangles: typeof trianglesAbove = [];
@@ -316,9 +329,9 @@ async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1): P
     // If you want to see what I am talking about, look at the 'orange' cube's B-Side icon and then reverse the -1 and 1 below, then clear the cached image and reload. You'll see that the pixels on the original that signify texture get reduced to absolutely tiny pinpricks because the larger group (the skin) overwrote their groups because it was ordered after.
     colorGroups.sort((a, b) => {
         if (a.coordinates.length > b.coordinates.length) {
-            return -1
+            return -minutia
         } else {
-            return 1
+            return minutia
         }
     }).forEach(colorGroup => {
         // This simply fills the pixel's position, basically accomplishes the same thing as resizing, but applies this pixel in the order of groups.
@@ -362,6 +375,98 @@ async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1): P
     return newIcon;
 }
 
+async function detectEdgesOnImage(image: Jimp, scanfunc: (x: number, y: number, idx: number, edgecolor: number, matrix: strokeMatrix, source: Jimp, target: Jimp) => void = lazyEdgeDetection, background: number = 0x000000ff, edgecolor: number = 0xffffffff) {
+    const edgeJimp = new Jimp(image.bitmap.width, image.bitmap.height, background);
+    const edgeMatrix: strokeMatrix = [
+        [0, 1, 0],
+        [1, 0, 1],
+        [0, 1, 0]
+    ]
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
+        scanfunc(x, y, idx, edgecolor, edgeMatrix, image, edgeJimp)
+    });
+    return edgeJimp;
+}
+
+async function lazyEdgeDetection(x: number, y: number, idx: number, edgecolor: number, matrix: strokeMatrix, source: Jimp, target: Jimp) {
+    const centerPixel = source.getPixelColor(x, y);
+    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
+        const row = matrix[rowIndex];
+        let breakloop = false;
+        for (let columnIndex = 0; columnIndex < row.length; columnIndex++) {
+            const matrixData = row[columnIndex];
+            if (matrixData === 1) {
+                if (source.getPixelColor(x - 1 + rowIndex, y - 1 + columnIndex) !== centerPixel) {
+                    target.setPixelColor(edgecolor, x, y);
+                    breakloop = true;
+                    break;
+                }
+            }
+        }
+        if (breakloop) break;
+    }
+}
+
+async function slowEdgeDetection(x: number, y: number, idx: number, edgecolor: number, matrix: strokeMatrix, source: Jimp, target: Jimp) {
+    const centerPixel = source.getPixelColor(x, y);
+    const centerPixelRGBA = Jimp.intToRGBA(centerPixel);
+    for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
+        const row = matrix[rowIndex];
+        let breakloop = false;
+        for (let columnIndex = 0; columnIndex < row.length; columnIndex++) {
+            const matrixData = row[columnIndex];
+            if (matrixData === 1) {
+                const checkingColor = Jimp.intToRGBA(source.getPixelColor(x - 1 + rowIndex, y - 1 + columnIndex));
+                const colorDifference = deltaE([centerPixelRGBA.r, centerPixelRGBA.g, centerPixelRGBA.b], [checkingColor.r, checkingColor.g, checkingColor.b]);
+                if (colorDifference < 0.5) {
+                    target.setPixelColor(edgecolor, x, y);
+                    breakloop = true;
+                    break;
+                }
+            }
+        }
+        if (breakloop) break;
+    }
+}
+
+// Thank you user993683 on stackoverflow for this color difference code
+// https://stackoverflow.com/questions/13586999/color-difference-similarity-between-two-values-with-js
+function deltaE(rgbA: [number, number, number], rgbB: [number, number, number]) {
+    let labA = rgb2lab(rgbA);
+    let labB = rgb2lab(rgbB);
+    let deltaL = labA[0] - labB[0];
+    let deltaA = labA[1] - labB[1];
+    let deltaB = labA[2] - labB[2];
+    let c1 = Math.sqrt(labA[1] * labA[1] + labA[2] * labA[2]);
+    let c2 = Math.sqrt(labB[1] * labB[1] + labB[2] * labB[2]);
+    let deltaC = c1 - c2;
+    let deltaH = deltaA * deltaA + deltaB * deltaB - deltaC * deltaC;
+    deltaH = deltaH < 0 ? 0 : Math.sqrt(deltaH);
+    let sc = 1.0 + 0.045 * c1;
+    let sh = 1.0 + 0.015 * c1;
+    let deltaLKlsl = deltaL / (1.0);
+    let deltaCkcsc = deltaC / (sc);
+    let deltaHkhsh = deltaH / (sh);
+    let i = deltaLKlsl * deltaLKlsl + deltaCkcsc * deltaCkcsc + deltaHkhsh * deltaHkhsh;
+    return i < 0 ? 0 : Math.sqrt(i);
+}
+function rgb2lab(rgb: [number, number, number]) {
+    let r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255, x, y, z;
+    r = (r > 0.04045) ? Math.pow((r + 0.055) / 1.055, 2.4) : r / 12.92;
+    g = (g > 0.04045) ? Math.pow((g + 0.055) / 1.055, 2.4) : g / 12.92;
+    b = (b > 0.04045) ? Math.pow((b + 0.055) / 1.055, 2.4) : b / 12.92;
+    x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+    y = (r * 0.2126 + g * 0.7152 + b * 0.0722) / 1.00000;
+    z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+    x = (x > 0.008856) ? Math.pow(x, 1 / 3) : (7.787 * x) + 16 / 116;
+    y = (y > 0.008856) ? Math.pow(y, 1 / 3) : (7.787 * y) + 16 / 116;
+    z = (z > 0.008856) ? Math.pow(z, 1 / 3) : (7.787 * z) + 16 / 116;
+    return [(116 * y) - 16, 500 * (x - y), 200 * (y - z)]
+}
+
 export {
-    createBSideImage
+    createBSideImage,
+    detectEdgesOnImage,
+    lazyEdgeDetection,
+    slowEdgeDetection
 }
