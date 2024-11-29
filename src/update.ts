@@ -6,12 +6,44 @@ import { boxID } from "./modules/schematics/boxes";
 
 (async () => {
     const updatedCubes: cubeID[] = [
-        "upsidedown"
+        "yellowstriped",
+        "whitegoo",
+        "redstriped",
+        "bluejumble",
+        "childsafe",
+        "bluewireframe",
+        "petrified2",
+        "petrified1",
+        "redfabric",
+        "pinkfabric",
+        "ducky",
+        "greenice",
+        "redice",
+        "pandoras",
+        "crimson",
+        "velvet",
+        "greenbook",
+        "dog",
+        "oldfashionedtv",
+        "autumn",
+        "clover",
+        "terminal",
+        "shoji4",
+        "teensy",
+        "cubeswarm",
+        "cautionary",
+        "chivalrous",
+        "rgb",
+        "seeno",
+        "hearno",
+        "speakno"
     ];
     const updatedPrefixes: prefixID[] = [
-        "Outlawed"
+        "Typing"
     ];
-    const updatedBoxes: boxID[] = [];
+    const updatedBoxes: boxID[] = [
+        "series8"
+    ];
 
     const iconDirectory = `./../ccicons/`
     const allFiles: string[] = await readDirectoryRecursively(iconDirectory);
