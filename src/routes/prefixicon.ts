@@ -4,8 +4,7 @@ import * as path from 'node:path';
 import * as Jimp from 'jimp';
 import * as fs from 'fs-extra';
 
-import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder, prefixHasTag } from './../modules/schematics/prefixes';
-import { createBSideImage } from './../modules/bside';
+import { prefixes, prefixHasTag } from './../modules/schematics/prefixes';
 import { loadAnimatedCubeIcon, saveAnimatedCubeIcon } from 'src/modules/imageutils';
 import { generatePrefixedCube } from 'src/modules/cubeiconutils';
 
@@ -111,7 +110,6 @@ const route: CCOIcons.documentedRoute = {
                     if (outputAnimation.length > 1) {
                         outputFile = `${outputDirectory}/${fileName}.gif`;
                     }
-                    console.log(outputAnimation.length)
                 }
                 imagePath = outputFile;
             } catch (e) {

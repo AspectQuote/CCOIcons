@@ -287,6 +287,33 @@
             }
         ]
     },
+    "hydrodipped": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            },
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 1
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "gradientbrightgreen",
+                "seedhuerotate": true
+            },
+            {
+                "path": "hydrodipped"
+            }
+        ]
+    },
     "general": {
         "baseimage": "base",
         "overlayimage": "finaloverlay",

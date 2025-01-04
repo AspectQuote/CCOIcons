@@ -6629,5 +6629,47 @@
         "name": "Hemoglobin Cube",
         "desc": "Cube for the Cube god!",
         "rarity": "crafted"
+    },
+    "hydrodipped": {
+        "author": "Aspect - Randomized Item",
+        "name": "Hydrodipped Cube",
+        "desc": "A cube that was painted using a special technique involving water.",
+        "rarity": "legendary"
+    },
+    "steampunk": {
+        "author": "Aspect",
+        "name": "Steampunk Cube",
+        "desc": "...so it's just boiling water?",
+        "rarity": "relic"
+    },
+    "cutjade": {
+        "author": "Aspect",
+        "name": "Cut Jade Cube",
+        "desc": "Polished to perfection",
+        "rarity": "relic"
+    },
+    "redsporty": {
+        "author": "Aspect",
+        "name": "Red Sporty Cube",
+        "desc": "A cube painted with a sporty and textured splatter pattern.",
+        "rarity": "epic"
+    },
+    "bluesporty": {
+        "author": "Aspect",
+        "name": "Blue Sporty Cube",
+        "desc": "A cube painted with a sporty and textured splatter pattern.",
+        "rarity": "epic"
+    },
+    "pinksporty": {
+        "author": "Aspect",
+        "name": "Pink Sporty Cube",
+        "desc": "A cube painted with a sporty and textured splatter pattern.",
+        "rarity": "epic"
+    },
+    "greensporty": {
+        "author": "Aspect",
+        "name": "Green Sporty Cube",
+        "desc": "A cube painted with a sporty and textured splatter pattern.",
+        "rarity": "epic"
     }
 }

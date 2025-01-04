@@ -424,7 +424,7 @@ const prefixes = {
         },
         compileFrames: async function (anchorPoints, iconFrames, seed, cubeData) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
-            prefixFrames.sourceID = "Slated";
+            prefixFrames.sourceID = "Contraband";
             let accentFrames = anchorPoints.accents;
             let patternRNG = new seedrandom(`${cubeData.name}`);
 
@@ -433,15 +433,24 @@ const prefixes = {
             const cropY = Math.ceil(patternRNG() * (contrabandEffectImage.bitmap.height - iconFrames[0].bitmap.height));
             contrabandEffectImage.crop(cropX, cropY, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
 
-            const contrabandOutlineThickness = 1;
             for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
                 let contrabandEffectClone = contrabandEffectImage.clone();
-                contrabandEffectClone.mask(accentFrames[frameIndex % accentFrames.length].image, 0, 0);
+                const iconFrame = iconFrames[frameIndex];
+                const accentImage = accentFrames[frameIndex % accentFrames.length].image;
+                contrabandEffectClone.scan(0, 0, contrabandEffectClone.bitmap.width, contrabandEffectClone.bitmap.height, (x, y) => {
+                    if (accentImage.bitmap.data[accentImage.getPixelIndex(x, y) + 3] === 0) {
+                        if (accentImage.bitmap.data[accentImage.getPixelIndex(x, Math.max(0, y - 1)) + 3] !== 0 && iconFrame.bitmap.data[iconFrame.getPixelIndex(x, y) + 3] !== 0) {
+                            contrabandEffectClone.setPixelColor(0x00000046, x, y);
+                        } else {
+                            contrabandEffectClone.setPixelColor(0x00000000, x, y);
+                        }
+                    }
+                })
                 prefixFrames.frontFrames.push([{
-                    image: strokeImage(contrabandEffectClone, 0x000000ff, contrabandOutlineThickness, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]),
+                    image: contrabandEffectClone,
                     compositePosition: {
-                        x: -contrabandOutlineThickness,
-                        y: -contrabandOutlineThickness
+                        x: 0,
+                        y: 0,
                     }
                 }]);
             }
@@ -5127,7 +5136,7 @@ const prefixes = {
         compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Meleagris";
-            const teamCaptainHatImage = await Jimp.read(`${prefixSourceDirectory}/meleagris/tail.png`);
+            const turkeyFeathersImage = await Jimp.read(`${prefixSourceDirectory}/meleagris/tail.png`);
             const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/meleagris/`);
             if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
 
@@ -5135,7 +5144,7 @@ const prefixes = {
 
             for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
                 const headFrame = headPositions[newAnimationIndex % headPositions.length];
-                const hatsThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(teamCaptainHatImage, cacheDirectory, headFrame, { x: 16, y: 24, width: 32 });
+                const hatsThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(turkeyFeathersImage, cacheDirectory, headFrame, { x: 16, y: 24, width: 32 });
 
                 prefixFrames.backFrames.push([...hatsThisFrame]);
             }
@@ -5440,36 +5449,105 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Scientific": {
-        name: "",
-        tags: [],
+        name: "Scientific",
+        tags: ["seeded"],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Scientific";
+            let headPositions = anchorPoints.heads;
+
+            let seedGen = new seedrandom(`scientific${seed}`);
+            let animation = parseHorizontalSpriteSheet((await Jimp.read(`${prefixSourceDirectory}/scientific/flask.png`)).color([{apply: "hue", params: [Math.round(seedGen() * 360)]}]), 5);
+
+            const flaskDistance = -8;
+            for (let animationFrameIndex = 0; animationFrameIndex < animation.length; animationFrameIndex++) {
+                const animationFrame = animation[animationFrameIndex];
+                const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
+                for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                    const headFrame = headPositions[headFrameIndex];
+                    headFrame.positions.forEach(head => {
+                        constructedFrames.push({
+                            image: animationFrame,
+                            compositePosition: {
+                                x: head.startPosition.x + head.width + flaskDistance,
+                                y: head.startPosition.y + (head.width/2) + flaskDistance
+                            }
+                        })
+                    })
+                }
+                prefixFrames.frontFrames.push(constructedFrames)
+            }
+
+            return prefixFrames;
         }
     },
     "Brainy": {
-        name: "",
+        name: "Brainy",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Brainy";
+            const brainHatImage = await Jimp.read(`${prefixSourceDirectory}/brainy/brain.png`);
+            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/brainy/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            const headPositions = anchorPoints.heads;
+
+            for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
+                const headFrame = headPositions[newAnimationIndex % headPositions.length];
+                const hatsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(brainHatImage, cacheDirectory, headFrame, { x: 0, y: 12, width: 32 });
+
+                prefixFrames.frontFrames.push([...hatsThisFrame])
+            }
+
+            return prefixFrames;
+        }
+    },
+    "Oriental": {
+        name: "Oriental",
+        tags: [],
+        needs: {
+            heads: true,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Oriental";
+            const roofHatImage = await Jimp.read(`${prefixSourceDirectory}/oriental/roof.png`);
+            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/oriental/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            const headPositions = anchorPoints.heads;
+
+            for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
+                const headFrame = headPositions[newAnimationIndex % headPositions.length];
+                const hatsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(roofHatImage, cacheDirectory, headFrame, { x: 4, y: 18, width: 32 });
+
+                prefixFrames.frontFrames.push([...hatsThisFrame])
+            }
+
+            return prefixFrames;
         }
     },
     "Roped": {
-        name: "",
-        tags: [],
+        name: "Roped",
+        tags: ["seeded"],
         needs: {
             heads: false,
             eyes: false,
@@ -5477,22 +5555,164 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            const prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Roped";
+            let seedGen = new seedrandom(`roped${seed}`);
+
+            let iconHeight = iconFrames[0].bitmap.height;
+            let iconWidth = iconFrames[0].bitmap.width;
+
+            let ropeCount = Math.round(seedGen() * 2) + 2;
+            let ropeImage = await Jimp.read(`${prefixSourceDirectory}/roped/rope.png`);
+            const desiredFrames = 15;
+
+            let ropeSlopeVariance = 0.2;
+
+            let ropeLines: {
+                start: {
+                    x: number,
+                    y: number
+                },
+                end: {
+                    x: number,
+                    y: number
+                },
+                offset: number,
+                flipX: boolean,
+                flipY: boolean,
+                direction: number,
+                slope: number,
+                lineImage: Jimp,
+                lineImagesPerFrame: Jimp[]
+            }[] = [];
+
+            const maskThickness = Math.ceil(ropeImage.bitmap.height / 2);
+
+            while (ropeLines.length < ropeCount) {
+                let newRope: typeof ropeLines[number] = {
+                    start: {
+                        x: 0,
+                        y: 0
+                    },
+                    end: {
+                        x: 0,
+                        y: 0
+                    },
+                    offset: Math.round(seedGen() * ropeImage.bitmap.width),
+                    flipX: seedGen() > 0.5,
+                    flipY: seedGen() > 0.5,
+                    direction: ((seedGen() > 0.5) ? -1 : 1),
+                    slope: 0,
+                    lineImage: new Jimp(0, 0, 0),
+                    lineImagesPerFrame: []
+                }
+                newRope.start.y = Math.round((seedGen() * ((iconHeight + (maskThickness * 2)) * (1 - (ropeSlopeVariance * 2)))) + ((iconHeight + (maskThickness * 2)) * ropeSlopeVariance));
+                newRope.end.x = iconWidth + maskThickness - 1;
+                newRope.end.y = Math.round(newRope.start.y + (seedGen() * (iconHeight + (maskThickness * 2)) * ropeSlopeVariance * ((seedGen() > 0.5) ? -1 : 1)));
+                newRope.slope = (newRope.start.y - newRope.end.y) / (newRope.start.x - newRope.end.x);
+                newRope.lineImage = new Jimp(iconFrames[0].bitmap.width + (maskThickness * 2), iconFrames[0].bitmap.height + (maskThickness * 2), 0x00000000);
+                for (let lineImageX = 0; lineImageX < newRope.lineImage.bitmap.width; lineImageX++) {
+                    newRope.lineImage.setPixelColor(0xffffffff, lineImageX, newRope.start.y + Math.round(lineImageX * newRope.slope));
+                }
+                ropeLines.push(newRope);
+            }
+
+            const ropeMovementPerFrame = ropeImage.bitmap.width / desiredFrames;
+            const ropeImageCenterOffset = Math.round(ropeImage.bitmap.height / 2);
+            iconFrames.forEach((frame, index) => {
+                iconFrames[index] = strokeImage(frame, 0x00000000, maskThickness);
+                ropeLines.forEach((ropeLine) => {
+                    ropeLine.lineImagesPerFrame.push(strokeImage(ropeLine.lineImage.clone().mask(iconFrames[index], 0, 0), 0xffffffff, maskThickness, false, [
+                        [0, 1, 0],
+                        [1, 0, 1],
+                        [0, 1, 0]
+                    ]));
+                })
+            })
+            const neededFrames = maths.leastCommonMultipleOfArray([desiredFrames, iconFrames.length]);
+            for (let neededIconFrameIndex = 0; neededIconFrameIndex < neededFrames; neededIconFrameIndex++) {
+                let newPrefixImage = new Jimp(iconWidth + (maskThickness * 2), iconHeight + (maskThickness * 2), 0x00000000);
+                const iconFrameIndex = neededIconFrameIndex % iconFrames.length;
+
+                for (let ropeLineIndex = 0; ropeLineIndex < ropeLines.length; ropeLineIndex++) {
+                    const tentacleLine = ropeLines[ropeLineIndex];
+                    const lineImageThisFrame = tentacleLine.lineImagesPerFrame[iconFrameIndex];
+
+                    let newRopeFrame = new Jimp(newPrefixImage.bitmap.width, newPrefixImage.bitmap.height, 0x00000000);
+
+                    for (let newRopeFrameX = 0; newRopeFrameX < newRopeFrame.bitmap.width; newRopeFrameX++) {
+                        const newCenterPoint = {
+                            x: newRopeFrameX,
+                            y: tentacleLine.start.y + Math.round(newRopeFrameX * tentacleLine.slope)
+                        }
+                        for (let newRopeFrameY = 0; newRopeFrameY < ropeImage.bitmap.height; newRopeFrameY++) {
+                            let sourceX = (((newCenterPoint.x + (tentacleLine.offset + ropeImage.bitmap.width - 1)) + Math.round((tentacleLine.direction * neededIconFrameIndex) * ropeMovementPerFrame)) % ropeImage.bitmap.width);
+                            if (tentacleLine.flipX) {
+                                sourceX = ropeImage.bitmap.width - 1 - sourceX;
+                            }
+                            let sourceY = newRopeFrameY;
+                            if (tentacleLine.flipY) {
+                                sourceY = ropeImage.bitmap.height - 1 - sourceY;
+                            }
+                            const sourceCoordinates = {
+                                x: sourceX,
+                                y: sourceY
+                            }
+                            const destinationCoordinates = {
+                                x: newRopeFrameX,
+                                y: newCenterPoint.y - ropeImageCenterOffset + newRopeFrameY + 1
+                            }
+                            newRopeFrame.setPixelColor(ropeImage.getPixelColor(sourceCoordinates.x, sourceCoordinates.y), destinationCoordinates.x, destinationCoordinates.y);
+                        }
+                    }
+                    // newPrefixImage.composite(lineImageThisFrame, -maskThickness, -maskThickness);
+                    newPrefixImage.composite(newRopeFrame.mask(lineImageThisFrame, -maskThickness, -maskThickness), 0, 0);
+                }
+
+                prefixFrames.frontFrames.push([{
+                    image: newPrefixImage,
+                    compositePosition: {
+                        x: -maskThickness,
+                        y: -maskThickness
+                    }
+                }]);
+            }
+
+            return prefixFrames;
         }
     },
     "Brilliant": {
-        name: "",
+        name: "Brilliant",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Brilliant";
+
+            let bulbFrames = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/brilliant/bulb.png`);
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/brilliant/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+            // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
+
+            let neededAnimationFrames = maths.leastCommonMultiple(bulbFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const haloMovementFrame = bulbFrames[animationFrameIndex % bulbFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(haloMovementFrame, cacheDirectory, frameHeadData, { x: -1, y: 28, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Sparkly": {
         name: "",
         tags: [],
@@ -5981,6 +6201,8 @@ const prefixIDApplicationOrder = [
     "Thinking", // Adds a thought bubble with a question mark to the cube
     "Talkative", // Adds an animated yellow speech indicator to the cube
     "Eudaemonic", // Adds an animated happy face speech bubble to the cube
+    "Brilliant", // Adds a floating light bulb to the cube
+    "Scientific", // Adds a sciency flask to the cube
     "Dazed", // Adds 'dazed' particles around the cube (I don't know what I was thinking when I created this prefix in 2020)
     "Boiled", // Adds steam coming off the cube
     "Amorous", // Adds hearts around the head of the cube
@@ -6028,12 +6250,13 @@ const prefixIDApplicationOrder = [
     "Emburdening", // Adds a statue of Atlas holding up the cube
     "Royal", // Adds a crown to the cube
     "Kramped", // Adds a pair of krampus horns to the cube
+    "Oriental", // Adds an oriental-style roof to the cube
     "Wranglin'", // Adds a cowboy hat to the cube
     "Sophisticated", // Adds a top hat to the cube
     "Culinary", // Adds a chef's toque to the cube
     "Captain", // Adds a Team Captain hat to the cube
-    "Streaming", // Adds headphones to the cube
     "Magical", // Adds a wizard hat to the cube
+    "Streaming", // Adds headphones to the cube
     "Sweetened", // Adds a cherry to the top of the cube
     "Trouvaille", // Adds a clover to the top of the cube
     "Dovey", // Adds a dove perched on the cube
@@ -6054,8 +6277,10 @@ const prefixIDApplicationOrder = [
     "Tentacular", // Adds moving tentacles to the cube
     "Chained", // Adds moving chains to the cube
     "Adduced", // Adds moving caution tape to the cube
+    "Roped", // Adds moving ropes to the cube
     "Bushy", // Adds a Random Beard to the Cube
     "Emphasized", // Adds a random amount of red arrows to the cube
+    "Brainy", // Adds a gross brain to the cube
     "Comfortable", // Adds a pillow for the cube to sit on
 
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)

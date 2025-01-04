@@ -152,6 +152,11 @@ const useTallyingImageCache = !devmode;
 const maxTallyPercent = 101;
 
 /**
+ * Tallies will be rendered in multiples of this number.
+ */
+const tallyDivisor = 10;
+
+/**
  * The limit on .gif frames that an icon can use
  */
 const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 500;
@@ -179,5 +184,6 @@ export {
     useTallyingImageCache,
     maxTallyPercent,
     maximumPrefixFramesPerIcon,
-    bSideAnimationLimit
+    bSideAnimationLimit,
+    tallyDivisor
 }

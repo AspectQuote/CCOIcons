@@ -706,8 +706,8 @@ const route: CCOIcons.documentedRoute = {
         let startIconGeneration = performance.now();
         // Set requested cube ID variable
         let requestedCubeID: CCOIcons.cubeID;
-        if (cubes[(req.params?.cubeid ?? 'green').toLowerCase() as CCOIcons.cubeID] !== undefined) {
-            requestedCubeID = ((req.params?.cubeid ?? 'green').toLowerCase() as CCOIcons.cubeID);
+        if (cubes[(req.params?.cubeid ?? 'green') as CCOIcons.cubeID] !== undefined) {
+            requestedCubeID = ((req.params?.cubeid ?? 'green') as CCOIcons.cubeID);
         } else if (req.params?.cubeid === 'random') {
             requestedCubeID = (Object.keys(cubes) as CCOIcons.cubeID[])[Math.floor(Math.random() * Object.keys(cubes).length)]
         } else {
@@ -788,6 +788,7 @@ const route: CCOIcons.documentedRoute = {
                 if (Number.isNaN(possibleIconTallies)) {
                     possibleIconTallies = 0; // If an unparsable tally% was given
                 }
+                possibleIconTallies = Math.floor(possibleIconTallies/config.tallyDivisor)*config.tallyDivisor;
                 if (possibleIconTallies < 0) {
                     possibleIconTallies = Math.abs(possibleIconTallies); // If the tally% is less than 0, then set it to the positive version of that number.
                 }

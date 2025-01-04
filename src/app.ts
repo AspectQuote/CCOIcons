@@ -26,6 +26,7 @@ import { prefixIconRoute } from './routes/prefixicon';
 import { directoryStructureRoute } from './routes/directorystructure';
 import { boxIconRoute } from './routes/boxicon';
 import { randomBSideImageFromDirectory } from './routes/randombsideimagefromdirectory';
+import { materialIconCollageRoute } from './routes/materialiconcollage';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -93,7 +94,8 @@ const routes: CCOIcons.documentedRoute[] = [
     prefixIconRoute,
     directoryStructureRoute,
     boxIconRoute,
-    randomBSideImageFromDirectory
+    randomBSideImageFromDirectory,
+    materialIconCollageRoute
 ];
 
 routes.forEach((routeInformation) => {
