@@ -5556,6 +5556,7 @@ const prefixes = {
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             const prefixFrames = structuredClone(basePrefixReturnObject);
+            return prefixFrames;
             prefixFrames.sourceID = "Roped";
             let seedGen = new seedrandom(`roped${seed}`);
 
