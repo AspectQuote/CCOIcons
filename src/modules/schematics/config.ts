@@ -159,7 +159,7 @@ const tallyDivisor = 10;
 /**
  * The limit on .gif frames that an icon can use
  */
-const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 500;
+const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 120;
 
 console.log("DEVMODE: ", devmode)
 
