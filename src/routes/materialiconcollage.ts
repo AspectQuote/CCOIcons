@@ -35,7 +35,7 @@ const route: CCOIcons.documentedRoute = {
             }
             return -1;
         }).map(file => `${sourceDirectory}/${file}`);
-        const cubesForFragments: CCOIcons.cubeID[] = ["green", "eventhorizon", "ice", "sushi", "burger", "australian", "feathered", "brick"];
+        const cubesForFragments: CCOIcons.cubeID[] = ["green", "eventhorizon", "ice", "sushi", "burger", "australian", "feathered", "brick", "black", "redgoo", "missingno"];
         const outputImage = new Jimp(sheetSize*desiredSize, sheetSize*desiredSize, 0x00000000);
 
         let spriteSheetCount = 0;

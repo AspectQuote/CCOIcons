@@ -62,7 +62,7 @@ const routes: CCOIcons.documentedRoute[] = [
             subtitle: "GETs a JSON document that has some basic statistics about the site.",
             resolves: "json",
             author: "AspectQuote",
-            description: "Get some bastic statistics about CCIcons. It's not that interesting, a lot of this information is on the homepage.",
+            description: "Get some bastic statistics about CCIcons. It's not that interesting, a lot of this information is/will be on the homepage.",
             examples: [{
                 name: "Large Green Cube Icon",
                 example: "/statistics",
