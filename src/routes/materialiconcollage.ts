@@ -27,7 +27,7 @@ const route: CCOIcons.documentedRoute = {
         if (!config.devmode) return res.send("This endpoint is only accessible in devmode.")
         const desiredSize = 32;
         const outputFile = `${outputDirectory}/particles${desiredSize}.png`;
-        const sheetSize = 12;
+        const sheetSize = 14;
         // if (fs.existsSync(outputFile)) return res.sendFile(outputFile);
         const premadeImages = fs.readdirSync(sourceDirectory).filter(path => path.endsWith('.png')).sort((a, b) => {
             if (parseInt(a) > parseInt(b)) {
@@ -35,7 +35,7 @@ const route: CCOIcons.documentedRoute = {
             }
             return -1;
         }).map(file => `${sourceDirectory}/${file}`);
-        const cubesForFragments: CCOIcons.cubeID[] = ["green", "eventhorizon", "ice", "sushi", "burger", "australian", "feathered", "brick", "black", "redgoo", "missingno"];
+        const cubesForFragments: CCOIcons.cubeID[] = ["green", "eventhorizon", "ice", "sushi", "burger", "australian", "feathered", "brick", "black", "redgoo", "missingno", "rednebula", "brimstone", "crimson", "copper", "orange", "autumn", "yellowmarble", "dusk", "shunned", "emerald", "greencamo", "greenbuildingblock", "turf", "stone3"];
         const outputImage = new Jimp(sheetSize*desiredSize, sheetSize*desiredSize, 0x00000000);
 
         let spriteSheetCount = 0;

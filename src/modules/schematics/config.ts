@@ -10,7 +10,7 @@ const cubePatternIndexLimit = 1000;
 /**
  * Controls how many prefix pattern indices there can be, it's pretty arbitrary.
  */
-const prefixPatternIndexLimit = 150;
+const prefixPatternIndexLimit = 300;
 
 /**
  * Controls how many prefixes can be displayed on a cube at once. Increasing this will GREATLY effect how many icons can be generated.
@@ -159,7 +159,7 @@ const tallyDivisor = 10;
 /**
  * The limit on .gif frames that an icon can use
  */
-const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 60;
+const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 120;
 
 console.log("DEVMODE: ", devmode)
 

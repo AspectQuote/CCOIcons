@@ -498,11 +498,7 @@ function finishServingIcon(res: Response, imagePath: string, predictedDirectory:
     if (config.devmode) console.log("Output Directory: ", imagePath);
     if (config.devmode) console.log("Predicted Output Directory: ", predictedDirectory);
     console.log(`Icon generation took ${genTime}ms.`)
-    let imageStats = fs.statSync(imagePath);
-    res.set('cubeiconattributes', JSON.stringify({
-        size: imageStats.size,
-        generationTime: genTime
-    }));
+    if (!config.devmode) res.set('Cache-Control', 'max-age=3600,must-revalidate');
     res.sendFile(imagePath);
 }
 
