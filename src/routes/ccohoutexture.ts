@@ -621,7 +621,8 @@ let validCubeIDS: CCOIcons.cubeID[] = [
     "yellowshell",
     "yellowstriped",
     "yinyang",
-    "zsaga"
+    "zsaga",
+    "stitched"
 ]
 
 const route: CCOIcons.documentedRoute = {
@@ -675,7 +676,7 @@ const route: CCOIcons.documentedRoute = {
         let imagePath: string = '';
         const sourceFile = `./sourceicons/cubes/${cubeID}/cube.png`;
         const outputFile = `${outputDirectory}/${cubeID}.png`;
-        if (!fs.existsSync(outputFile)) {
+        if (!fs.existsSync(outputFile) || config.devmode) {
             // Create the image (if needed)
             const outputImage = createCCOHouImage(await Jimp.read(sourceFile));
             await outputImage.writeAsync(outputFile);

@@ -466,6 +466,23 @@
             }
         ]
     },
+    "sweeper": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "sweeper"
+            }
+        ]
+    },
     "racerhelmet": {
         "baseimage": "base",
         "overlayimage": "finaloverlay",

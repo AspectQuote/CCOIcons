@@ -6671,5 +6671,11 @@
         "name": "Green Sporty Cube",
         "desc": "A cube painted with a sporty and textured splatter pattern.",
         "rarity": "epic"
+    },
+    "sweeper": {
+        "author": "Slax - Randomized Item",
+        "name": "Sweeper Cube",
+        "desc": "FLAGGED!",
+        "rarity": "epic"
     }
 }
