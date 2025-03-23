@@ -600,5 +600,256 @@
                 ]
             }
         ]
+    },
+    "circumscribed": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "circumscribed",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "complexion": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "complexion",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "dragoncurve": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "dragoncurve",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "hemholtz": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "hemholtz",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "hilbertcurve": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "hilbertcurve",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "imperialpattern": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "imperial",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "mandelbrot": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "mandelbrot",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "menger": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "menger",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "negativespace": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "negativespace",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "sierpinski": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "sierpinski",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "spearmint": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "spearmint"
+            }
+        ]
+    },
+    "tilated": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "tilated",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "transitional": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "transitional",
+                "seedhuerotate": true
+            }
+        ]
+    },
+    "translational": {
+        "baseimage": "base",
+        "overlayimage": "finaloverlay",
+        "masks": [
+            {
+                "images": [
+                    "patternmask"
+                ],
+                "patternimage": 0
+            }
+        ],
+        "patternimages": [
+            {
+                "path": "translational",
+                "seedhuerotate": true
+            }
+        ]
     }
 }

@@ -6677,5 +6677,95 @@
         "name": "Sweeper Cube",
         "desc": "FLAGGED!",
         "rarity": "epic"
+    },
+    "gilbert": {
+        "author": "gilbert",
+        "name": "gilbert",
+        "desc": "gilbert",
+        "rarity": "unreal"
+    },
+    "circumscribed": {
+        "author": "Slax - Randomized Item",
+        "name": "Circumscribed Cube",
+        "desc": "Touching! ...at certain points.",
+        "rarity": "uncommon"
+    },
+    "complexion": {
+        "author": "Slax - Randomized Item",
+        "name": "Cube of Complexion",
+        "desc": "All the bestagons.",
+        "rarity": "cubic"
+    },
+    "dragoncurve": {
+        "author": "Slax - Randomized Item",
+        "name": "Dragon Curve Cube",
+        "desc": "Sadly doesn't breathe fire.",
+        "rarity": "gold"
+    },
+    "hemholtz": {
+        "author": "Slax - Randomized Item",
+        "name": "Hemholtz's Cube",
+        "desc": "The world's first slanted cube!",
+        "rarity": "rare"
+    },
+    "hilbertcurve": {
+        "author": "Slax - Randomized Item",
+        "name": "Hilbert Curve Cube",
+        "desc": "I can't stop inspecting Hilbert's curves.",
+        "rarity": "gold"
+    },
+    "imperialpattern": {
+        "author": "Slax - Randomized Item",
+        "name": "Imperial Cube",
+        "desc": "Purple means expensive.",
+        "rarity": "legendary"
+    },
+    "mandelbrot": {
+        "author": "Slax - Randomized Item",
+        "name": "Mandelbrot Cube",
+        "desc": "recursiverecursiverecursiverecur...",
+        "rarity": "cubic"
+    },
+    "menger": {
+        "author": "Slax - Randomized Item",
+        "name": "Menger Sponge Cube",
+        "desc": "Menger? I hardly know her!",
+        "rarity": "relic"
+    },
+    "negativespace": {
+        "author": "Slax - Randomized Item",
+        "name": "Negative Space Cube",
+        "desc": "Strangely, doesn't have any negative space.",
+        "rarity": "rare"
+    },
+    "sierpinski": {
+        "author": "Slax - Randomized Item",
+        "name": "Sierpinksi Cube",
+        "desc": "Quit handing me a friggin fractal, yo.",
+        "rarity": "relic"
+    },
+    "spearmint": {
+        "author": "Slax - Randomized Item",
+        "name": "Spearmint Cube",
+        "desc": "Tastes minty. Still not edible, like an air freshener.",
+        "rarity": "epic"
+    },
+    "tilated": {
+        "author": "Slax - Randomized Item",
+        "name": "Iterated Cube",
+        "desc": "Design is iterative. Maybe design more.",
+        "rarity": "uncommon"
+    },
+    "transitional": {
+        "author": "Slax - Randomized Item",
+        "name": "Transitional Cube",
+        "desc": "In-between? Sorta.",
+        "rarity": "common"
+    },
+    "translational": {
+        "author": "Slax - Randomized Item",
+        "name": "Translational Cube",
+        "desc": "Using h and k to move little up and to the right.",
+        "rarity": "common"
     }
 }

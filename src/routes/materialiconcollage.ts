@@ -35,7 +35,13 @@ const route: CCOIcons.documentedRoute = {
             }
             return -1;
         }).map(file => `${sourceDirectory}/${file}`);
-        const cubesForFragments: CCOIcons.cubeID[] = ["green", "eventhorizon", "ice", "sushi", "burger", "australian", "feathered", "brick", "black", "redgoo", "missingno", "rednebula", "brimstone", "crimson", "copper", "orange", "autumn", "pumpkin", "crust", "dusk", "shunned", "emerald", "greencamo", "greenbuildingblock", "turf", "stone3", "linksbongo", "opal2", "log", "greenchocobox", "stitched"];
+        const cubeFragmentMask = await Jimp.read(`${config.sourceImagesDirectory}/misc/fragmentmask.png`);
+        const cubesForFragments: CCOIcons.cubeID[] = [
+            "green", "eventhorizon", "ice", "sushi", "burger", "australian", "feathered2", "brick", "black", "redgoo", "missingno", "rednebula",
+            "brimstone", "crimson", "copper", "orange", "autumn", "pumpkin", "crust", "dusk", "shunned", "emerald", "greencamo", "greenbuildingblock",
+            "turf", "stone3", "linksbongo", "opal2", "log", "greenchocobox", "stitched", "shoji2",
+            "bluemushroom", "splatter3", "earth", "holywater", "interrobang", "sunset", "gilbert"
+        ];
         const outputImage = new Jimp(sheetSize*desiredSize, sheetSize*desiredSize, 0x00000000);
 
         let spriteSheetCount = 0;
@@ -57,10 +63,10 @@ const route: CCOIcons.documentedRoute = {
             const fragmentCubeID = cubesForFragments[fragmentCubeIDIndex];
             const cubeImage = await Jimp.read(`${config.sourceImagesDirectory}/cubes/${fragmentCubeID}/cube.png`);
             const halfImageSize = Math.floor(cubeImage.bitmap.width / 2);
-            compositeImageToSpriteSheet(cubeImage.clone().crop(halfImageSize, 0, halfImageSize, halfImageSize)); // Top Right
-            compositeImageToSpriteSheet(cubeImage.clone().crop(halfImageSize, halfImageSize, halfImageSize, halfImageSize)); // Bottom Right
-            compositeImageToSpriteSheet(cubeImage.clone().crop(0, 0, halfImageSize, halfImageSize)); // Top Left
-            compositeImageToSpriteSheet(cubeImage.clone().crop(0, halfImageSize, halfImageSize, halfImageSize)); // Bottom Left
+            compositeImageToSpriteSheet(cubeImage.clone().crop(halfImageSize, 0, halfImageSize, halfImageSize).resize(desiredSize, desiredSize, Jimp.RESIZE_NEAREST_NEIGHBOR).mask(cubeFragmentMask, 0, 0)); // Top Right
+            compositeImageToSpriteSheet(cubeImage.clone().crop(halfImageSize, halfImageSize, halfImageSize, halfImageSize).resize(desiredSize, desiredSize, Jimp.RESIZE_NEAREST_NEIGHBOR).mask(cubeFragmentMask, 0, 0)); // Bottom Right
+            compositeImageToSpriteSheet(cubeImage.clone().crop(0, 0, halfImageSize, halfImageSize).resize(desiredSize, desiredSize, Jimp.RESIZE_NEAREST_NEIGHBOR).mask(cubeFragmentMask, 0, 0)); // Top Left
+            compositeImageToSpriteSheet(cubeImage.clone().crop(0, halfImageSize, halfImageSize, halfImageSize).resize(desiredSize, desiredSize, Jimp.RESIZE_NEAREST_NEIGHBOR).mask(cubeFragmentMask, 0, 0)); // Bottom Left
             compositeImageToSpriteSheet(cubeImage.clone()); // Entire cube
         }
 

@@ -64,7 +64,7 @@ const route: CCOIcons.documentedRoute = {
             return res.send('Image was not found.');
         }
         // Finally, send the file.
-        console.log(imagePath);
+        if (!config.devmode) res.set('Cache-Control', 'max-age=360000,must-revalidate');
         res.sendFile(imagePath);
         return;
     }

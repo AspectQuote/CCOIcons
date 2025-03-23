@@ -118,6 +118,7 @@ const route: CCOIcons.documentedRoute = {
             }
             await icon.writeAsync(iconOutput);
         }
+        if (!config.devmode) res.set('Cache-Control', 'max-age=36000,must-revalidate');
         return res.sendFile(iconOutput);
     }
 }

@@ -9,7 +9,7 @@ const bSideConfig = {
     /**
      * Determines the scale of the B-Side resize, in pixels (1x1 Pixel from the original image = resizeSizexresizeSize Pixel for the B-Side image) NOTE: When this number is set very high, the performance of the algorithm dramatically drops.
      */
-    resizeSize: 5,
+    resizeSize: 4,
 
     /**
      * Determines how far the algorithm can go to find pixels that are similar enough to create a triangle. Higher numbers don't effect algorithm efficiency (much), however, they can create very uncanny-looking visuals.

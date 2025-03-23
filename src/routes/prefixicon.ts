@@ -121,6 +121,7 @@ const route: CCOIcons.documentedRoute = {
             return res.send('Invalid Prefix ID.');
         }
         // Finally, send the file.
+        if (!config.devmode) res.set('Cache-Control', 'max-age=36000,must-revalidate');
         if (fs.existsSync(imagePath.replace('.png', '.gif'))) {
             res.sendFile(imagePath.replace('.png', '.gif'));
         } else {

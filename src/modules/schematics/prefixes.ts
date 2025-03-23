@@ -5713,6 +5713,76 @@ const prefixes = {
 
             return prefixFrames;
         }
+    },
+    "Collectible": {
+        name: "Collectible",
+        tags: [],
+        needs: {
+            heads: true,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Collectible";
+
+            let caseBackImage = await Jimp.read(`${prefixSourceDirectory}/collectible/back.png`);
+            let caseFrontImage = await Jimp.read(`${prefixSourceDirectory}/collectible/front.png`);
+
+            let caseBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/collectible/back/`);
+            if (!fs.existsSync(caseBackDirectory)) fs.mkdirSync(caseBackDirectory, { recursive: true });
+            let caseFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/collectible/front/`);
+            if (!fs.existsSync(caseFrontDirectory)) fs.mkdirSync(caseFrontDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backCaseImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(caseBackImage, caseBackDirectory, frameHeadPosition, { x: 5, y: 14, width: 32 });
+                prefixFrames.backFrames.push(backCaseImagesThisFrame);
+
+                const frontCaseImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(caseFrontImage, caseFrontDirectory, frameHeadPosition, { x: 5, y: 14, width: 32 });
+                prefixFrames.frontFrames.push(frontCaseImagesThisFrame);
+            }
+
+            return prefixFrames;
+        }
+    },
+    "Tumbling": {
+        name: "Tumbling",
+        tags: [],
+        needs: {
+            heads: true,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            let headPositions = anchorPoints.heads;
+            prefixFrames.sourceID = "Tumbling";
+
+            let chairBackImage = await Jimp.read(`${prefixSourceDirectory}/tumbling/back.png`);
+            let chairFrontImage = await Jimp.read(`${prefixSourceDirectory}/tumbling/front.png`);
+
+            let chairBackDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/tumbling/back/`);
+            if (!fs.existsSync(chairBackDirectory)) fs.mkdirSync(chairBackDirectory, { recursive: true });
+            let chairFrontDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/tumbling/front/`);
+            if (!fs.existsSync(chairFrontDirectory)) fs.mkdirSync(chairFrontDirectory, { recursive: true });
+
+            for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                const frameHeadPosition = headPositions[headFrameIndex];
+
+                const backChairImagesThisFrame: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(chairBackImage, chairBackDirectory, frameHeadPosition, { x: 16, y: 19, width: 32 });
+                prefixFrames.backFrames.push(backChairImagesThisFrame);
+
+                const frontChairImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(chairFrontImage, chairFrontDirectory, frameHeadPosition, { x: 16, y: 19, width: 32 });
+                prefixFrames.frontFrames.push(frontChairImagesThisFrame);
+            }
+
+            return prefixFrames;
+        }
     }, /*
     "Sparkly": {
         name: "",
@@ -6241,8 +6311,10 @@ const prefixIDApplicationOrder = [
     "Sniping", // Adds a sniper rifle to the Cube
     "Marvelous", // Adds a Hand holding the Cube
     "Muscular", // Adds disgusting muscly arms to the cube
-    "Meleagris", // Adds a turkey tail to the cube
     "Leggendary", // Adds disgusting built-ass legs to the cube
+    "Meleagris", // Adds a turkey tail to the cube
+    "Collectible", // Adds a display case to the cube
+    "Tumbling", // Adds the evangelion folding chair to the cube
     "Incarcerated", // Adds a Jail around the Cube
     "Pugilistic", // Adds boxing gloves to the Cube
     "Basking", // Adds sand and an umbrella to the cube

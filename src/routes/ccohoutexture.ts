@@ -622,7 +622,9 @@ let validCubeIDS: CCOIcons.cubeID[] = [
     "yellowstriped",
     "yinyang",
     "zsaga",
-    "stitched"
+    "stitched",
+    "missingno",
+    "gilbert"
 ]
 
 const route: CCOIcons.documentedRoute = {
@@ -689,6 +691,7 @@ const route: CCOIcons.documentedRoute = {
 }
 
 function createCCOHouImage(image: Jimp): Jimp {
+    image.resize(32, 32, Jimp.RESIZE_NEAREST_NEIGHBOR);
     let outputFile = new Jimp(64, 48, 0x00000000);
     let topUpperLerpLine = {
         start: {x: 0, y: 8},

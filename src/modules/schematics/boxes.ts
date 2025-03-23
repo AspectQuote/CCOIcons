@@ -166,6 +166,10 @@ const boxSchema = {
     "entropy": {
         "name": "Entropy Series",
         "type": "cube"
+    },
+    "fractal": {
+        "name": "Fractal Series",
+        "type": "cube"
     }
 } as const satisfies {[key: string]: {name: string, type: "cube" | "specialcube"}}
 

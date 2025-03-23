@@ -5,7 +5,7 @@ const devmode = process.argv.findIndex(arg => arg === "--dev") !== -1;
 /**
  * Controls how many cube pattern indices there can be, it's pretty arbitrary.
  */
-const cubePatternIndexLimit = 1000;
+const cubePatternIndexLimit = 500;
 
 /**
  * Controls how many prefix pattern indices there can be, it's pretty arbitrary.
@@ -25,7 +25,7 @@ const patternAtlasRoot = Math.ceil(Math.sqrt(cubePatternIndexLimit));
 /**
  * How large cubes can be resized to with the ?size= URL parameter
  */
-const resizeMax = (devmode) ? 2048 : 64;
+const resizeMax = (devmode) ? 2048 : 32;
 
 /**
  * How small cubes can be resized to with the ?size= URL parameter
@@ -154,7 +154,7 @@ const maxTallyPercent = 101;
 /**
  * Tallies will be rendered in multiples of this number.
  */
-const tallyDivisor = 10;
+const tallyDivisor = 25;
 
 /**
  * The limit on .gif frames that an icon can use

@@ -498,7 +498,7 @@ function finishServingIcon(res: Response, imagePath: string, predictedDirectory:
     if (config.devmode) console.log("Output Directory: ", imagePath);
     if (config.devmode) console.log("Predicted Output Directory: ", predictedDirectory);
     console.log(`Icon generation took ${genTime}ms.`)
-    if (!config.devmode) res.set('Cache-Control', 'max-age=3600,must-revalidate');
+    if (!config.devmode) res.set('Cache-Control', 'max-age=36000,must-revalidate');
     res.sendFile(imagePath);
 }
 
