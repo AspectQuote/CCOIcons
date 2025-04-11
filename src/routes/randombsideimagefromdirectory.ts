@@ -37,11 +37,12 @@ const route: CCOIcons.documentedRoute = {
         }]
     },
     responseFunction: async (req, res) => {
-        const colorIndices = 28;
-        let resizeScale = 0.25;
-        let maxHeight = 200;
-        let minHeight = 150;
-        const bSideQuality = 3;
+        const colorIndices = 20;
+        let resizeScale = 0.075;
+        // let resizeScale = 0.33;
+        let maxHeight = 1000 * resizeScale;
+        let minHeight = maxHeight/2;
+        const bSideQuality = 8;
         if (!config.devmode) return res.json({success: false, message: "Server must be in devmode."});
         const dirName = req.query.dir as string;
         if (!path.dirname) return res.json({ success: false, message: "No directory supplied." });
@@ -52,6 +53,7 @@ const route: CCOIcons.documentedRoute = {
             const outputFileExtension = '.png';
             const files = fs.readdirSync(dirName).filter(file => acceptableFileExtensions.some(fileExtension => file.endsWith(fileExtension))).map(item => path.resolve(`${dirName}/${item}`));
             const inputFile = files[Math.floor(Math.random() * files.length)];
+            console.log(inputFile)
             const outputDirectory = `${config.relativeRootDirectory}/ccicons/custombsideicons`;
             if (!fs.existsSync(outputDirectory)) fs.mkdirSync(outputDirectory, { recursive: true });
             const outputFile = path.resolve(`${outputDirectory}/${path.basename(inputFile).replace(acceptableFileExtensions.find(fileExtension => inputFile.endsWith(fileExtension)) as string, outputFileExtension)}`);
@@ -59,7 +61,7 @@ const route: CCOIcons.documentedRoute = {
             if (inputImage.bitmap.height * resizeScale > maxHeight) resizeScale = (maxHeight/inputImage.bitmap.height);
             if (inputImage.bitmap.height * resizeScale < minHeight) resizeScale = (minHeight/inputImage.bitmap.height);
             console.log(resizeScale)
-            inputImage.resize(Math.round(inputImage.bitmap.width * resizeScale), Math.round(inputImage.bitmap.height * resizeScale));
+            inputImage.resize(Math.round(inputImage.bitmap.width * resizeScale), Math.round(inputImage.bitmap.height * resizeScale), Jimp.RESIZE_BICUBIC);
             const jimpImage = methods.quantize(inputImage, {
                 colors: colorIndices,
                 imageQuantization: "nearest",

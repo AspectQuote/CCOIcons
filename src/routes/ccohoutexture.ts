@@ -624,7 +624,8 @@ let validCubeIDS: CCOIcons.cubeID[] = [
     "zsaga",
     "stitched",
     "missingno",
-    "gilbert"
+    "gilbert",
+    "aspectsmodifiedgaze"
 ]
 
 const route: CCOIcons.documentedRoute = {

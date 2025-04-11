@@ -6767,5 +6767,17 @@
         "name": "Translational Cube",
         "desc": "Using h and k to move little up and to the right.",
         "rarity": "common"
+    },
+    "aspectsmodifiedgaze": {
+        "author": "Aspect",
+        "name": "Aspect's Gaze (Modified)",
+        "desc": "A surprise tool.",
+        "rarity": "common"
+    },
+    "conway": {
+        "author": "???",
+        "name": "Cube of Life",
+        "desc": "As if by...",
+        "rarity": "exotic"
     }
 }

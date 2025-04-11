@@ -1212,7 +1212,7 @@ const prefixes = {
                 const headFrame = headPositions[newAnimationIndex % headPositions.length];
                 const swordsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(swordImage, cacheDirectory, headFrame, { x: 0, y: 104, width: 32 });
                 
-                prefixFrames.frontFrames.push([...swordsThisFrame])
+                prefixFrames.frontFrames.push([...swordsThisFrame]);
             }
 
             return prefixFrames;

@@ -7,7 +7,7 @@ import { Response } from 'express';
 import { createBSideImage } from './../modules/bside';
 import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../modules/imageutils';
 import { prefixes } from '../modules/schematics/prefixes';
-import { getSeededCubeIconType, generateAndValidatePrefixDirectory, generatePrefixedCube } from '../modules/cubeiconutils';
+import { getSeededCubeIconType, generateAndValidatePrefixDirectory, generatePrefixedCube, customSeededCubes } from '../modules/cubeiconutils';
 import * as config from '../modules/schematics/config'
 let seedrandom = require('seedrandom');
 
@@ -179,7 +179,7 @@ const iconModifiers = {
                 const outcomeFile = `${outcomePath}/${fileNameOverride}`;
                 if (!fs.existsSync(outcomeFile) || !config.useBaseCubeCache) {
                     let iconFile = await getSeededCubeIconType(modifyingID as CCOIcons.patternedCubeID, cubeSeed, "base");
-                    await saveAnimatedCubeIcon([iconFile], fileNameOverride, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
+                    await saveAnimatedCubeIcon(iconFile, fileNameOverride, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
                 }
             } else {
                 // Create the outcome path of the file
@@ -824,9 +824,9 @@ const route: CCOIcons.documentedRoute = {
                 // Create the image (if needed) and get its path
                 imagePath = await generateCubeIcon(cubeIconParams, requestedCubeID, cubeIconSeed, returnSpriteSheet);
             } catch (e: any) {
-                console.log(e, requestedCubeID, cubeIconParams);
+                console.log(e.stack, requestedCubeID, cubeIconParams);
                 res.status(403);
-                return res.send('Failed to get this image. Internal error: ' + e.stack);
+                return res.send('Failed to get this image. Internal error.');
             }
             finishServingIcon(res, imagePath, predictedDirectory.pngPath, performance.now() - startIconGeneration);
             return;

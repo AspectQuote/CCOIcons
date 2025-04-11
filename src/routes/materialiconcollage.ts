@@ -40,7 +40,7 @@ const route: CCOIcons.documentedRoute = {
             "green", "eventhorizon", "ice", "sushi", "burger", "australian", "feathered2", "brick", "black", "redgoo", "missingno", "rednebula",
             "brimstone", "crimson", "copper", "orange", "autumn", "pumpkin", "crust", "dusk", "shunned", "emerald", "greencamo", "greenbuildingblock",
             "turf", "stone3", "linksbongo", "opal2", "log", "greenchocobox", "stitched", "shoji2",
-            "bluemushroom", "splatter3", "earth", "holywater", "interrobang", "sunset", "gilbert"
+            "bluemushroom", "splatter3", "earth", "holywater", "interrobang", "sunset", "gilbert", "aspectsmodifiedgaze"
         ];
         const outputImage = new Jimp(sheetSize*desiredSize, sheetSize*desiredSize, 0x00000000);
 

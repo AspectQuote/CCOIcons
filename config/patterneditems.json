@@ -851,5 +851,11 @@
                 "seedhuerotate": true
             }
         ]
+    },
+    "conway": {
+        "baseimage": "base",
+        "overlayimage": "the code for this is handled separately.",
+        "masks": [],
+        "patternimages": []
     }
 }

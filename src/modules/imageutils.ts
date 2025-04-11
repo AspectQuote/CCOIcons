@@ -44,13 +44,13 @@ function fillRect(image: Jimp, rectX: number, rectY: number, width: number, heig
 async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
     let cubeFrames: Jimp[] = [];
     if (!fs.existsSync(iconPath)) {
-        console.log(`Cube Icon Path not found!\n${path.resolve(iconPath)}`)
+        console.log(`Cube Icon Path not found!\n${path.resolve(iconPath)}`);
         return cubeFrames;
     }
     if (iconPath.endsWith('.gif')) {
         let rawImageFile = await gifwrap.GifUtil.read(iconPath);
         rawImageFile.frames.forEach(frame => {
-            cubeFrames.push(new Jimp(frame.bitmap))
+            cubeFrames.push(new Jimp(frame.bitmap));
         })
     } else {
         let rawImageFile = await Jimp.read(iconPath);
@@ -86,7 +86,7 @@ async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPa
             res(true)
         } else {
             await gifwrap.GifUtil.write(path.resolve(`${iconPath}/${iconFileName}.gif`), frames.map(frame => new gifwrap.GifFrame(frame.bitmap, {delayCentisecs: delayCentisecs}))).catch(e => {
-                console.log(e)
+                console.log("Gif write error: ", e);
             });
             let imageSpriteSheet = new Jimp(frames[0].bitmap.width, frames[0].bitmap.height * frames.length, 0x00000000);
             frames.forEach((frame, idx) => {

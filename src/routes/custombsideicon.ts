@@ -3,6 +3,7 @@ import * as config from './../modules/schematics/config';
 import * as path from 'node:path';
 import * as Jimp from 'jimp';
 import * as fs from 'fs-extra';
+import { methods } from '@jimp/plugin-quantize';
 
 import { createBSideImage } from './../modules/bside';
 
@@ -46,22 +47,29 @@ const route: CCOIcons.documentedRoute = {
         const iconName = req.params.image;
         let imagePath: string = '';
         const sourceFile = `${sourceDirectory}/${iconName}.png`;
-        if (fs.existsSync(sourceFile)) {
-            try {
-                const outputFile = `${outputDirectory}/${iconName}.png`;
-                if (!fs.existsSync(outputFile) || config.devmode) {
+        const outputFile = `${outputDirectory}/${iconName}.png`;
+        
+        if (!fs.existsSync(outputFile) || config.devmode) {
+            if (fs.existsSync(sourceFile)) {
+                try {
                     // Create the image (if needed)
-                    const outputImage = await createBSideImage(await Jimp.read(sourceFile), 2);
+                    const sourceFileImage = await Jimp.read(sourceFile);
+                    const outputImage = await createBSideImage(methods.quantize(sourceFileImage, {
+                        colors: 22,
+                        imageQuantization: "nearest",
+                        paletteQuantization: "wuquant",
+                        colorDistanceFormula: "manhattan"
+                    }), 3);
                     await outputImage.writeAsync(outputFile);
+                    imagePath = outputFile;
+                } catch (e) {
+                    console.log(e);
+                    res.status(403);
+                    return res.send('Failed to get this image. Internal error: ' + e);
                 }
-                imagePath = outputFile;
-            } catch (e) {
-                console.log(e);
-                res.status(403);
-                return res.send('Failed to get this image. Internal error: ' + e);
+            } else {
+                return res.send('Image was not found.');
             }
-        } else {
-            return res.send('Image was not found.');
         }
         // Finally, send the file.
         if (!config.devmode) res.set('Cache-Control', 'max-age=360000,must-revalidate');
