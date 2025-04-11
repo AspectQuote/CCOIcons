@@ -50,7 +50,6 @@ const route: CCOIcons.documentedRoute = {
         const outputFile = `${outputDirectory}/${iconName}.png`;
         
         if (!fs.existsSync(outputFile) || config.devmode) {
-            imagePath = outputFile;
             if (fs.existsSync(sourceFile)) {
                 try {
                     // Create the image (if needed)
@@ -62,6 +61,7 @@ const route: CCOIcons.documentedRoute = {
                         colorDistanceFormula: "manhattan"
                     }), 3);
                     await outputImage.writeAsync(outputFile);
+                    imagePath = outputFile;
                 } catch (e) {
                     console.log(e);
                     res.status(403);
@@ -70,6 +70,8 @@ const route: CCOIcons.documentedRoute = {
             } else {
                 return res.send('Image was not found.');
             }
+        } else {
+            imagePath = outputFile;
         }
         // Finally, send the file.
         if (!config.devmode) res.set('Cache-Control', 'max-age=360000,must-revalidate');
