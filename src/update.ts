@@ -6,7 +6,7 @@ import { boxID } from "./modules/schematics/boxes";
 
 (async () => {
     const updatedCubes: cubeID[] = [];
-    const updatedPrefixes: prefixID[] = ["Endangered"];
+    const updatedPrefixes: prefixID[] = [];
     const updatedBoxes: boxID[] = [];
 
     if ((updatedCubes.length + updatedPrefixes.length + updatedBoxes.length) > 0) {

@@ -5557,7 +5557,6 @@ const prefixes = {
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             const prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Roped";
-            return prefixFrames;
             let seedGen = new seedrandom(`roped${seed}`);
 
             let iconHeight = iconFrames[0].bitmap.height;
@@ -5783,36 +5782,87 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    }, 
     "Sparkly": {
-        name: "",
-        tags: [],
+        name: "Sparkly",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
-            accents: false,
+            accents: true,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Sparkly";
+            const sparkles = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/sparkly/sparkles.png`);
+            const sparkleFrameMulti = iconFrames.length > 1 ? 2 : 10;
+            let seedGen = new seedrandom(`sparkly${seed}`);
+
+            const accentPositions = anchorPoints.accents;
+
+            const desiredFrames = iconFrames.length * sparkleFrameMulti;
+            for (let newAnimationIndex = 0; newAnimationIndex < desiredFrames; newAnimationIndex++) {
+                const constructedFrame: typeof prefixFrames.frontFrames[number] = [];
+                
+                const accentFrame = accentPositions[newAnimationIndex % accentPositions.length].image;
+                accentFrame.scan(0, 0, accentFrame.bitmap.width, accentFrame.bitmap.height, function(x, y, idx) {
+                    if (seedGen() > 0.99 && accentFrame.getPixelColor(x, y) === 0xffffffff) {
+                        constructedFrame.push({
+                            image: sparkles[Math.floor(sparkles.length * seedGen())],
+                            compositePosition: {
+                                x: x-Math.floor(sparkles[0].bitmap.width/2),
+                                y: y-Math.floor(sparkles[0].bitmap.height/2)
+                            }}
+                        )
+                    }
+                })
+
+                prefixFrames.frontFrames.push(constructedFrame)
+            }
+
+            return prefixFrames;
         }
     },
     "Adorable": {
-        name: "",
-        tags: [],
+        name: "Adorable",
+        tags: [ "seeded" ],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Adorable";
+            let seedGen = new seedrandom(`adorable${seed}`);
+            const bows = await loadAnimatedCubeIcon(`${prefixSourceDirectory}/adorable/bows.png`);
+            const usingBow = bows[Math.floor(seedGen() * bows.length)]
+            usingBow.color([
+                {
+                    apply: "hue",
+                    params: [360 * seedGen()]
+                }
+            ])
+            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/adorable${seed}/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            const headPositions = anchorPoints.heads;
+
+            for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
+                const headFrame = headPositions[newAnimationIndex % headPositions.length];
+                const hatsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(usingBow, cacheDirectory, headFrame, { x: -19, y: 7, width: 32 });
+
+                prefixFrames.frontFrames.push([...hatsThisFrame])
+            }
+
+            return prefixFrames;
         }
     },
     "Hurt": {
-        name: "",
-        tags: [],
+        name: "Hurt",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
@@ -5820,9 +5870,63 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Hurt";
+
+            let baseFrame = new Jimp(iconFrames[0].bitmap.width, iconFrames[0].bitmap.height, 0x00000000);
+
+            let seedGen = new seedrandom(`hurt${seed}`);
+
+            let baseBandaidImage = await Jimp.read(`${prefixSourceDirectory}/hurt/bandaid.png`);
+
+            const baseBandaids = Math.ceil(((iconFrames[0].bitmap.width * iconFrames[0].bitmap.height) / 1024) * 2);
+            const bandaidsOnFrame = baseBandaids + Math.round(seedGen() * baseBandaids);
+
+            const bandaidPositionDeadZone = 0.1;
+            const bandaidPositionOffset = baseFrame.bitmap.width * bandaidPositionDeadZone;
+            const bandaidPositionRange = baseFrame.bitmap.width * (1 - (bandaidPositionDeadZone * 2));
+            const maxRotation = 60;
+
+            const bandaidPositions: CCOIcons.coordinate[] = [];
+            const minBandaidDistance = 15;
+            let loopTimes = 0;
+            for (let bandaidIndex = 0; bandaidIndex < bandaidsOnFrame && loopTimes < 100; bandaidIndex++) {
+                loopTimes++;
+                let newKissPosition = {
+                    x: Math.round(bandaidPositionOffset + (seedGen() * bandaidPositionRange) - (baseBandaidImage.bitmap.width / 2)),
+                    y: Math.round(bandaidPositionOffset + (seedGen() * bandaidPositionRange) - (baseBandaidImage.bitmap.width / 2))
+                };
+                if (bandaidPositions.find(position => maths.distanceBetweenPoints(position, newKissPosition) < minBandaidDistance)) {
+                    bandaidIndex--;
+                } else {
+                    bandaidPositions.push(newKissPosition);
+                    let newBandaidImage = baseBandaidImage.clone().rotate(Math.round((maxRotation * seedGen()) - (maxRotation / 2)));
+                    baseFrame.composite(newBandaidImage, newKissPosition.x, newKissPosition.y);
+                }
+            }
+            const shadowSize = 1;
+            baseFrame = strokeImage(baseFrame, 0x00000022, shadowSize, false, [[0, 1, 0], [1, 0, 1], [0, 1, 0]]);
+            baseFrame.crop(shadowSize, shadowSize, baseFrame.bitmap.width - (shadowSize * 2), baseFrame.bitmap.height - (shadowSize * 2));
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex];
+                const maskedBandaidFrame = baseFrame.clone();
+                iconFrame.scan(0, 0, iconFrame.bitmap.width, iconFrame.bitmap.height, function (x, y, idx) {
+                    if (this.bitmap.data[idx + 3] === 0) {
+                        maskedBandaidFrame.setPixelColor(0x00000000, x, y);
+                    }
+                });
+                prefixFrames.frontFrames.push([{
+                    image: maskedBandaidFrame,
+                    compositePosition: {
+                        x: 0,
+                        y: 0
+                    },
+                    preventOutline: true
+                }]);
+            }
+            return prefixFrames;
         }
-    },
+    }, /*
     "Ailurophilic": {
         name: "",
         tags: [],
@@ -5835,20 +5939,40 @@ const prefixes = {
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             return structuredClone(basePrefixReturnObject)
         }
-    },
+    }, */
     "Fake": {
-        name: "",
-        tags: [],
+        name: "Fake",
+        tags: [ "appliesDirectlyAfterAllPrefixes" ],
         needs: {
             heads: false,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Fake";
+
+            const colors = [
+                [0xf2f2f2ff, 0xc2c2c2ff],
+                [0xc2c2c2ff, 0xf2f2f2ff]
+            ];
+
+            for (let outputFrameIndex = 0; outputFrameIndex < iconFrames.length; outputFrameIndex++) {
+                const currentIconFrame = iconFrames[outputFrameIndex % iconFrames.length].clone();
+                
+                currentIconFrame.scan(0, 0, currentIconFrame.bitmap.width, currentIconFrame.bitmap.height, function(x, y, idx) {
+                    if (currentIconFrame.bitmap.data[idx + 3] === 0) {
+                        currentIconFrame.setPixelColor(colors[y % colors.length][x % colors[0].length], x, y);
+                    }
+                })
+
+                prefixFrames.maskFrames.push(currentIconFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Glinting": {
         name: "",
         tags: [],
@@ -6246,6 +6370,7 @@ const prefixes = {
  * Describes the order in which prefixes should be applied; if applied in the wrong order, prefixes can look strange.
  */
 const prefixIDApplicationOrder = [
+    "Fake", // Turns the icon into a 'fake' PNG
     "Rippling", // Adds a sine wave to the cube
     "Musical", // Adds an animated music sheet to the cube
 
@@ -6310,6 +6435,7 @@ const prefixIDApplicationOrder = [
     "Cuffed", // Adds a handcuff around the Cube
     "Sniping", // Adds a sniper rifle to the Cube
     "Marvelous", // Adds a Hand holding the Cube
+    "Sparkly", // Adds a sparkling effect to the cube
     "Muscular", // Adds disgusting muscly arms to the cube
     "Leggendary", // Adds disgusting built-ass legs to the cube
     "Meleagris", // Adds a turkey tail to the cube
@@ -6326,6 +6452,7 @@ const prefixIDApplicationOrder = [
     "Oriental", // Adds an oriental-style roof to the cube
     "Wranglin'", // Adds a cowboy hat to the cube
     "Sophisticated", // Adds a top hat to the cube
+    "Adorable", // Adds a cute little bow to the cube
     "Culinary", // Adds a chef's toque to the cube
     "Captain", // Adds a Team Captain hat to the cube
     "Magical", // Adds a wizard hat to the cube
@@ -6362,6 +6489,7 @@ const prefixIDApplicationOrder = [
     "Sick", // Adds a face mask to the cube
     "Gruesome", // Adds blood all over the cube
     "Canoodled", // Adds kiss-shaped lipstick to the cube in random spots
+    "Hurt", // Adds bandaids to the cube in random spots
     "Frosty", // Adds frost all over the cube
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
     "95in'", // Adds a Windows 95-esque application window to the cube
