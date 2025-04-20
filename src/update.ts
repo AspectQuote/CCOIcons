@@ -3,23 +3,20 @@ import { cubeID, prefixID } from "./typedefs";
 import fs from "fs-extra";
 import { readDirectoryRecursively } from "./modules/miscutils";
 import { boxID } from "./modules/schematics/boxes";
+import { updatedCubes, updatedPrefixes, updatedBoxes } from "./updateconfig"
 
 (async () => {
-    const updatedCubes: cubeID[] = [];
-    const updatedPrefixes: prefixID[] = ["Roped"];
-    const updatedBoxes: boxID[] = [];
-
     if ((updatedCubes.length + updatedPrefixes.length + updatedBoxes.length) > 0) {
         const iconDirectory = `./../ccicons/`
         const allFiles: string[] = await readDirectoryRecursively(iconDirectory);
         
-        const updatedCubeFiles = [...allFiles].filter(file => updatedCubes.find(cubeID => file.includes(`${cubeID}.png`) || file.includes(`${cubeID}.gif`) ) !== undefined)
+        const updatedCubeFiles = [...allFiles].filter(file => updatedCubes.find(cubeID => file.includes(`${cubeID}.png`) || file.includes(`${cubeID}.gif`) ) !== undefined);
         
-        const updatedPrefixFiles = [...allFiles].filter(file => updatedPrefixes.find(prefixID => !file.includes('.') && file.includes(`prefix`) && file.includes(prefixID.toLowerCase())) !== undefined)
+        const updatedPrefixFiles = [...allFiles].filter(file => updatedPrefixes.find(prefixID => !file.includes('.') && file.includes(`prefix`) && file.includes(prefixID.toLowerCase())) !== undefined);
         
-        const updatedPrefixCacheDirs = [...allFiles].filter(file => file.includes('prefixcache') && !file.endsWith('.png') && !!updatedPrefixes.find(prefixID => file.includes(prefixID.toLowerCase())))
+        const updatedPrefixCacheDirs = [...allFiles].filter(file => file.includes('prefixcache') && !file.endsWith('.png') && !!updatedPrefixes.find(prefixID => file.includes(prefixID.toLowerCase())));
         
-        const updatedBoxFiles = [...allFiles].filter(file => file.includes('boxicons') && !!updatedBoxes.find(boxID => file.includes(boxID.toLowerCase())))
+        const updatedBoxFiles = [...allFiles].filter(file => file.includes('boxicons') && !!updatedBoxes.find(boxID => file.includes(boxID.toLowerCase())));
         
         updatedCubeFiles.forEach(filePath => {
             if (fs.existsSync(filePath)) {

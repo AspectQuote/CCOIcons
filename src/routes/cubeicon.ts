@@ -9,6 +9,7 @@ import { fillRect, loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } fro
 import { prefixes } from '../modules/schematics/prefixes';
 import { getSeededCubeIconType, generateAndValidatePrefixDirectory, generatePrefixedCube, customSeededCubes } from '../modules/cubeiconutils';
 import * as config from '../modules/schematics/config'
+import { updatedCubes } from '../updateconfig';
 let seedrandom = require('seedrandom');
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
@@ -705,7 +706,9 @@ const route: CCOIcons.documentedRoute = {
         if (cubes[(req.params?.cubeid ?? 'green') as CCOIcons.cubeID] !== undefined) {
             requestedCubeID = ((req.params?.cubeid ?? 'green') as CCOIcons.cubeID);
         } else if (req.params?.cubeid === 'random') {
-            requestedCubeID = (Object.keys(cubes) as CCOIcons.cubeID[])[Math.floor(Math.random() * Object.keys(cubes).length)]
+            requestedCubeID = (Object.keys(cubes) as CCOIcons.cubeID[])[Math.floor(Math.random() * Object.keys(cubes).length)];
+        } else if (req.params?.cubeid === 'randomupdated') {
+            requestedCubeID = updatedCubes[Math.floor(Math.random() * updatedCubes.length)];
         } else {
             requestedCubeID = 'green';
         }
