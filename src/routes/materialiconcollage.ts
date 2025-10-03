@@ -27,7 +27,7 @@ const route: CCOIcons.documentedRoute = {
         if (!config.devmode) return res.send("This endpoint is only accessible in devmode.")
         const desiredSize = 32;
         const outputFile = `${outputDirectory}/particles${desiredSize}.png`;
-        const sheetSize = 20;
+        const sheetSize = 11;
         // if (fs.existsSync(outputFile)) return res.sendFile(outputFile);
         const premadeImages = fs.readdirSync(sourceDirectory).filter(path => path.endsWith('.png')).sort((a, b) => {
             if (parseInt(a) > parseInt(b)) {

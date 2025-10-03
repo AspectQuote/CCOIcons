@@ -1,6 +1,7 @@
 import { strokeMatrix } from 'src/typedefs';
 import { fillRect } from './imageutils';
 import Jimp from 'jimp';
+import { methods } from '@jimp/plugin-quantize';
 
 /**
  * B-Side Cube Configuration
@@ -277,7 +278,8 @@ async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1, us
         if (originalIcon.bitmap.data[idx + 3] > 0) {
             // Determine what color the center pixel is, in number literal format.
             const centerPixelColor = originalIcon.getPixelColour(x, y);
-            
+            const coords = { x, y };
+
             // Find a color group that this pixel belongs to.
             let colorGroupIndex = 0;
             // This search method creates some extra 'jaggy' pixels because it can include pixels that are far away, but only if they're close enough on either axis. I think this is abstract enough where a pattern won't be noticed! Maybe!
@@ -297,24 +299,25 @@ async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1, us
 
             // Find the triangles related to this pixel in each direction.
             const passedEdgeImage = edgeImage ? edgeImage : new Jimp(1, 1, 0);
-            const trianglesToTheRight: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 1, 0, computedScale, useAccurateColorComparison, passedEdgeImage);
-            const trianglesToTheLeft: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, -1, 0, computedScale, useAccurateColorComparison, passedEdgeImage);
-            const trianglesBelow: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, 1, computedScale, useAccurateColorComparison, passedEdgeImage);
-            const trianglesAbove: roughTriangle[] = createBSideTriangles(originalIcon, { x, y }, 0, -1, computedScale, useAccurateColorComparison, passedEdgeImage);
+            const trianglesToTheRight: roughTriangle[] = createBSideTriangles(originalIcon, coords, 1, 0, computedScale, useAccurateColorComparison, passedEdgeImage);
+            const trianglesToTheLeft: roughTriangle[] = createBSideTriangles(originalIcon, coords, -1, 0, computedScale, useAccurateColorComparison, passedEdgeImage);
+            const trianglesBelow: roughTriangle[] = createBSideTriangles(originalIcon, coords, 0, 1, computedScale, useAccurateColorComparison, passedEdgeImage);
+            const trianglesAbove: roughTriangle[] = createBSideTriangles(originalIcon, coords, 0, -1, computedScale, useAccurateColorComparison, passedEdgeImage);
 
             // Merge all the arrays and filter them all out based on whether they should be used or not.
             let newTriangles: typeof trianglesAbove = [];
             newTriangles = newTriangles.concat(trianglesAbove).concat(trianglesBelow).concat(trianglesToTheLeft).concat(trianglesToTheRight).filter((triangleCandidate => triangleCandidate.use === true));
 
             // For each of the new triangles that was found, add them to the group.
-            newTriangles.forEach((triangleCandidate) => {
+            for (let newTriangleIndex = 0; newTriangleIndex < newTriangles.length; newTriangleIndex++) {
+                const triangleCandidate = newTriangles[newTriangleIndex];
                 colorGroups[colorGroupIndex].triangles.push({
                     start: triangleCandidate.start,
                     end: triangleCandidate.end,
                     color: centerPixelColor,
                     side: triangleCandidate.side
-                })
-            })
+                });
+            }
         }
     })
 
@@ -333,14 +336,18 @@ async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1, us
         } else {
             return minutia
         }
-    }).forEach(colorGroup => {
+    })
+    for (let colorGroupIndex = 0; colorGroupIndex < colorGroups.length; colorGroupIndex++) {
+        const colorGroup = colorGroups[colorGroupIndex];
         // This simply fills the pixel's position, basically accomplishes the same thing as resizing, but applies this pixel in the order of groups.
-        colorGroup.coordinates.forEach((coordinate) => {
+        for (let colorGroupCoordinateIndex = 0; colorGroupCoordinateIndex < colorGroup.coordinates.length; colorGroupCoordinateIndex++) {
+            const coordinate = colorGroup.coordinates[colorGroupCoordinateIndex];
             const bSidePosition = getBSideCornerCoordinates(coordinate.x, coordinate.y, computedScale);
-            fillRect(newIcon, bSidePosition.topLeft.x, bSidePosition.topLeft.y, computedScale, computedScale, colorGroup.color)
-        })
+            fillRect(newIcon, bSidePosition.topLeft.x, bSidePosition.topLeft.y, computedScale, computedScale, colorGroup.color);
+        }
 
-        colorGroup.triangles.forEach((triangleData) => {
+        for (let colorGroupTriangleIndex = 0; colorGroupTriangleIndex < colorGroup.triangles.length; colorGroupTriangleIndex++) {
+            const triangleData = colorGroup.triangles[colorGroupTriangleIndex];
             //    m     =  y2                   - y1                  /  x2                   - x1
             const slope = (triangleData.start.y - triangleData.end.y) / (triangleData.start.x - triangleData.end.x);
             // Determine the 'Domain' of the triangle (as in the cartesian domain)
@@ -368,8 +375,8 @@ async function createBSideImage(originalJimp: Jimp, qualityScale: number = 1, us
             // Uncomment the next two lines if you want to see the starting and ending points of triangles on the cube icon. It looks strange, but makes sense. I think.
             // newIcon.setPixelColor(0xff0000ff, triangleData.start.x, triangleData.start.y);
             // newIcon.setPixelColor(0x00ff00ff, triangleData.end.x, triangleData.end.y);
-        })
-    })
+        }
+    }
 
     // Return the Icon
     return newIcon;
@@ -464,9 +471,26 @@ function rgb2lab(rgb: [number, number, number]) {
     return [(116 * y) - 16, 500 * (x - y), 200 * (y - z)]
 }
 
+function prepareImageForBSideV1(inputImage: Jimp, resizeScale: number, colorIndices: number) {
+    let maxHeight = 1000 * resizeScale;
+    let minHeight = maxHeight / 4;
+    if (inputImage.bitmap.height * resizeScale > maxHeight) resizeScale = (maxHeight / inputImage.bitmap.height);
+    if (inputImage.bitmap.height * resizeScale < minHeight) resizeScale = (minHeight / inputImage.bitmap.height);
+    // console.log(`Resize Scale (final): ${consoleHighlight(`${resizeScale}`)}\nDimensions (final): ${consoleHighlight(`${(Math.round(inputImage.bitmap.width * resizeScale).toLocaleString())}px x ${(Math.round(inputImage.bitmap.height * resizeScale).toLocaleString())}px`)}`);
+    inputImage.resize(Math.round(inputImage.bitmap.width * resizeScale), Math.round(inputImage.bitmap.height * resizeScale), Jimp.RESIZE_BICUBIC);
+    return methods.quantize(inputImage, {
+        colors: colorIndices,
+        imageQuantization: "nearest",
+        paletteQuantization: "wuquant",
+        colorDistanceFormula: "manhattan"
+    });
+}
+
 export {
     createBSideImage,
     detectEdgesOnImage,
     lazyEdgeDetection,
-    slowEdgeDetection
+    slowEdgeDetection,
+    deltaE,
+    prepareImageForBSideV1
 }

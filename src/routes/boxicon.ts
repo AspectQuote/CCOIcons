@@ -8,6 +8,7 @@ import { boxID, boxSchema } from './../modules/schematics/boxes';
 import { createBSideImage } from './../modules/bside';
 import { loadAnimatedCubeIcon, saveAnimatedCubeIcon } from 'src/modules/imageutils';
 import { generatePrefixedCube } from 'src/modules/cubeiconutils';
+import { createBSideV2Image } from 'src/modules/bsidev2';
 
 const outputDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/boxicons/`);
 
@@ -111,7 +112,8 @@ const route: CCOIcons.documentedRoute = {
         if (!fs.existsSync(iconOutput) || config.devmode) {
             let icon = await Jimp.read(`${config.sourceImagesDirectory}boxes/${boxID}/box.png`);
             if (bSide) {
-                icon = (await createBSideImage(icon, 2));
+                // icon = (await createBSideImage(icon, 2));
+                icon = (await createBSideV2Image(icon));
             }
             if (resize) {
                 icon.resize(resize, resize, Jimp.RESIZE_NEAREST_NEIGHBOR);

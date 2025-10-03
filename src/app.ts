@@ -6,7 +6,7 @@ import * as fs from 'fs-extra';
 import * as documentationUtils from './documentationUtils';
 import cors from 'cors';
 
-var app: ExpressJS.Application = express();
+const app: ExpressJS.Application = express();
 app.use(cors());
 const networkPort = process.env.PORT ?? 80;
 
@@ -27,6 +27,9 @@ import { directoryStructureRoute } from './routes/directorystructure';
 import { boxIconRoute } from './routes/boxicon';
 import { randomBSideImageFromDirectory } from './routes/randombsideimagefromdirectory';
 import { materialIconCollageRoute } from './routes/materialiconcollage';
+import { randomBSideComparisonFromDirectory } from './routes/randombsidecomparisonfromdirectory';
+import { randomBSideV2FromDirectory } from './routes/randombsidev2fromdirectory';
+import { cubeIconBSideAlgorithmComparison } from './routes/cubeiconbsidealgorithmcomparison';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -95,7 +98,10 @@ const routes: CCOIcons.documentedRoute[] = [
     directoryStructureRoute,
     boxIconRoute,
     randomBSideImageFromDirectory,
-    materialIconCollageRoute
+    materialIconCollageRoute,
+    randomBSideComparisonFromDirectory,
+    randomBSideV2FromDirectory,
+    cubeIconBSideAlgorithmComparison
 ];
 
 routes.forEach((routeInformation) => {

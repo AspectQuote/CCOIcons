@@ -6,6 +6,8 @@ import { loadAnimatedCubeIcon, saveAnimatedCubeIcon, strokeImage } from './../mo
 import { prefixes, getNeededPaddingFromCompiledFrames, prefixIDApplicationOrder, sortPrefixesByApplicationOrder, prefixHasTag } from './../modules/schematics/prefixes';
 import * as config from '../modules/schematics/config';
 import * as maths from '../modules/maths';
+import { createBSideV2Image } from './bsidev2';
+import { createBSideImage } from './bside';
 let seedrandom: new (seed: string) => () => number = require('seedrandom');
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
 const rarityConfig: { [key in CCOIcons.rarityID]: CCOIcons.rarityDefinition } = fs.readJSONSync('./config/rarityconfig.json');
@@ -666,6 +668,335 @@ function performConwaySimulation(previousFrame: Jimp, aliveColor: number, deadCo
     return newFrame;
 }
 
+const iconModifiers = {
+    baseIcon: {
+        directory: '/ccicons',
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { seed: number }) {
+            // Get the path of the output of the previous modification 
+            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+            // Create the directory path of the outcome of this modification
+            const outcomePath = path.resolve(`${config.relativeRootDirectory}/ccicons`);
+            // If the path to the directory doesn't exist, create it.
+            if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
+
+            let fileNameOverride: `${string}.png` = `${modifyingID}.png`;
+
+            if (modifyingID === "badass") {
+                // Create the outcome path of the file
+                const outcomeFile = `${outcomePath}/${modifyingID}.png`;
+                if (!fs.existsSync(outcomeFile) || !config.useBaseCubeCache) {
+                    let badassFrameCount = 60;
+                    let badassRNG = new seedrandom(`badass`);
+                    let usedIDs: CCOIcons.cubeID[] = [];
+                    let allBadassFrames: Jimp[] = [];
+                    while (usedIDs.length < badassFrameCount) {
+                        let newID: CCOIcons.cubeID = Object.keys(cubes)[Math.round(badassRNG() * Object.keys(cubes).length)] as CCOIcons.cubeID;
+                        if (!usedIDs.includes(newID) && !patternedCubeIDs.includes(newID as CCOIcons.patternedCubeID)) {
+                            usedIDs.push(newID)
+                        }
+                    }
+                    for (let badassFrameIndex = 0; badassFrameIndex < usedIDs.length; badassFrameIndex++) {
+                        const newCubeID = usedIDs[badassFrameIndex];
+                        const cubeDirectory = `${config.relativeRootDirectory}/CCOIcons/sourceicons/cubes/${newCubeID}`;
+                        if (fs.existsSync(cubeDirectory)) {
+                            let newCubeFrame = await loadAnimatedCubeIcon(`${cubeDirectory}/cube.png`);
+                            allBadassFrames.push(newCubeFrame[Math.floor(newCubeFrame.length * badassRNG())].resize(32, 32, Jimp.RESIZE_NEAREST_NEIGHBOR));
+                        }
+                    }
+                    await saveAnimatedCubeIcon(allBadassFrames, `badass`, outcomePath, config.getCubeAnimationDelay(modifyingID));
+                }
+            } else if (patternedCubeIDs.find(patternedCubeID => patternedCubeID === modifyingID) !== undefined) {
+                const cubeSeed = data.seed;
+                // Create the outcome path of the file
+                fileNameOverride = `${modifyingID}${cubeSeed}.png`;
+                const outcomeFile = `${outcomePath}/${fileNameOverride}`;
+                if (!fs.existsSync(outcomeFile) || !config.useBaseCubeCache) {
+                    let iconFile = await getSeededCubeIconType(modifyingID as CCOIcons.patternedCubeID, cubeSeed, "base");
+                    await saveAnimatedCubeIcon(iconFile, fileNameOverride, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
+                }
+            } else {
+                // Create the outcome path of the file
+                const outcomeFile = `${outcomePath}/${modifyingID}.png`;
+                // If the icon hasn't been generated yet, then generate it (in this case, it's copying it to the generated icons directory to make sure the original image isn't accidentally modified)
+                if (!fs.existsSync(outcomeFile) || !config.useBaseCubeCache) {
+                    let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                    let savedIcon = await saveAnimatedCubeIcon(iconFrames, fileNameOverride, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
+                    if (savedIcon !== true) {
+                        console.log('Failed to save icon!');
+                    }
+                }
+            }
+            // Return the directory to add to the icon generation function.
+            return {
+                directoryAddition: `/ccicons/`,
+                newFileName: fileNameOverride
+            };
+        }
+    },
+    bSide: {
+        directory: '/bside',
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { algorithm: "V1" | "V2" }) {
+            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+            const newImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}/bside`);
+            if (!fs.existsSync(newImagePath)) fs.mkdirSync(newImagePath, { recursive: true });
+            const newIconPath = path.resolve(`${newImagePath}/${fileName}`);
+            if (!fs.existsSync(newIconPath) || !config.useBSideCache) {
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+                if (iconFrames.length > config.bSideAnimationLimit) {
+                    iconFrames = iconFrames.slice(0, config.bSideAnimationLimit);
+                }
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    if (data.algorithm === "V1") {
+                        iconFrames[frameIndex] = await createBSideImage(iconFrames[frameIndex]);
+                    } else {
+                        iconFrames[frameIndex] = await createBSideV2Image(iconFrames[frameIndex]);
+                    }
+                }
+                await saveAnimatedCubeIcon(iconFrames, fileName, `${newImagePath}/`, config.getCubeAnimationDelay(modifyingID));
+            }
+            return {
+                directoryAddition: `/bside/`
+            };
+        }
+    },
+    tallying: {
+        directory: '/tallying',
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { tallies: number }) {
+            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+            // Create the directory path of the outcome of this modification
+            const tallyNumber = Math.floor(Math.min(Math.abs(data.tallies), config.maxTallyPercent)).toString();
+            const outcomeFolder = `/tallying${tallyNumber}`
+            const outcomePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${outcomeFolder}`);
+            // Create the outcome path of the file
+            const outcomeFile = `${outcomePath}/${fileName}`;
+            // If the path to the directory doesn't exist, create it.
+            if (!fs.pathExistsSync(outcomePath)) fs.mkdirSync(outcomePath, { recursive: true });
+            // If the icon hasn't been generated yet, then generate it (in this case, it's just adding the tally flavor to the bottom right of the cube.)
+            if (!fs.existsSync(outcomeFile) || !config.useTallyingImageCache) {
+                let tallyNumberFrames = await loadAnimatedCubeIcon(`./sourceicons/attributeeffects/tallying/tallynumbers.png`);
+                const tallyNumberWidth = tallyNumberFrames[0].bitmap.width;
+                const tallyNumberPadding = 1;
+                let tallyNumberImage = new Jimp(((tallyNumber.length + 1) * (tallyNumberWidth + tallyNumberPadding)) - tallyNumberPadding, tallyNumberWidth, 0x00000000);
+
+                tallyNumber.split('').concat(['10']).forEach((numString, index) => {
+                    let number = parseInt(numString);
+                    tallyNumberImage.composite(tallyNumberFrames[number], ((tallyNumberWidth + tallyNumberPadding) * index), 0);
+                })
+
+                tallyNumberImage = strokeImage(strokeImage(tallyNumberImage, 0x000000ff, 1, false, [[1, 1, 1], [1, 0, 1], [1, 1, 1]]), 0x616161ff, 1, false, [[0, 0, 0], [0, 0, 0], [0, 0, 1]]);
+
+
+                let iconFrames: Jimp[] = [];
+                iconFrames = await loadAnimatedCubeIcon(`${originalImagePath}`);
+
+                let tallyNumberX = iconFrames[0].bitmap.width - tallyNumberImage.bitmap.width - 1;
+                let tallyNumberY = iconFrames[0].bitmap.height - tallyNumberImage.bitmap.height - 1;
+
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    if (tallyNumberImage.bitmap.width > iconFrames[frameIndex].bitmap.width) {
+                        const newFrameSize = tallyNumberImage.bitmap.width;
+                        let newFrame = new Jimp(newFrameSize, newFrameSize, 0x00000000);
+                        const newIconPosition = Math.round((newFrameSize / 2) - (iconFrames[frameIndex].bitmap.width / 2));
+                        newFrame.composite(iconFrames[frameIndex], newIconPosition, newIconPosition);
+                        newFrame.composite(tallyNumberImage, 0, newFrame.bitmap.height - tallyNumberImage.bitmap.height - 1);
+                        iconFrames[frameIndex] = newFrame;
+                    } else {
+                        iconFrames[frameIndex].composite(tallyNumberImage, tallyNumberX, tallyNumberY);
+                    }
+                }
+                await saveAnimatedCubeIcon(iconFrames, fileName, `${outcomePath}/`, config.getCubeAnimationDelay(modifyingID));
+            }
+            return {
+                directoryAddition: `${outcomeFolder}/`
+            }
+        }
+    },
+    prefixes: {
+        directory: '/prefix',
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { prefixes: CCOIcons.prefixID[], prefixSeed: number, cubeSeed: number }) {
+            const baseDirectory = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}`);
+            const originalImagePath = path.resolve(`${baseDirectory}/${fileName}`);
+
+            const validatedPrefixData = generateAndValidatePrefixDirectory(data.prefixes, data.prefixSeed);
+
+            let targetOutputDirectory = path.resolve(`${baseDirectory}/${validatedPrefixData.newDirectoryName}`);
+
+            if (!fs.existsSync(targetOutputDirectory)) fs.mkdirSync(targetOutputDirectory);
+
+            let targetOutputFile = path.resolve(`${targetOutputDirectory}/${fileName}`);
+
+            if (!fs.existsSync(targetOutputFile) || !config.usePrefixImageCache) {
+                const newAnimation = await generatePrefixedCube(await loadAnimatedCubeIcon(originalImagePath), modifyingID, validatedPrefixData.shownPrefixes, data.prefixSeed, data.cubeSeed, true);
+
+                await saveAnimatedCubeIcon(newAnimation, fileName, targetOutputDirectory, config.getCubeAnimationDelay(modifyingID));
+            }
+            return {
+                directoryAddition: `${validatedPrefixData.newDirectoryName}`
+            };
+        }
+    },
+    size: {
+        directory: '/size',
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { size: number }) {
+            // Check if the size is a power of 2, within the bounds of set above. If not, don't resize and don't return a new nested directory
+            if (Number.isNaN(data.size) || data.size > config.resizeMax || data.size < config.resizeMin || (Math.log(data.size) / Math.log(2)) % 1 !== 0) return { directoryAddition: '' };
+
+            // Get the path of the output of the previous modification
+            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+
+            // Sizes can be in many forms, so let's create a separate directory for each size.
+            const resizeDirectory = `/sizex${data.size}/`;
+
+            // Create the directory path of the outcome of this modification
+            const outcomeDirectory = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${resizeDirectory}`);
+
+            // Create the outcome path of the file
+            const outcomeFile = `${outcomeDirectory}/${fileName}`;
+
+            // If the path to the directory doesn't exist, create it.
+            if (!fs.pathExistsSync(outcomeDirectory)) fs.mkdirSync(outcomeDirectory, { recursive: true });
+
+            // If the icon hasn't been generated yet, then generate it (in this case, it's simply reading the original image then resizing it.)
+            if (!fs.existsSync(outcomeFile) || !config.useResizeCache) {
+                // Read the original icon
+
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    // Resize the icon
+                    iconFrames[frameIndex].resize(data.size, data.size, Jimp.RESIZE_NEAREST_NEIGHBOR)
+                }
+
+                // Write the icon
+                await saveAnimatedCubeIcon(iconFrames, fileName, outcomeDirectory, config.getCubeAnimationDelay(modifyingID));
+            }
+
+            // Return the directory to add to the icon generation function.
+            return {
+                directoryAddition: resizeDirectory
+            };
+        }
+    },
+    flip: {
+        directory: '/flipped',
+        modificationFunction: async function (modifyingPath, modifyingID, fileName, data: { flipX: boolean, flipY: boolean }) {
+
+            // Get the path of the output of the previous modification
+            const originalImagePath = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${fileName}`);
+            const flipDirectory = `/flip/`;
+
+            // Create the directory path of the outcome of this modification
+            const outcomeDirectory = path.resolve(`${config.relativeRootDirectory}${modifyingPath.join('')}${flipDirectory}`);
+
+            // Create the outcome path of the file
+            const outcomeFile = `${outcomeDirectory}/${fileName}`;
+
+            // If the path to the directory doesn't exist, create it.
+            if (!fs.pathExistsSync(outcomeDirectory)) fs.mkdirSync(outcomeDirectory, { recursive: true });
+
+            // If the icon hasn't been generated yet, then generate it (in this case, it's simply reading the original image then resizing it.)
+            if (!fs.existsSync(outcomeFile)) {
+                // Read the original icon
+                let iconFrames = await loadAnimatedCubeIcon(originalImagePath);
+
+                for (let frameIndex = 0; frameIndex < iconFrames.length; frameIndex++) {
+                    iconFrames[frameIndex].flip(data.flipX, data.flipY);
+                }
+
+                // Write the icon
+                await saveAnimatedCubeIcon(iconFrames, fileName, outcomeDirectory, config.getCubeAnimationDelay(modifyingID));
+            }
+
+            // Return the directory to add to the icon generation function.
+            return {
+                directoryAddition: flipDirectory
+            };
+        }
+    }
+} satisfies {
+    [key: string]: {
+        directory: string,
+        modificationFunction: (modifyingPath: string[], modifyingID: CCOIcons.cubeID, modifyingFileName: `${string}.png`, data: any) => Promise<{ directoryAddition: string, newFileName?: string }>
+    }
+}
+
+interface cubeIconGenerationParameters {
+    bSide: {
+        use: boolean,
+        data: {
+            algorithm: "V1" | "V2"
+        }
+    },
+    prefixes: {
+        use: boolean,
+        data: {
+            prefixes: CCOIcons.prefixID[],
+            prefixSeed: number,
+            cubeSeed: number
+        }
+    },
+    size: {
+        use: boolean,
+        data: {
+            size: number
+        }
+    },
+    tallying: {
+        use: boolean,
+        data: {
+            tallies: number
+        }
+    }
+}
+
+
+async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParameters>, cubeID: CCOIcons.cubeID, iconSeed: number, returnSpriteSheet: boolean): Promise<string> {
+    let imageDirectories: string[] = [];
+    let fileName: `${string}.png` = `${'cube'}.png`;
+    const copyModification = await iconModifiers.baseIcon.modificationFunction([`/CCOIcons/sourceicons/cubes/${cubeID}/`], cubeID, fileName, { seed: iconSeed });
+    fileName = copyModification.newFileName;
+    imageDirectories.push(copyModification.directoryAddition);
+
+    // These IF..ELSE statements are set up in this order to enforce the image application filter order... obviously we don't want 'b-side' to be applied after 'size' and stuff like that... it wouldn't look quite right
+
+    if (iconAttributes.prefixes !== undefined && iconAttributes.prefixes.use === true) {
+        let beforePrefixes = performance.now();
+        imageDirectories.push((await iconModifiers.prefixes.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.prefixes.data)).directoryAddition);
+        if (config.devmode) console.log('Prefixes took '+(performance.now() - beforePrefixes)+ 'ms.');
+    }
+
+    if (iconAttributes.tallying !== undefined && iconAttributes.tallying.use === true) {
+        let beforeTallying = performance.now();
+        imageDirectories.push((await iconModifiers.tallying.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.tallying.data)).directoryAddition);
+        if (config.devmode) console.log('Tallying took '+(performance.now() - beforeTallying)+ 'ms.');
+    }
+
+    if (iconAttributes.bSide !== undefined && iconAttributes.bSide.use === true) {
+        let beforeBSide = performance.now();
+        imageDirectories.push((await iconModifiers.bSide.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.bSide.data)).directoryAddition);
+        if (config.devmode) console.log(`B-Side (${iconAttributes.bSide.data.algorithm}) took ${performance.now() - beforeBSide}ms.`);
+    }
+
+    if (iconAttributes.size !== undefined && iconAttributes.size.use === true) {
+        let newBeforeResize = performance.now();
+        imageDirectories.push((await iconModifiers.size.modificationFunction(imageDirectories, cubeID, fileName, iconAttributes.size.data)).directoryAddition);
+        if (config.devmode) console.log('Resize took '+(performance.now() - newBeforeResize)+ 'ms.');
+    }
+
+    if (!!cubes[cubeID].flipY || !!cubes[cubeID].flipX) {
+        let beforeFlipY = performance.now();
+        imageDirectories.push((await iconModifiers.flip.modificationFunction(imageDirectories, cubeID, fileName, { flipX: cubes[cubeID]?.flipX === true, flipY: cubes[cubeID]?.flipY === true })).directoryAddition);
+        if (config.devmode) console.log('Flipping took ' + (performance.now() - beforeFlipY) + 'ms.');
+    }
+
+    if (!returnSpriteSheet && fs.existsSync(`${config.relativeRootDirectory}${imageDirectories.join('')}${fileName.replace('.png', '.gif')}`)) {
+        // @ts-ignore An override for a .gif, should be OK... probably
+        fileName = fileName.replace('.png', '.gif');
+    }
+
+    return path.resolve(`${config.relativeRootDirectory}${imageDirectories.join('')}${fileName}`);
+}
+
 export {
     getSeededIconRNGValues,
     getPatternedIconAndPartDirectory,
@@ -673,5 +1004,7 @@ export {
     getCubeIconPart,
     generateAndValidatePrefixDirectory,
     generatePrefixedCube,
-    customSeededCubes
+    customSeededCubes,
+    type cubeIconGenerationParameters,
+    generateCubeIcon
 }

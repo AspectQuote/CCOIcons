@@ -139,7 +139,7 @@ const useBaseCubeCache = !devmode;
 /**
  * The limit to the amount of frames the B-Side filter can apply to for one animation, used to keep server loads down at the cost of gif loop quality
  */
-const bSideAnimationLimit = 30;
+const bSideAnimationLimit = 60;
 
 /**
  * Whether or not to regenerate tallying images each time they are requested. Used for debugging.
@@ -160,6 +160,11 @@ const tallyDivisor = 25;
  * The limit on .gif frames that an icon can use
  */
 const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 120;
+
+/**
+ * The limit on how many pixels the b-side algorithm will process. If an icon has more pixels than this, it will be resized to contain this many pixels then the algorithm will be applied.
+ */
+const bSideMaxPixels = 16000;
 
 console.log("DEVMODE: ", devmode)
 
@@ -185,5 +190,6 @@ export {
     maxTallyPercent,
     maximumPrefixFramesPerIcon,
     bSideAnimationLimit,
-    tallyDivisor
+    tallyDivisor,
+    bSideMaxPixels
 }

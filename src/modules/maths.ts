@@ -23,10 +23,15 @@ function clampRandomHiLo(low: number, high: number, seed: number) {
     return ((high - low) * seed) + low;
 }
 
+function randomInRange(low: number, high: number) {
+    return (Math.random() * (high - low)) + low;
+}
+
 export {
     gcd as greatestCommonDenominator,
     lcm as leastCommonMultiple,
     leastCommonMultipleOfArray,
     distanceBetweenPoints,
-    clampRandomHiLo
+    clampRandomHiLo,
+    randomInRange
 }
