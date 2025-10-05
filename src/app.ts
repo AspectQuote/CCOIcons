@@ -30,6 +30,7 @@ import { materialIconCollageRoute } from './routes/materialiconcollage';
 import { randomBSideComparisonFromDirectory } from './routes/randombsidecomparisonfromdirectory';
 import { randomBSideV2FromDirectory } from './routes/randombsidev2fromdirectory';
 import { cubeIconBSideAlgorithmComparison } from './routes/cubeiconbsidealgorithmcomparison';
+import { boxContentsPreview } from './routes/boxcontentspreview';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -101,7 +102,8 @@ const routes: CCOIcons.documentedRoute[] = [
     materialIconCollageRoute,
     randomBSideComparisonFromDirectory,
     randomBSideV2FromDirectory,
-    cubeIconBSideAlgorithmComparison
+    cubeIconBSideAlgorithmComparison,
+    boxContentsPreview
 ];
 
 routes.forEach((routeInformation) => {

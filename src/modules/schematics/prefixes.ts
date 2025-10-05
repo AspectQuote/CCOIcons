@@ -4072,25 +4072,27 @@ const prefixes = {
             prefixFrames.sourceID = "Eudaemonic";
             let headPositions = anchorPoints.heads;
 
-            let animation = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/eudaemonic/speechbubble.png`), 10);
-
-            const bubbleDistance = 7;
-            for (let animationFrameIndex = 0; animationFrameIndex < animation.length; animationFrameIndex++) {
-                const animationFrame = animation[animationFrameIndex];
-                const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
-                for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
-                    const headFrame = headPositions[headFrameIndex];
-                    headFrame.positions.forEach(head => {
-                        constructedFrames.push({
-                            image: animationFrame,
-                            compositePosition: {
-                                x: head.startPosition.x + head.width + Math.round(head.width / bubbleDistance),
-                                y: head.startPosition.y - Math.round(head.width / bubbleDistance) - animation[0].bitmap.height
-                            }
+            if (!allPrefixes.includes("Thinking")) {
+                let animation = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/eudaemonic/speechbubble.png`), 10);
+    
+                const bubbleDistance = 7;
+                for (let animationFrameIndex = 0; animationFrameIndex < animation.length; animationFrameIndex++) {
+                    const animationFrame = animation[animationFrameIndex];
+                    const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
+                    for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                        const headFrame = headPositions[headFrameIndex];
+                        headFrame.positions.forEach(head => {
+                            constructedFrames.push({
+                                image: animationFrame,
+                                compositePosition: {
+                                    x: head.startPosition.x + head.width + Math.round(head.width / bubbleDistance),
+                                    y: head.startPosition.y - Math.round(head.width / bubbleDistance) - animation[0].bitmap.height
+                                }
+                            })
                         })
-                    })
+                    }
+                    prefixFrames.frontFrames.push(constructedFrames)
                 }
-                prefixFrames.frontFrames.push(constructedFrames)
             }
 
             return prefixFrames;
@@ -4749,7 +4751,20 @@ const prefixes = {
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Thinking";
 
-            let speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/thinking/thoughts.png`), 5);
+            let speechFrames: Jimp[] = [];
+
+            if (allPrefixes.includes("Eudaemonic")) {
+                speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/thinking/eudaemonicthoughts.png`), 5);
+            } else if (allPrefixes.includes("Feminine") && allPrefixes.includes("Masculine")) {
+                speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/thinking/mascfemthoughts.png`), 5);
+            } else if (allPrefixes.includes("Feminine")) {
+                speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/thinking/femthoughts.png`), 5);
+            } else if (allPrefixes.includes("Masculine")) {
+                speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/thinking/mascthoughts.png`), 5);
+            } else {
+                speechFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/thinking/thoughts.png`), 5);
+            }
+
             let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/thinking/`);
             if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
             // We don't cache this prefix, but we'll make a cache directory just in case we need to in the future
@@ -4832,9 +4847,16 @@ const prefixes = {
             const characterPool = `AAAABCDEEEEFGHIIIIJKLMNOOOOPQRSTUUUUVWXYYZ`;
 
             const characters: number[] = [];
-            const typingLength = Math.round(seedGen() * 4) + 4;
-            while (characters.length < typingLength) {
-                characters.push(characterPool.charCodeAt(Math.floor(seedGen() * characterPool.length)));
+
+            if (allPrefixes.includes("Zammin")) {
+                characters.push(...("ZAMMIN".split('').map(character => character.charCodeAt(0))));
+            } else if (allPrefixes.includes("Acquiescing")) {
+                characters.push(...("SIGHING".split('').map(character => character.charCodeAt(0))));
+            } else {
+                const typingLength = Math.round(seedGen() * 4) + 4;
+                while (characters.length < typingLength) {
+                    characters.push(characterPool.charCodeAt(Math.floor(seedGen() * characterPool.length)));
+                }
             }
             const typingString = String.fromCharCode(...characters);
             const speechBubblePadding = 2;
@@ -5926,10 +5948,10 @@ const prefixes = {
             }
             return prefixFrames;
         }
-    }, /*
+    },
     "Ailurophilic": {
-        name: "",
-        tags: [],
+        name: "Ailurophilic",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
@@ -5937,9 +5959,53 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Ailurophilic";
+            let seedGen = new seedrandom(`ailurophilic${seed}`);
+
+            const catPatternCount = 3;
+            const catSpriteSheet = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/ailurophilic/basecat.png`), 10);
+            const catPatternSheet = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/ailurophilic/catpattern${Math.floor(seedGen() * catPatternCount)}.png`), 10);
+            const catPalette = await Jimp.read(`${prefixSourceDirectory}/ailurophilic/catpallettes.png`);
+            const flipped = (seedGen() > 0.5);
+            const compositePosition = flipped ? {
+                x: -5,
+                y: iconFrames[0].bitmap.height - catSpriteSheet[0].bitmap.height + 1
+            } : {
+                x: iconFrames[0].bitmap.width - catSpriteSheet[0].bitmap.width + 3,
+                y: iconFrames[0].bitmap.height - catSpriteSheet[0].bitmap.height + 1
+            }
+
+            const usingPalette = Math.floor(catPalette.bitmap.width * seedGen());
+            const paletteMap = {
+                0xeeeeeeff: catPalette.getPixelColor(usingPalette, 0),
+                0xbdbdbdff: catPalette.getPixelColor(usingPalette, 1),
+                0x9e9e9eff: catPalette.getPixelColor(usingPalette, 2),
+                0xff0000ff: catPalette.getPixelColor(usingPalette, 3),
+                0xcc0000ff: catPalette.getPixelColor(usingPalette, 4)
+            }
+
+            for (let catSpriteSheetIndex = 0; catSpriteSheetIndex < catSpriteSheet.length; catSpriteSheetIndex++) {
+                const catSprite = catSpriteSheet[catSpriteSheetIndex];
+                catSprite.composite(catPatternSheet[catSpriteSheetIndex], 0, 0);
+                catSprite.scan(0, 0, catSprite.bitmap.width, catSprite.bitmap.height, function(x, y, idx) {
+                    const sourceColor = catSprite.getPixelColor(x, y);
+                    // @ts-ignore 
+                    const foundColor = paletteMap[sourceColor] ?? 0x00000000;
+                    if (foundColor !== 0x00000000) {
+                        catSprite.setPixelColor(foundColor, x, y);
+                    }
+                });
+                if (!flipped) catSprite.flip(true, false);
+                prefixFrames.frontFrames.push([{
+                    image: catSprite,
+                    compositePosition
+                }]);
+            }
+
+            return prefixFrames;
         }
-    }, */
+    },
     "Fake": {
         name: "Fake",
         tags: [ "appliesDirectlyAfterAllPrefixes" ],
@@ -5972,23 +6038,56 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Glinting": {
-        name: "",
-        tags: [],
+        name: "Glinting",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
-            accents: false,
+            accents: true,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Glinting";
+            const accentFrames = anchorPoints.accents;
+            let seedGen = new seedrandom(`glinting${seed}`);
+
+            const glintOverlay = await Jimp.read(`${prefixSourceDirectory}/glinting/glint.png`);
+            glintOverlay.color([{apply: "hue", params: [Math.floor(360 * seedGen())]}]);
+            const desiredFrames = 30;
+            const trueFrames = maths.leastCommonMultiple(desiredFrames, accentFrames.length);
+
+            const sinAmplitude = Math.ceil(seedGen() * 5) + 1;
+            const sinOffset = seedGen() * 2 * Math.PI;
+
+            for (let newFrameIndex = 0; newFrameIndex < trueFrames; newFrameIndex++) {
+                const newFrame = accentFrames[newFrameIndex % accentFrames.length].image.clone();
+                const animationProgress = (newFrameIndex % desiredFrames)/desiredFrames;
+                
+                const yOffset = Math.round(Math.sin(sinOffset + (animationProgress * 2 * Math.PI)) * sinAmplitude);
+                const xOffset = Math.round(animationProgress * glintOverlay.bitmap.width);
+
+                newFrame.scan(0, 0, newFrame.bitmap.width, newFrame.bitmap.height, function(x, y, idx) {
+                    if (newFrame.bitmap.data[idx + 3] > 0) newFrame.setPixelColor(glintOverlay.getPixelColor((x + xOffset) % glintOverlay.bitmap.width, (y + yOffset) % glintOverlay.bitmap.height), x, y);
+                })
+
+                prefixFrames.frontFrames.push([
+                    {
+                        image: newFrame,
+                        compositePosition: { x: 0, y: 0 },
+                        preventOutline: true
+                    }
+                ])
+            }
+
+            return prefixFrames;
         }
     },
     "Conspicuous": {
-        name: "",
-        tags: [],
+        name: "Conspicuous",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
@@ -5996,48 +6095,267 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Conspicuous";
+            let seedGen = new seedrandom(`conspicuous${seed}`);
+
+            const evidenceTagSheet = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/conspicuous/crimemarkers.png`), 9);
+            const flipped = (seedGen() > 0.5);
+            const compositePosition = flipped ? {
+                x: -20,
+                y: iconFrames[0].bitmap.height - (evidenceTagSheet[0].bitmap.height/2) + 5
+            } : {
+                x: iconFrames[0].bitmap.width - evidenceTagSheet[0].bitmap.width + 18,
+                y: iconFrames[0].bitmap.height - (evidenceTagSheet[0].bitmap.height / 2) + 5
+            }
+
+            const usingSprite = evidenceTagSheet[Math.floor(seedGen() * evidenceTagSheet.length)];
+            const spriteHeight = usingSprite.bitmap.height / 2;
+            const spriteWidth = usingSprite.bitmap.width;
+
+            if (flipped) {
+                usingSprite.crop(0, spriteHeight, spriteWidth, spriteHeight);
+            } else {
+                usingSprite.crop(0, 0, spriteWidth, spriteHeight);
+            }
+
+            prefixFrames.frontFrames.push([{
+                image: usingSprite,
+                compositePosition
+            }]);
+
+            return prefixFrames;
         }
     },
     "Voodoo": {
-        name: "",
-        tags: [],
+        name: "Voodoo",
+        tags: [ "seeded" ],
         needs: {
-            heads: false,
-            eyes: false,
+            heads: true,
+            eyes: true,
             accents: false,
-            mouths: false
+            mouths: true
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Voodoo";
+            let seedGen = new seedrandom(`voodoo${seed}`);
+            const pinBobSheet = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/voodoo/pins.png`), 3);
+            const crosseyeImage = await Jimp.read(`${prefixSourceDirectory}/voodoo/crosseye.png`);
+
+            const createPins = anchorPoints.heads.every((headFrame) => headFrame.positions[0].startPosition.x === anchorPoints.heads[0].positions[0].startPosition.x && headFrame.positions[0].startPosition.y === anchorPoints.heads[0].positions[0].startPosition.y && headFrame.positions[0].width === anchorPoints.heads[0].positions[0].width );
+
+            console.log(`Create Pins: ${createPins}`);
+
+            const usingPins: {
+                position: CCOIcons.coordinate,
+                length: number,
+                style: number,
+                hue: number
+            }[] = [];
+            const pinBobPositions: CCOIcons.coordinate[] = [];
+            let pinShaftImage = new Jimp(1, 1, 0x00000000);
+
+            const iconBitmap = iconFrames[0].bitmap;
+            const extraPinLength = 4;
+            const basePinLength = 8;
+            if (createPins) {
+                let failsafe = 0;
+                const pinCount = Math.round(seedGen() * 2) + 4;
+
+                while (usingPins.length < pinCount && failsafe < 250) {
+                    failsafe++;
+    
+                    const chosenPosition = {
+                        x: Math.floor(seedGen() * iconBitmap.width),
+                        y: Math.floor(seedGen() * iconBitmap.height)
+                    }
+    
+                    if (iconBitmap.data[iconFrames[0].getPixelIndex(chosenPosition.x, chosenPosition.y) + 3] > 100) { // if the pixel is transparent
+                        let valid = false;
+                        if (!usingPins.some(pinData => maths.distanceBetweenPoints(pinData.position, chosenPosition) < (iconFrames[0].bitmap.width / 3))) {
+                            if (chosenPosition.x >= (iconBitmap.width - 1) || chosenPosition.x <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x - 1, chosenPosition.y) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+    
+                            if (chosenPosition.x >= (iconBitmap.width - 1) || chosenPosition.x <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x + 1, chosenPosition.y) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+    
+                            if (chosenPosition.y >= (iconBitmap.height - 1) || chosenPosition.y <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x, chosenPosition.y - 1) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+    
+                            if (chosenPosition.y >= (iconBitmap.height - 1) || chosenPosition.y <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x, chosenPosition.y + 1) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+    
+                            if (valid) {
+                                failsafe = 0;
+                                usingPins.push({
+                                    position: chosenPosition,
+                                    length: Math.ceil(seedGen() * extraPinLength) + basePinLength,
+                                    style: Math.floor(seedGen() * pinBobSheet.length),
+                                    hue: Math.floor(360 * seedGen())
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                pinShaftImage = new Jimp(iconBitmap.width + (extraPinLength + basePinLength * 2), iconBitmap.height + (extraPinLength + basePinLength * 2), 0x00000000);
+
+                const centerPoint = {
+                    x: Math.floor(iconBitmap.width / 2),
+                    y: Math.floor(iconBitmap.height / 2)
+                }
+                const pinPalette = {
+                    shaftMain: 0x696969ff,
+                    shaftShadow: 0x4a4a4aff
+                }
+
+                for (let pinIndex = 0; pinIndex < usingPins.length; pinIndex++) {
+                    const pinData = usingPins[pinIndex];
+                    const trueAngle = Math.atan2(centerPoint.y - pinData.position.y, pinData.position.x - centerPoint.x);
+
+                    for (let pinPixelIndex = 0; pinPixelIndex < pinData.length; pinPixelIndex++) {
+                        const xPos = pinData.position.x + Math.ceil(Math.cos(trueAngle) * (pinPixelIndex + 1));
+                        const yPos = pinData.position.y - Math.ceil(Math.sin(trueAngle) * (pinPixelIndex + 1));
+
+                        pinShaftImage.setPixelColor(pinPalette.shaftMain, extraPinLength + basePinLength + xPos, extraPinLength + basePinLength + yPos);
+
+                        if (pinPixelIndex === pinData.length - 1) {
+                            pinBobPositions.push({
+                                x: xPos,
+                                y: yPos
+                            })
+                        }
+                    }
+
+                    // pinShaftImage.setPixelColor(0xff0000ff, pinPosition.x + extraPinLength + basePinLength, pinPosition.y + extraPinLength + basePinLength);
+                }
+
+                pinShaftImage = strokeImage(pinShaftImage, pinPalette.shaftShadow, 1, false, [[0, 0, 0], [0, 0, 0], [0, 1, 0]]);
+            }
+
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex];
+                let constructedFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = [];
+
+                if (createPins) {
+                    constructedFrame.push({
+                        image: pinShaftImage,
+                        compositePosition: {
+                            x: - extraPinLength - basePinLength - 1,
+                            y: - extraPinLength - basePinLength - 1
+                        }
+                    })
+    
+                    for (let pinBobIndex = 0; pinBobIndex < pinBobPositions.length; pinBobIndex++) {
+                        const pinBobPosition = pinBobPositions[pinBobIndex];
+                        const pinData = usingPins[pinBobIndex];
+                        constructedFrame.push({
+                            image: pinBobSheet[pinData.style].clone().color([{apply: "hue", params: [pinData.hue]}]),
+                            compositePosition: {
+                                x: pinBobPosition.x - Math.floor(pinBobSheet[0].bitmap.width/2),
+                                y: pinBobPosition.y - Math.floor(pinBobSheet[0].bitmap.height/2)
+                            }
+                        })
+                    }
+                }
+
+                const eyes = anchorPoints.eyes[iconFrameIndex % anchorPoints.eyes.length];
+                for (let eyeIndex = 0; eyeIndex < eyes.coordinates.length; eyeIndex++) {
+                    const eyeCoordinate = eyes.coordinates[eyeIndex];
+                    constructedFrame.push({
+                        image: crosseyeImage.clone(),
+                        compositePosition: {
+                            x: eyeCoordinate.x - Math.floor(crosseyeImage.bitmap.width/2),
+                            y: eyeCoordinate.y - Math.floor(crosseyeImage.bitmap.height/2)
+                        },
+                        preventOutline: true
+                    })
+                }
+
+                prefixFrames.frontFrames.push(constructedFrame);
+            }
+            
+            return prefixFrames;
         }
     },
     "Annoyed": {
-        name: "",
+        name: "Annoyed",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let headPositions = anchorPoints.heads;
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Annoyed";
+
+            let annoyedFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/annoyed/fuzzball.png`), 5);
+
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/annoyed/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            let neededAnimationFrames = maths.leastCommonMultiple(annoyedFrames.length, iconFrames.length);
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const annoyedFrame = annoyedFrames[animationFrameIndex % annoyedFrames.length];
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const headImagesThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(annoyedFrame, cacheDirectory, frameHeadData, { x: 0, y: 27, width: 32 }, false);
+                prefixFrames.frontFrames.push(headImagesThisFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Zammin": {
-        name: "",
+        name: "Zammin",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Zammin";
+            let headPositions = anchorPoints.heads;
+
+            if (!allPrefixes.includes("Typing")) {
+                let animation: Jimp = new Jimp(1, 1, 0);
+                if (allPrefixes.includes("Acquiescing")) {
+                    animation = await Jimp.read(`${prefixSourceDirectory}/zamminacquiescing/sighzamn.png`);
+                } else {
+                    animation = await Jimp.read(`${prefixSourceDirectory}/zamminacquiescing/zamn.png`);
+                }
+    
+                const bubbleDistance = 13;
+                const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
+                for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                    const headFrame = headPositions[headFrameIndex];
+                    headFrame.positions.forEach(head => {
+                        constructedFrames.push({
+                            image: animation,
+                            compositePosition: {
+                                x: head.startPosition.x + head.width + Math.round(head.width / bubbleDistance),
+                                y: head.startPosition.y - Math.round(head.width / bubbleDistance) - animation.bitmap.height
+                            }
+                        })
+                    })
+                    prefixFrames.frontFrames.push(constructedFrames)
+                }
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "RDMing": {
         name: "",
         tags: [],
@@ -6050,20 +6368,44 @@ const prefixes = {
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             return structuredClone(basePrefixReturnObject)
         }
-    },
+    }, */
     "Acquiescing": {
-        name: "",
+        name: "Acquiescing",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Acquiescing";
+            let headPositions = anchorPoints.heads;
+
+            if (!allPrefixes.includes("Zammin") && !allPrefixes.includes("Typing")) {
+                let animation: Jimp = await Jimp.read(`${prefixSourceDirectory}/zamminacquiescing/sigh.png`);
+
+                const bubbleDistance = 13;
+                const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
+                for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                    const headFrame = headPositions[headFrameIndex];
+                    headFrame.positions.forEach(head => {
+                        constructedFrames.push({
+                            image: animation,
+                            compositePosition: {
+                                x: head.startPosition.x + head.width + Math.round(head.width / bubbleDistance),
+                                y: head.startPosition.y - Math.round(head.width / bubbleDistance) - animation.bitmap.height
+                            }
+                        })
+                    })
+                    prefixFrames.frontFrames.push(constructedFrames)
+                }
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Fuming": {
         name: "",
         tags: [],
@@ -6089,33 +6431,92 @@ const prefixes = {
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             return structuredClone(basePrefixReturnObject)
         }
-    },
+    },*/
     "Feminine": {
-        name: "",
+        name: "Feminine",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Feminine";
+            let headPositions = anchorPoints.heads;
+
+            if (!allPrefixes.includes("Thinking")) {
+                let animation: Jimp[] = [];
+                if (allPrefixes.includes("Masculine")) {
+                    animation = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/masculinefeminine/both.png`), 5);
+                } else {
+                    animation = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/masculinefeminine/feminine.png`), 5);
+                }
+
+                const bubbleDistance = 13;
+                for (let animationFrameIndex = 0; animationFrameIndex < animation.length; animationFrameIndex++) {
+                    const animationFrame = animation[animationFrameIndex];
+                    const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
+                    for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                        const headFrame = headPositions[headFrameIndex];
+                        headFrame.positions.forEach(head => {
+                            constructedFrames.push({
+                                image: animationFrame,
+                                compositePosition: {
+                                    x: head.startPosition.x + head.width + Math.round(head.width / bubbleDistance),
+                                    y: head.startPosition.y - Math.round(head.width / bubbleDistance) - animation[0].bitmap.height
+                                }
+                            })
+                        })
+                    }
+                    prefixFrames.frontFrames.push(constructedFrames)
+                }
+            }
+
+            return prefixFrames;
         }
     },
     "Masculine": {
-        name: "",
+        name: "Masculine",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Masculine";
+            let headPositions = anchorPoints.heads;
+
+            if (!allPrefixes.includes("Thinking") && !allPrefixes.includes("Feminine")) {
+                let animation = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/masculinefeminine/masculine.png`), 5);
+
+                const bubbleDistance = 13;
+                for (let animationFrameIndex = 0; animationFrameIndex < animation.length; animationFrameIndex++) {
+                    const animationFrame = animation[animationFrameIndex];
+                    const constructedFrames: typeof prefixFrames["frontFrames"][number] = [];
+                    for (let headFrameIndex = 0; headFrameIndex < headPositions.length; headFrameIndex++) {
+                        const headFrame = headPositions[headFrameIndex];
+                        headFrame.positions.forEach(head => {
+                            constructedFrames.push({
+                                image: animationFrame,
+                                compositePosition: {
+                                    x: head.startPosition.x + head.width + Math.round(head.width / bubbleDistance),
+                                    y: head.startPosition.y - Math.round(head.width / bubbleDistance) - animation[0].bitmap.height
+                                }
+                            })
+                        })
+                    }
+                    prefixFrames.frontFrames.push(constructedFrames)
+                }
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Ornamentalized": {
         name: "",
         tags: [],
@@ -6397,6 +6798,11 @@ const prefixIDApplicationOrder = [
     "Thinking", // Adds a thought bubble with a question mark to the cube
     "Talkative", // Adds an animated yellow speech indicator to the cube
     "Eudaemonic", // Adds an animated happy face speech bubble to the cube
+    "Acquiescing", // Adds a speech bubble with SIGH...
+    "Zammin", // Adds a speech bubble with ZAMN
+    "Feminine", // Adds a speech bubble with the "female" symbol inside
+    "Masculine", // Adds a speech bubble with the "male" symbol inside
+    "Annoyed", // Adds a fuzzball floating above the cube
     "Brilliant", // Adds a floating light bulb to the cube
     "Scientific", // Adds a sciency flask to the cube
     "Dazed", // Adds 'dazed' particles around the cube (I don't know what I was thinking when I created this prefix in 2020)
@@ -6427,6 +6833,8 @@ const prefixIDApplicationOrder = [
     "Saiyan", // Makes the cube yell super loud whilst charging
     "Electrified", // Adds arcing lightning to the cube
     "Cucurbitaphilic", // Adds a random pumpkin to the cube
+    "Ailurophilic", // Adds a cat to the cube
+    "Conspicuous", // Adds crime scene markers to the cube
     "Read", // Adds a tarot reading to the cube (swords, wands, etc.)
 
     // -------------- Prefixes That Add Accessories (Props that are bound to the cube's parts)
@@ -6484,12 +6892,14 @@ const prefixIDApplicationOrder = [
     "Comfortable", // Adds a pillow for the cube to sit on
 
     // -------------- Prefixes That Are Skin-Tight (idk how to phrase this)
+    "Voodoo", // Adds pins and Xes to the cube
     "Swag", // Adds sunglasses to the cube
     "Stereoscopic", // Adds stereoscopic shades to the cube
     "Sick", // Adds a face mask to the cube
     "Gruesome", // Adds blood all over the cube
     "Canoodled", // Adds kiss-shaped lipstick to the cube in random spots
     "Hurt", // Adds bandaids to the cube in random spots
+    "Glinting", // Adds a minecraft enchantment-esque glint animation
     "Frosty", // Adds frost all over the cube
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
     "95in'", // Adds a Windows 95-esque application window to the cube

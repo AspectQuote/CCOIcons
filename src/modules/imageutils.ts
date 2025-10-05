@@ -76,9 +76,10 @@ async function loadAnimatedCubeIcon(iconPath: string): Promise<Jimp[]> {
  * @param iconFileName The name of the icon, if there is a . here, then only the characters before the first . will be used.
  * @param iconPath The path to the directory where the icon should be saved
  * @param delayCentisecs The duration of each frame in an animated icon's .gif file
+ * @param saveSpriteSheet Whether or not to save the spritesheet.
  * @returns A boolean that describes whether or not the save was successful.
  */
-async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string, delayCentisecs: number): Promise<boolean> {
+async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPath: string, delayCentisecs: number, saveSpriteSheet: boolean = true): Promise<boolean> {
     return new Promise(async (res, rej) => {
         iconFileName = iconFileName.split('.')[0];
         if (frames.length === 1) {
@@ -88,11 +89,13 @@ async function saveAnimatedCubeIcon(frames: Jimp[], iconFileName: string, iconPa
             await gifwrap.GifUtil.write(path.resolve(`${iconPath}/${iconFileName}.gif`), frames.map(frame => new gifwrap.GifFrame(frame.bitmap, {delayCentisecs: delayCentisecs}))).catch(e => {
                 console.log("Gif write error: ", e);
             });
-            let imageSpriteSheet = new Jimp(frames[0].bitmap.width, frames[0].bitmap.height * frames.length, 0x00000000);
-            frames.forEach((frame, idx) => {
-                imageSpriteSheet.composite(frame, 0, idx * frames[0].bitmap.height)
-            });
-            await imageSpriteSheet.writeAsync(path.resolve(`${iconPath}/${iconFileName}.png`));
+            if (saveSpriteSheet) {
+                let imageSpriteSheet = new Jimp(frames[0].bitmap.width, frames[0].bitmap.height * frames.length, 0x00000000);
+                frames.forEach((frame, idx) => {
+                    imageSpriteSheet.composite(frame, 0, idx * frames[0].bitmap.height)
+                });
+                await imageSpriteSheet.writeAsync(path.resolve(`${iconPath}/${iconFileName}.png`));
+            }
             res(true)
         }
     })

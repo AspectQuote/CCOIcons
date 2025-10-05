@@ -11,7 +11,7 @@ const route: CCOIcons.documentedRoute = {
     routes: ['/cubeiconbsidealgorithmcomparison/'],
     documentation: {
         title: "Cube Icon B-Side Algorithm Comparison",
-        subtitle: "GETs an image to used for comparing b-side algorithms.",
+        subtitle: "GETs an image used for comparing b-side algorithms.",
         resolves: "image",
         author: "AspectQuote",
         description: "Creates B-Side images of random cubes with random patterns and prefixes.",
@@ -50,6 +50,7 @@ const route: CCOIcons.documentedRoute = {
 
         const compositeImageBase = new Jimp(bSideV1Icon[0].bitmap.width + bSideV2Icon[0].bitmap.width, Math.max(bSideV1Icon[0].bitmap.height, bSideV2Icon[0].bitmap.height ), 0x00000000);
         const compositeFrames: Jimp[] = [];
+        
         for (let cubeIconFrameIndex = 0; cubeIconFrameIndex < bSideV1Icon.length; cubeIconFrameIndex++) {
             const V1Frame = bSideV1Icon[cubeIconFrameIndex];
             const V2Frame = bSideV2Icon[cubeIconFrameIndex];
