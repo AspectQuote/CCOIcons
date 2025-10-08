@@ -516,7 +516,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                         }
                     });
                     frameModifiers.back.forEach(modifier => {
-                        if (modifier.origin) {
+                        if (modifier.origin !== compiledPrefixFrames.sourceID) {
                             strokedBackFrame.color(modifier.mods);
                         }
                     });
@@ -530,9 +530,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
             let strokedIconFrame = iconFrames[oldIconIndex];
             const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
             frameModifiers.icon.forEach(modifier => {
-                if (modifier.origin) {
-                    strokedIconFrame.color(modifier.mods);
-                }
+                strokedIconFrame.color(modifier.mods);
             });
             frameOutlines.icon.forEach(outline => {
                 strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width, false, outline.matrix);
@@ -558,7 +556,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                         }
                     });
                     frameModifiers.front.forEach(modifier => {
-                        if (modifier.origin) {
+                        if (modifier.origin !== compiledPrefixFrames.sourceID) {
                             strokedFrontFrame.color(modifier.mods);
                         }
                     });
