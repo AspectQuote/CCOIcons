@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs-extra';
 import Jimp from 'jimp';
 import * as maths from '../maths';
-import { fillRect, generateSmallWordImage, loadAnimatedCubeIcon, parseHorizontalSpriteSheet, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
+import { fillHollowRect, fillRect, generateSmallWordImage, loadAnimatedCubeIcon, parseHorizontalSpriteSheet, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
 let seedrandom: new (seed: string) => () => number = require('seedrandom');
 
 /**
@@ -1354,8 +1354,13 @@ const prefixes = {
 
             for (let ravingFrameIndex = 0; ravingFrameIndex < ravingFrames; ravingFrameIndex++) {
                 prefixFrames.frameModifiers.push([
-                    { apply: "hue", params: [(360/ravingFrames)*(ravingFrameIndex+frameOffset)]},
-                    { apply: "darken", params: [10]}
+                    {
+                        layers: ["front", "icon", "back"],
+                        modifiers: [
+                            { apply: "hue", params: [(360 / ravingFrames) * (ravingFrameIndex + frameOffset)] },
+                            { apply: "darken", params: [10] }
+                        ]
+                    }
                 ])
             }
 
@@ -6355,10 +6360,10 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "RDMing": {
-        name: "",
-        tags: [],
+        name: "RDMing",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
@@ -6366,9 +6371,87 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "RDMing";
+
+            let seedGen = new seedrandom(`rdming${seed}`);
+            const possibleGravGunColors = [
+                0xd829ffff,
+                0x42cbf5ff,
+                0xff2966ff,
+                0xffad29ff
+            ]
+            const gravGunColor = possibleGravGunColors[Math.floor(seedGen() * possibleGravGunColors.length)];
+
+            prefixFrames.outlineFrames.push([
+                {
+                    width: 1,
+                    color: gravGunColor,
+                    layers: ["back", "front", "icon"]
+                }
+            ]);
+
+            const animationPadding = 2;
+            const divisions = 8;
+            const maxReferenceAngle = (Math.PI * 2) / (divisions * 2);
+            const desiredFrames = 5;
+            const neededFrames = maths.leastCommonMultiple(desiredFrames, iconFrames.length);
+
+            const iconCenterPosition = {
+                x: Math.floor(iconFrames[0].bitmap.width / 2),
+                y: Math.floor(iconFrames[0].bitmap.height / 2),
+            }
+            for (let iconFrameIndex = 0; iconFrameIndex < neededFrames; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex % iconFrames.length];
+                const angleAddition = (Math.PI * iconFrameIndex) / (desiredFrames * divisions);
+                const newFrame = new Jimp(iconFrame.bitmap.width + (animationPadding * 2), iconFrame.bitmap.height + (animationPadding * 2));
+                newFrame.scan(0, 0, newFrame.bitmap.width, newFrame.bitmap.height, function(newX, newY, idx) {
+                    const x = newX - animationPadding;
+                    const y = newY - animationPadding;
+                    const originalIndex = iconFrame.getPixelIndex(x, y);
+                    const checkingPositions = [
+                        { x: x - 2, y: y - 2 },
+                        { x: x - 1, y: y - 2 },
+                        { x: x, y: y - 2 },
+                        { x: x + 1, y: y - 2 },
+                        { x: x + 2, y: y - 2 },
+                        { x: x + 2, y: y - 1 },
+                        { x: x + 2, y: y },
+                        { x: x + 2, y: y + 1 },
+                        { x: x + 2, y: y + 2 },
+                        { x: x + 1, y: y + 2 },
+                        { x: x, y: y + 2 },
+                        { x: x - 1, y: y + 2 },
+                        { x: x - 2, y: y + 2 },
+                        { x: x - 2, y: y + 1 },
+                        { x: x - 2, y: y },
+                        { x: x - 2, y: y - 1 },
+                    ]
+                    if ((iconFrame.bitmap.data[originalIndex + 3] === 0 || x < 0 || x >= iconFrame.bitmap.width || y < 0 || y >= iconFrame.bitmap.height) && checkingPositions.some(coord => iconFrame.bitmap.data[iconFrame.getPixelIndex(coord.x, coord.y) + 3] > 0)) {
+                        let pixelAngle = Math.atan2(-(y - iconCenterPosition.y), x - iconCenterPosition.x);
+                        if (pixelAngle < 0) pixelAngle += Math.PI;
+                        pixelAngle = (pixelAngle + angleAddition) % maxReferenceAngle;
+                        if (0 < pixelAngle && pixelAngle < maxReferenceAngle / 2) {
+                            newFrame.setPixelColor(gravGunColor, x + animationPadding, y + animationPadding)
+                        }
+                        if (pixelAngle < 0) console.log(pixelAngle * (180/Math.PI), x, y);
+                    }
+                })
+                prefixFrames.backFrames.push([
+                    {
+                        image: newFrame,
+                        compositePosition: {
+                            x: -animationPadding,
+                            y: -animationPadding
+                        },
+                        preventOutline: true
+                    }
+                ]);
+            }
+
+            return prefixFrames;
         }
-    }, */
+    },
     "Acquiescing": {
         name: "Acquiescing",
         tags: [],
@@ -6405,22 +6488,43 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Fuming": {
-        name: "",
+        name: "Fuming",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Fuming";
+
+            let steamFrames = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/fuming/steam.png`), 5);
+
+            let neededAnimationFrames = maths.leastCommonMultiple(steamFrames.length, iconFrames.length);
+
+            const headPositions = anchorPoints.heads;
+
+            // if we cache this, we may need separate directories for the flipped versions.
+            let cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/fuming/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            for (let animationFrameIndex = 0; animationFrameIndex < neededAnimationFrames; animationFrameIndex++) {
+                const frameHeadData = headPositions[animationFrameIndex % headPositions.length];
+                const fumingLeftHeadImages: CCOIcons.compiledPrefixFrames["backFrames"][number] = await compileHeadsForFrame(steamFrames[animationFrameIndex % steamFrames.length], cacheDirectory, frameHeadData, { x: 9, y: 0, width: 32 }, false);
+                const fumingRightHeadImages: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(steamFrames[animationFrameIndex % steamFrames.length].clone().flip(true, false), cacheDirectory, frameHeadData, { x: -24, y: -4, width: 32 }, false);
+                prefixFrames.frontFrames.push([...fumingRightHeadImages]);
+                prefixFrames.backFrames.push([...fumingLeftHeadImages]);
+            }
+
+            return prefixFrames
         }
     },
     "DLC": {
-        name: "",
+        name: "DLC",
         tags: [],
         needs: {
             heads: false,
@@ -6428,10 +6532,22 @@ const prefixes = {
             accents: false,
             mouths: false
         },
-        compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "DLC";
+
+            prefixFrames.frameModifiers.push([
+                {
+                    modifiers: [
+                        { apply: "darken", params: [100] }
+                    ],
+                    layers: ["icon"]
+                }
+            ])
+
+            return prefixFrames;
         }
-    },*/
+    },
     "Feminine": {
         name: "Feminine",
         tags: [],
@@ -6555,20 +6671,92 @@ const prefixes = {
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             return structuredClone(basePrefixReturnObject)
         }
-    },
+    }, */
     "Sussy": {
-        name: "",
-        tags: [],
+        name: "Sussy",
+        tags: [ "seeded" ],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Sussy";
+
+            let seedGen = new seedrandom(`sussy${seed}`);
+            const espPadding = 3;
+            const shadowColor = 0x242424ff;
+            function generateESPImageFromHead(head: CCOIcons.anchorPointSchema["heads"][number]["positions"][number]) {
+                const createdJimp = new Jimp(head.width + 1 + (espPadding * 2), head.width + 1 + (espPadding * 2), 0x00000000);
+                fillHollowRect(createdJimp, 1, 1, head.width + (espPadding * 2), head.width + (espPadding * 2), shadowColor);
+                fillHollowRect(createdJimp, 0, 0, head.width + (espPadding * 2), head.width + (espPadding * 2), 0xcf2929ff);
+                return createdJimp;
+            }
+
+            const shadowMatrix: CCOIcons.strokeMatrix = [[0, 0, 0], [0, 0, 0], [0, 0, 1]];
+            const barOutlineMatrix: CCOIcons.strokeMatrix = [[1, 1, 1], [1, 0, 1], [1, 1, 1]];
+            const cubeHPImage = strokeImage(strokeImage(new Jimp(1, iconFrames[0].bitmap.height + (espPadding * 2) - 2, 0x479639ff), 0x345934ff, 1, false, barOutlineMatrix), shadowColor, 1, false, shadowMatrix);
+            const cubeStaminaImage = strokeImage(strokeImage(new Jimp(1, iconFrames[0].bitmap.height + (espPadding * 2) - 2, 0xbf8e47ff), 0x594a34ff, 1, false, barOutlineMatrix), shadowColor, 1, false, shadowMatrix)
+
+            const missingHP = seedGen() * (iconFrames[0].bitmap.height);
+            const missingStamina = seedGen() * (iconFrames[0].bitmap.height);
+            for (let missingHPIndex = 0; missingHPIndex < Math.max(missingHP, missingStamina); missingHPIndex++) {
+                if (missingHP >= missingHPIndex) cubeHPImage.setPixelColor(shadowColor, 2, 2 + missingHPIndex);
+                if (missingStamina >= missingHPIndex) cubeStaminaImage.setPixelColor(shadowColor, 2, 2 + missingHPIndex);
+            }
+
+
+            let usingCubeName = cubeData.name.split(' ')[0].slice(0, 6);
+            if (usingCubeName !== cubeData.name) usingCubeName = `${usingCubeName}_`;
+            const cubeNameImage = await generateSmallWordImage(usingCubeName.toUpperCase(), 0x00000000, 0x000000ff, 0);
+            cubeNameImage.rotate(90);
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex];
+                const iconHeads = anchorPoints.heads[iconFrameIndex].positions;
+                const constructedFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = [
+                    {
+                        image: cubeStaminaImage,
+                        compositePosition: {
+                            x: iconFrame.bitmap.width + 9,
+                            y: -espPadding - 1
+                        }
+                    },
+                    {
+                        image: cubeHPImage,
+                        compositePosition: {
+                            x: iconFrame.bitmap.width + 4,
+                            y: -espPadding - 1
+                        }
+                    },
+                    {
+                        image: cubeNameImage,
+                        compositePosition: {
+                            x: -cubeNameImage.bitmap.width - 3,
+                            y: iconFrame.bitmap.height - cubeNameImage.bitmap.height + 4
+                        }
+                    }
+                ];
+                
+                for (let iconHeadIndex = 0; iconHeadIndex < iconHeads.length; iconHeadIndex++) {
+                    const iconHead = iconHeads[iconHeadIndex];
+                    constructedFrame.push({
+                        image: generateESPImageFromHead(iconHead),
+                        compositePosition: {
+                            x: iconHead.startPosition.x - espPadding,
+                            y: iconHead.startPosition.y - espPadding - Math.floor(iconHead.width/4)
+                        },
+                        preventOutline: true
+                    });
+                }
+
+                prefixFrames.frontFrames.push(constructedFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Sleepy": {
         name: "",
         tags: [],
@@ -6777,6 +6965,7 @@ const prefixIDApplicationOrder = [
 
     // -------------- Special cases
     "Censored", // Adds a censor bar to the cube
+    "Sussy", // Adds an ESP (cheater) overlay to the cube
 
     // -------------- Prefixes That Add Environmental Stuffs (Or just super large props)
     "Orbital", // Adds 3 orbiting planets to the cube
@@ -6863,6 +7052,7 @@ const prefixIDApplicationOrder = [
     "Adorable", // Adds a cute little bow to the cube
     "Culinary", // Adds a chef's toque to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Fuming", // Adds a set of steam coming out of the cube's "ears"
     "Magical", // Adds a wizard hat to the cube
     "Streaming", // Adds headphones to the cube
     "Sweetened", // Adds a cherry to the top of the cube
@@ -6902,6 +7092,7 @@ const prefixIDApplicationOrder = [
     "Glinting", // Adds a minecraft enchantment-esque glint animation
     "Frosty", // Adds frost all over the cube
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
+    "RDMing", // Adds an animated gravity-gun outline to the cube
     "95in'", // Adds a Windows 95-esque application window to the cube
     "Wanted", // Adds a wanted poster to the cube
 
@@ -6911,6 +7102,7 @@ const prefixIDApplicationOrder = [
 
     // -------------- Prefixes that only apply filters
     "Raving", // Hue shifts the cube every frame to create a 'rainbow' effect
+    "DLC", // Turns the cube completely black
 
     // -------------- Attribute Effects should always be behind everything else
     "Divine", // Divine modifier for the cube

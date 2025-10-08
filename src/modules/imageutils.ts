@@ -36,6 +36,24 @@ function fillRect(image: Jimp, rectX: number, rectY: number, width: number, heig
     })
 }
 
+function fillHollowRect(image: Jimp, rectX: number, rectY: number, width: number, height: number, color: number) {
+    for (let topLineXIndex = 0; topLineXIndex < width; topLineXIndex++) {
+        image.setPixelColor(color, rectX + topLineXIndex, rectY);
+    }
+
+    for (let bottomLineXIndex = 0; bottomLineXIndex < width; bottomLineXIndex++) {
+        image.setPixelColor(color, rectX + bottomLineXIndex, rectY + height - 1);
+    }
+
+    for (let leftLineYIndex = 1; leftLineYIndex < height; leftLineYIndex++) {
+        image.setPixelColor(color, rectX, rectY + leftLineYIndex - 1);
+    }
+
+    for (let rightLineYIndex = 1; rightLineYIndex < (height - 1); rightLineYIndex++) {
+        image.setPixelColor(color, rectX + width - 1, rectY + rightLineYIndex);
+    }
+}
+
 /**
  * Load an icon spritesheet
  * @param iconPath Path to the icon you want to load
@@ -299,5 +317,6 @@ export {
     strokeImage,
     drawLine,
     parseHorizontalSpriteSheet,
-    generateSmallWordImage
+    generateSmallWordImage,
+    fillHollowRect
 }

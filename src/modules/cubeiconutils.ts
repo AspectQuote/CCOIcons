@@ -428,7 +428,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
         ...allPrefixFrames.map(compiledFrames => (compiledFrames.maskFrames.length || 1))
     ];
     if (animationLengths.find(animlength => animlength % 5 !== 0 && animlength !== 1)) {
-        console.log("An animation in this icon isn't a multiple of 5!", animationLengths);
+        console.log("##### An animation in this icon isn't a multiple of 5!", animationLengths);
     }
     const neededIconFrames = Math.min(config.maximumPrefixFramesPerIcon, maths.leastCommonMultipleOfArray(animationLengths));
 
@@ -458,6 +458,17 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
             back: []
         }
 
+        let frameModifiers: {
+            [key in ("front" | "back" | "icon")]: {
+                mods: CCOIcons.JimpImgMod[],
+                origin: CCOIcons.prefixID
+            }[]
+        } = {
+            front: [],
+            icon: [],
+            back: []
+        }
+
         allPrefixFrames.forEach((compiledPrefixFrames) => {
             if (compiledPrefixFrames.outlineFrames.length > 0) {
                 const outlineIndex = newIconIndex % compiledPrefixFrames.outlineFrames.length;
@@ -469,6 +480,18 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                             width: outlinesOnFrame.width,
                             origin: compiledPrefixFrames.sourceID,
                             matrix: outlinesOnFrame.matrix ?? undefined
+                        })
+                    })
+                })
+            }
+            if (compiledPrefixFrames.frameModifiers.length > 0) {
+                const frameModifierIndex = newIconIndex % compiledPrefixFrames.frameModifiers.length;
+                const modifiersOnFrame = compiledPrefixFrames.frameModifiers[frameModifierIndex];
+                modifiersOnFrame.forEach(modsOnFrame => {
+                    modsOnFrame.layers.forEach(layerKey => {
+                        frameModifiers[layerKey].push({
+                            mods: modsOnFrame.modifiers,
+                            origin: compiledPrefixFrames.sourceID
                         })
                     })
                 })
@@ -491,7 +514,12 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                                 paddingOffset += outline.width;
                             }
                         }
-                    })
+                    });
+                    frameModifiers.back.forEach(modifier => {
+                        if (modifier.origin) {
+                            strokedBackFrame.color(modifier.mods);
+                        }
+                    });
                     newFrame.composite(strokedBackFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding + paddingOffset, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding + paddingOffset)
                 })
             }
@@ -501,9 +529,14 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
         if (useCubeIcon || frameOutlines.icon.length > 0) {
             let strokedIconFrame = iconFrames[oldIconIndex];
             const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
+            frameModifiers.icon.forEach(modifier => {
+                if (modifier.origin) {
+                    strokedIconFrame.color(modifier.mods);
+                }
+            });
             frameOutlines.icon.forEach(outline => {
                 strokedIconFrame = strokeImage(strokedIconFrame, outline.color, outline.width, false, outline.matrix);
-            })
+            });
             newFrame.composite(strokedIconFrame, paddingValues.left - outlinePadding, paddingValues.above - outlinePadding);
         }
 
@@ -523,7 +556,12 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                                 paddingOffset += outline.width;
                             }
                         }
-                    })
+                    });
+                    frameModifiers.front.forEach(modifier => {
+                        if (modifier.origin) {
+                            strokedFrontFrame.color(modifier.mods);
+                        }
+                    });
                     newFrame.composite(strokedFrontFrame, paddingValues.left + partOfFrame.compositePosition.x - outlinePadding + paddingOffset, paddingValues.above + partOfFrame.compositePosition.y - outlinePadding + paddingOffset)
                 })
             }
@@ -540,14 +578,6 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
             }
         })
         if (doMask) newFrame.mask(compiledMask, 0, 0);
-
-        allPrefixFrames.forEach(compiledPrefixFrames => {
-            if (compiledPrefixFrames.frameModifiers.length > 0) {
-                const modifierIndex = newIconIndex % compiledPrefixFrames.frameModifiers.length;
-                const modifierFrame = compiledPrefixFrames.frameModifiers[modifierIndex];
-                newFrame.color(modifierFrame);
-            }
-        })
 
         newAnimation.push(newFrame);
     }

@@ -164,7 +164,7 @@ const maximumPrefixFramesPerIcon = (devmode) ? Infinity : 120;
 /**
  * The limit on how many pixels the b-side algorithm will process. If an icon has more pixels than this, it will be resized to contain this many pixels then the algorithm will be applied.
  */
-const bSideMaxPixels = 16000;
+const bSideMaxPixels = 15000;
 
 console.log("DEVMODE: ", devmode)
 

@@ -169,7 +169,7 @@ export type compiledPrefixFrames = {
     /**
      * What Jimp filters should be applied to the cube and prefix per-frame.
      */
-    frameModifiers: JimpImgMod[][]
+    frameModifiers: {modifiers: JimpImgMod[], layers: ("back" | "front" | "icon")[]}[][]
 
     /**
      * The mask frames the prefix applies

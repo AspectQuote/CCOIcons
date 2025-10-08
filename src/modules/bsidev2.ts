@@ -37,7 +37,7 @@ function dumbBlend(color1: number, color2: number) {
  * @param resizeMode The resize algorithm to use. Bicubic is default, but nearest-neighbor and bilinear create interesting effects
  * @returns The b-side-ified image.
  */
-async function createBSideV2Image(originalImage: Jimp, similarThereshold: number = 5, maxIteration: number = 2, blendType: "random" | "gradient" | "dithered" = "dithered", iteration: number = 1, resizeMode: "hermiteInterpolation" | "bezierInterpolation" | "bicubicInterpolation" | "bilinearInterpolation" | "nearestNeighbor" = Jimp.RESIZE_BICUBIC) {
+async function createBSideV2Image(originalImage: Jimp, similarThereshold: number = 5, maxIteration: number = 3, blendType: "random" | "gradient" | "dithered" = "dithered", iteration: number = 1, resizeMode: "hermiteInterpolation" | "bezierInterpolation" | "bicubicInterpolation" | "bilinearInterpolation" | "nearestNeighbor" = Jimp.RESIZE_BICUBIC) {
     // const before = performance.now();
     if (iteration === 1) {
         const maxPixels = bSideMaxPixels;
@@ -77,6 +77,7 @@ async function createBSideV2Image(originalImage: Jimp, similarThereshold: number
             }
         }
     })
+
 
     // const after = performance.now();
     // console.log(`B-Side V2: Finished Iteration #${iteration} in ${after-before}ms.`);
