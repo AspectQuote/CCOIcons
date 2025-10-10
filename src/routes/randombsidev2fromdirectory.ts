@@ -80,7 +80,7 @@ const route: CCOIcons.documentedRoute = {
             // const bSideImage = await generateBSideV2TheresholdComparison(inputImage, 20, 1, 50, 4);
             // const bSideImage = await generateBSideV2InterpolationComparison(inputImage, desiredQuality);
             // const bSideImage = await generateBSideV2BlendAndInterpolationComparison(inputImage, desiredQuality - 1);
-            const bSideImage = await createBSideV2Image(inputImage, 7.5, desiredQuality, "dithered");
+            const bSideImage = await createBSideV2Image(inputImage, 10, desiredQuality, "dithered");
 
             console.log(`\nOutput Information:\nFinal Dimensions: ${consoleHighlight(`${(bSideImage.bitmap.width.toLocaleString())}px x ${(bSideImage.bitmap.height.toLocaleString())}px`)}\nPixel Count: ${consoleHighlight(`${(bSideImage.bitmap.width * bSideImage.bitmap.height).toLocaleString()}px`)}`);
             console.log(`Output Directory: ${consoleHighlight(outputFile)}`);

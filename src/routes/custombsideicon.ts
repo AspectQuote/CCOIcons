@@ -6,6 +6,7 @@ import * as fs from 'fs-extra';
 import { methods } from '@jimp/plugin-quantize';
 
 import { createBSideImage } from './../modules/bside';
+import { createBSideV2Image } from 'src/modules/bsidev2';
 
 const outputDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/custombsideicons`);
 const sourceDirectory = path.resolve(`${config.sourceImagesDirectory}/images`)
@@ -54,12 +55,13 @@ const route: CCOIcons.documentedRoute = {
                 try {
                     // Create the image (if needed)
                     const sourceFileImage = await Jimp.read(sourceFile);
-                    const outputImage = await createBSideImage(methods.quantize(sourceFileImage, {
-                        colors: 22,
-                        imageQuantization: "nearest",
-                        paletteQuantization: "wuquant",
-                        colorDistanceFormula: "manhattan"
-                    }), 3);
+                    // const outputImage = await createBSideImage(methods.quantize(sourceFileImage, {
+                    //     colors: 22,
+                    //     imageQuantization: "nearest",
+                    //     paletteQuantization: "wuquant",
+                    //     colorDistanceFormula: "manhattan"
+                    // }), 3);
+                    const outputImage = await createBSideV2Image(sourceFileImage, undefined, 4);
                     await outputImage.writeAsync(outputFile);
                     imagePath = outputFile;
                 } catch (e) {

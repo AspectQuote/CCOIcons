@@ -1,74 +1,9 @@
 import { boxID } from "./modules/schematics/boxes";
 import { cubeID, prefixID } from "./typedefs";
 
-const updatedCubes: cubeID[] = [
-    "bluepill",
-    "redpill",
-    "greenpill",
-    "pinkjumble",
-    "greenjumble",
-    "redjumble",
-    "greentiles",
-    "bluetiles",
-    "petrified3",
-    "petrified4",
-    "bluemarble",
-    "greenmarble",
-    "redmarble",
-    "gasoline",
-    "splatter1",
-    "horus1",
-    "horus2",
-    "meteorite",
-    "pond",
-    "ballin",
-    "bear",
-    "apple",
-    "tp",
-    "dog2",
-    "bluecore",
-    "redcore",
-    "older",
-    "banded",
-    "blackmarble",
-    "octacube",
-    "goldbanded",
-    "bluebubble",
-    "yellowpill",
-    "purplepill",
-    "greencrumbling",
-    "bluecrumbling",
-    "landmass",
-    "collegeruled",
-    "plum",
-    "orange",
-    "pinktiles",
-    "firegem",
-    "vaporwave",
-    "yellowmarble",
-    "bluemarble",
-    "dusk",
-    "arizona",
-    "splatter3",
-    "splatter2",
-    "copper",
-    "clock",
-    "tornpolaroid",
-    "watamelon",
-    "raccoon",
-    "bunny",
-    "calico",
-    "frog",
-    "meltinggreen",
-    "altar",
-    "idol",
-    "goldfrog"
-];
+const updatedCubes: cubeID[] = [];
 const updatedPrefixes: prefixID[] = [];
-const updatedBoxes: boxID[] = [
-    "series10",
-    "series9"
-];
+const updatedBoxes: boxID[] = [];
 
 export {
     updatedBoxes,
