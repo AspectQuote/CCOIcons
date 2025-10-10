@@ -2608,13 +2608,12 @@ const prefixes = {
         name: "Contaminated",
         tags: ["seeded"],
         needs: {
-            heads: true,
+            heads: false,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function (anchorPoints, iconFrames, seed) {
-            let headPositions = anchorPoints.heads;
             let prefixFrames = structuredClone(basePrefixReturnObject);
             prefixFrames.sourceID = "Contaminated";
             let seedGen = new seedrandom(`contaminated${seed}`);
@@ -6632,10 +6631,10 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "Ornamentalized": {
-        name: "",
-        tags: [],
+        name: "Ornamentalized",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
@@ -6643,35 +6642,169 @@ const prefixes = {
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Ornamentalized";
+            let seedGen = new seedrandom(`ornamentalized${seed}`);
+            let possibleOrnaments = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/ornamentalized/ornaments.png`), 5);
+            let hookOverlay = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/ornamentalized/hook.png`), 5)[0];
+            let shadingOverlay = parseHorizontalSpriteSheet(await Jimp.read(`${prefixSourceDirectory}/ornamentalized/shading.png`), 5)[0];
+
+            let generatedOrnaments: { position: CCOIcons.coordinate, ornament: Jimp }[] = [];
+            const eligibilityFunction = function (frame: Jimp, x: number, y: number): boolean {
+                return frame.bitmap.data[frame.getPixelIndex(x, y) + 3] > 0 && frame.bitmap.data[frame.getPixelIndex(x, y + 1) + 3] === 0 && frame.bitmap.data[frame.getPixelIndex(x, y + 2) + 3] === 0
+            }
+            const minOrnamentDistance = possibleOrnaments[0].bitmap.width;
+
+            let failsafe = 0;
+            while (generatedOrnaments.length == 0 && failsafe < Math.pow(minOrnamentDistance, 3)) {
+                iconFrames[0].scan(0, 0, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height, function (x, y, idx) {
+                    if (y < this.bitmap.height - 1) {
+                        failsafe++;
+                        if (eligibilityFunction(this, x, y)) {
+                            if (seedGen() > 0.96 && !generatedOrnaments.some(pixel => maths.distanceBetweenPoints(pixel.position, { x, y }) < minOrnamentDistance)) {
+                                const newOrnament = possibleOrnaments[Math.floor(seedGen() * possibleOrnaments.length)].clone();
+                                newOrnament.color([{ apply: "hue", params: [Math.floor(seedGen() * 360)] }]);
+                                newOrnament.composite(hookOverlay, 0, 0);
+                                if (seedGen() > 0.5) newOrnament.flip(true, false);
+                                newOrnament.composite(shadingOverlay, 0, 0);
+                                generatedOrnaments.push({ position: { x, y }, ornament: newOrnament });
+                                failsafe = 0;
+                            }
+                        }
+                    }
+                })
+            }
+
+            iconFrames.forEach((frame, index) => {
+                if (index !== 0) {
+                    generatedOrnaments = generatedOrnaments.filter((dripPixel) => {
+                        return eligibilityFunction(frame, dripPixel.position.x, dripPixel.position.y);
+                    })
+                }
+            })
+
+            const padding = (possibleOrnaments[0].bitmap.width / 2) + 4;
+            const neededAnimationFrames = iconFrames.length;
+
+            for (let newAnimationFrameIndex = 0; newAnimationFrameIndex < neededAnimationFrames; newAnimationFrameIndex++) {
+                let newFrame = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
+                for (let ornamentIndex = 0; ornamentIndex < generatedOrnaments.length; ornamentIndex++) {
+                    const ornament = generatedOrnaments[ornamentIndex];
+                    newFrame.composite(ornament.ornament, ornament.position.x - Math.floor(ornament.ornament.bitmap.width/2) + padding, ornament.position.y - 2 + padding);
+                }
+                prefixFrames.frontFrames.push([{
+                    image: newFrame,
+                    compositePosition: {
+                        x: -padding,
+                        y: -padding
+                    }
+                }])
+            }
+
+            return prefixFrames;
         }
     },
     "Expensive": {
-        name: "",
+        name: "Expensive",
         tags: [],
         needs: {
             heads: false,
-            eyes: false,
+            eyes: true,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Expensive";
+            const moneyEye = await Jimp.read(`${prefixSourceDirectory}/expensive/moneyeye.png`);
+
+            const neededFrames = anchorPoints.eyes.length;
+
+            for (let frameIndex = 0; frameIndex < neededFrames; frameIndex++) {
+                const eyes = anchorPoints.eyes[frameIndex % anchorPoints.eyes.length];
+                const constructedFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = [];
+                for (let eyeIndex = 0; eyeIndex < eyes.coordinates.length; eyeIndex++) {
+                    const eye = eyes.coordinates[eyeIndex];
+                    constructedFrame.push({
+                        image: moneyEye.clone(),
+                        compositePosition: {
+                            x: eye.x - Math.floor(moneyEye.bitmap.width/2),
+                            y: eye.y - Math.floor(moneyEye.bitmap.height/2)
+                        }
+                    })
+                }
+                prefixFrames.frontFrames.push(constructedFrame);
+            }
+
+            return prefixFrames;
         }
     },
     "Hyaline": {
-        name: "",
-        tags: [],
+        name: "Hyaline",
+        tags: [ "seeded" ],
         needs: {
             heads: false,
             eyes: false,
-            accents: false,
+            accents: true,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Hyaline";
+
+            const desiredFrames = 15;
+            const waitFrames = 15;
+            const neededFrames = maths.leastCommonMultiple(desiredFrames, anchorPoints.accents.length);
+            let seedGen = new seedrandom(`hyaline${seed}`);
+
+            const sheenImageYScale = 3;
+            const sheenImage = new Jimp(1, Math.ceil(iconFrames[0].bitmap.height * sheenImageYScale));
+            let previousWasAdded = false;
+            let addedsheen = 0;
+            while (addedsheen < iconFrames[0].bitmap.height/7) {
+                sheenImage.scan(0, 0, 1, sheenImage.bitmap.height, function(x, y) {
+                    if (seedGen() > ((previousWasAdded) ? 0.2 : 0.94)) {
+                        sheenImage.setPixelColor(0xffffffff, x, y);
+                        previousWasAdded = !previousWasAdded;
+                        addedsheen++;
+                    }
+                })
+            }
+
+            for (let newFrameIndex = 0; newFrameIndex < neededFrames; newFrameIndex++) {
+                const accentFrame = anchorPoints.accents[newFrameIndex % anchorPoints.accents.length];
+                const iconFrame = iconFrames[newFrameIndex % iconFrames.length];
+                const newFrame = new Jimp(accentFrame.image.bitmap.width, accentFrame.image.bitmap.height, 0x00000000);
+                const sheenFrame = newFrameIndex % desiredFrames;
+
+                newFrame.scan(0, 0, newFrame.bitmap.width, newFrame.bitmap.height, function(x, y, idx) {
+                    const sheenIndex = Math.ceil(x + y + 1 + (sheenFrame * (sheenImageYScale) * (iconFrames[0].bitmap.height/desiredFrames))) % sheenImage.bitmap.height;
+                    if (sheenImage.getPixelColor(0, sheenIndex) !== 0) {
+                        if (accentFrame.image.bitmap.data[accentFrame.image.getPixelIndex(x, y) + 3] > 0) {
+                            newFrame.setPixelColor(0xffffff32, x, y);
+                        } else if (iconFrame.bitmap.data[iconFrame.getPixelIndex(x, y) + 3] > 0) {
+                            newFrame.setPixelColor(0xffffff11, x, y);
+                        }
+                    }
+                })
+
+                prefixFrames.frontFrames.push([{
+                    image: newFrame,
+                    compositePosition: {
+                        x: 0,
+                        y: 0
+                    }
+                }])
+            }            
+
+            const chosenWaitFrame = Math.floor(seedGen() * neededFrames);
+            for (let waitFrameIndex = 0; waitFrameIndex < waitFrames; waitFrameIndex++) {
+                prefixFrames.frontFrames.splice(chosenWaitFrame, 0, prefixFrames.frontFrames[chosenWaitFrame]);
+            }
+
+            return prefixFrames;
         }
-    }, */
+    },
     "Sussy": {
         name: "Sussy",
         tags: [ "seeded" ],
@@ -7001,6 +7134,7 @@ const prefixIDApplicationOrder = [
     "Stunned", // Adds a cartoony "seeing stars" effect to the cube
     "Fearful", // Adds a fear 'sweat' animation to the cube
     "Based", // Adds Flashing Eyes to the Cube
+    "Expensive", // Adds dollar signs to the eyes of the cube
     "Lovey", // Adds Heart Eyes to the Cube
     "Googly", // Adds Googly Eyes to the Cube
     "Expressive", // Adds sassy eyebrows to the Cube
@@ -7078,6 +7212,7 @@ const prefixIDApplicationOrder = [
     "Roped", // Adds moving ropes to the cube
     "Bushy", // Adds a Random Beard to the Cube
     "Emphasized", // Adds a random amount of red arrows to the cube
+    "Ornamentalized", // Adds a few christmas ornaments to the cube
     "Brainy", // Adds a gross brain to the cube
     "Comfortable", // Adds a pillow for the cube to sit on
 
@@ -7090,6 +7225,7 @@ const prefixIDApplicationOrder = [
     "Canoodled", // Adds kiss-shaped lipstick to the cube in random spots
     "Hurt", // Adds bandaids to the cube in random spots
     "Glinting", // Adds a minecraft enchantment-esque glint animation
+    "Hyaline", // Adds a sheen animation to the cube
     "Frosty", // Adds frost all over the cube
     "Glitchy", // Adds a Green Mask along with a particle rain inside that mask
     "RDMing", // Adds an animated gravity-gun outline to the cube

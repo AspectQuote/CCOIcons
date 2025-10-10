@@ -28,7 +28,7 @@ const route: CCOIcons.documentedRoute = {
         
         const pool = structuredClone(boxSchema[boxID].contents);
 
-        const iconPadding = 20;
+        const iconPadding = 10;
         const iconsPerRow = Math.ceil(Math.sqrt(pool.length));
         const rowCount = Math.ceil(pool.length/iconsPerRow);
 
@@ -37,7 +37,9 @@ const route: CCOIcons.documentedRoute = {
         
         for (let poolIndex = 0; poolIndex < pool.length; poolIndex++) {
             const cubeID = pool[poolIndex];
-            cubeIcons.push(await loadAnimatedCubeIcon(await generateCubeIcon({}, cubeID, 0, false)));
+            if (!["unrealgreen", "oddmush", "sublime", "plaguecapsule", "glacial"].includes(cubeID)) {
+                cubeIcons.push(await loadAnimatedCubeIcon(await generateCubeIcon({}, cubeID, 0, false)));
+            }
         }
 
         const neededSpacePerCube = Math.max(...cubeIcons.map(cubeFrames => cubeFrames[0].bitmap.width));
