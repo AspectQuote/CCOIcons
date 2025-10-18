@@ -31,6 +31,7 @@ import { randomBSideComparisonFromDirectory } from './routes/randombsidecomparis
 import { randomBSideV2FromDirectory } from './routes/randombsidev2fromdirectory';
 import { cubeIconBSideAlgorithmComparison } from './routes/cubeiconbsidealgorithmcomparison';
 import { boxContentsPreview } from './routes/boxcontentspreview';
+import { materialSpritesheet } from './routes/materialspritesheet';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -103,7 +104,8 @@ const routes: CCOIcons.documentedRoute[] = [
     randomBSideComparisonFromDirectory,
     randomBSideV2FromDirectory,
     cubeIconBSideAlgorithmComparison,
-    boxContentsPreview
+    boxContentsPreview,
+    materialSpritesheet
 ];
 
 routes.forEach((routeInformation) => {
