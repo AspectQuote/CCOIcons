@@ -32,6 +32,7 @@ import { randomBSideV2FromDirectory } from './routes/randombsidev2fromdirectory'
 import { cubeIconBSideAlgorithmComparison } from './routes/cubeiconbsidealgorithmcomparison';
 import { boxContentsPreview } from './routes/boxcontentspreview';
 import { materialSpritesheet } from './routes/materialspritesheet';
+import { randomKuwaharaFromDirectory } from './routes/randomkuwaharafromdirectory';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -105,7 +106,8 @@ const routes: CCOIcons.documentedRoute[] = [
     randomBSideV2FromDirectory,
     cubeIconBSideAlgorithmComparison,
     boxContentsPreview,
-    materialSpritesheet
+    materialSpritesheet,
+    randomKuwaharaFromDirectory
 ];
 
 routes.forEach((routeInformation) => {
