@@ -5,27 +5,27 @@ import Jimp from 'jimp';
 import * as fs from 'fs-extra';
 
 const outputDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/`);
-const sourceDirectory = path.resolve(`${config.sourceImagesDirectory}/materials/`)
+const sourceDirectory = path.resolve(`${config.sourceImagesDirectory}/elements/`)
 
 const route: CCOIcons.documentedRoute = {
-    routes: ['/materialspritesheet'],
+    routes: ['/elementspritesheet'],
     documentation: {
-        title: "Get Material Spritesheet",
-        subtitle: "GETs an image that is a composite of every material icon.",
+        title: "Get Element Spritesheet",
+        subtitle: "GETs an image that is a composite of every element icon.",
         resolves: "image",
         author: "AspectQuote",
-        description: "Retrieves/generates an image that is a collage of every material icon.",
+        description: "Retrieves/generates an image that is a collage of every element icon.",
         examples: [{
             name: "Response",
-            example: "/materialspritesheet",
+            example: "/elementspritesheet",
             description: "Will resolve into the aforementioned collage."
         }],
         parameterDocs: [],
         queryDocs: []
     },
     responseFunction: async (req, res) => {
-        const desiredSize = 40;
-        const outputFile = `${outputDirectory}/materialspritesheet${desiredSize}.png`;
+        const desiredSize = 22;
+        const outputFile = `${outputDirectory}/elementspritesheet${desiredSize}.png`;
         if (fs.existsSync(outputFile) && !config.devmode) return res.sendFile(outputFile);
         const premadeImages = fs.readdirSync(sourceDirectory).filter(path => path.endsWith('.png')).sort((a, b) => {
             if (parseInt(a) > parseInt(b)) {
@@ -57,5 +57,5 @@ const route: CCOIcons.documentedRoute = {
 }
 
 export {
-    route as materialSpritesheet
+    route as elementSpritesheet
 }
