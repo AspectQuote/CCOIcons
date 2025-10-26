@@ -337,6 +337,31 @@ const basePrefixReturnObject: CCOIcons.compiledPrefixFrames = {
 };
 
 const prefixes = {
+    "noprefix": {
+        name: "No Prefix",
+        tags: [],
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed) {
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "noprefix";
+            prefixFrames.frontFrames.push([
+                {
+                    compositePosition: {
+                        x: 0,
+                        y: 0
+                    },
+                    image: await Jimp.read(`${prefixSourceDirectory}/noprefix/noprefix.png`)
+                }
+            ])
+
+            return prefixFrames;
+        }
+    },
     "Divine": {
         name: "Divine",
         tags: ["ignoresPrefixCap"],
@@ -7244,7 +7269,8 @@ const prefixIDApplicationOrder = [
     "Divine", // Divine modifier for the cube
     "Slated", // Slated modifier for the cube
     "Contraband", // Contraband modifier for the cube
-    "Collectors" // Collectors modifier for the cube
+    "Collectors", // Collectors modifier for the cube
+    "noprefix" // Placeholder prefix for "no prefix"
 ] as const satisfies CCOIcons.prefixID[];
 
 /**
