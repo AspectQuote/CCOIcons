@@ -6953,20 +6953,35 @@ const prefixes = {
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
             return structuredClone(basePrefixReturnObject)
         }
-    },
+    }, */
     "Idiotic": {
-        name: "",
+        name: "Idiotic",
         tags: [],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "Idiotic";
+            const teamCaptainHatImage = await Jimp.read(`${prefixSourceDirectory}/idiotic/dunce.png`);
+            const cacheDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/prefixcache/idiotic/`);
+            if (!fs.existsSync(cacheDirectory)) fs.mkdirSync(cacheDirectory, { recursive: true });
+
+            const headPositions = anchorPoints.heads;
+
+            for (let newAnimationIndex = 0; newAnimationIndex < headPositions.length; newAnimationIndex++) {
+                const headFrame = headPositions[newAnimationIndex % headPositions.length];
+                const hatsThisFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = await compileHeadsForFrame(teamCaptainHatImage, cacheDirectory, headFrame, { x: 0, y: 22, width: 32 });
+
+                prefixFrames.frontFrames.push([...hatsThisFrame])
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "Nailed": {
         name: "",
         tags: [],
@@ -7211,6 +7226,7 @@ const prefixIDApplicationOrder = [
     "Adorable", // Adds a cute little bow to the cube
     "Culinary", // Adds a chef's toque to the cube
     "Captain", // Adds a Team Captain hat to the cube
+    "Idiotic", // Adds a dunce cap to the cube
     "Fuming", // Adds a set of steam coming out of the cube's "ears"
     "Magical", // Adds a wizard hat to the cube
     "Streaming", // Adds headphones to the cube
