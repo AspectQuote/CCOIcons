@@ -504,7 +504,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                 const backFrame = compiledPrefixFrames.backFrames[backIndex];
                 const outlinePadding = frameOutlines.back.reduce((prev, curr) => { return prev + ((curr.origin === compiledPrefixFrames.sourceID) ? 0 : curr.width) }, 0);
                 backFrame.forEach(partOfFrame => {
-                    let strokedBackFrame = partOfFrame.image;
+                    let strokedBackFrame = partOfFrame.image.clone();
                     let paddingOffset = 0;
                     frameOutlines.back.forEach(outline => {
                         if (outline.origin !== compiledPrefixFrames.sourceID) {
@@ -527,7 +527,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
 
         // Composite the icon in the 'center layer'
         if (useCubeIcon || frameOutlines.icon.length > 0) {
-            let strokedIconFrame = iconFrames[oldIconIndex];
+            let strokedIconFrame = iconFrames[oldIconIndex].clone();
             const outlinePadding = frameOutlines.icon.reduce((prev, curr) => { return prev + curr.width }, 0);
             frameModifiers.icon.forEach(modifier => {
                 strokedIconFrame.color(modifier.mods);
@@ -544,7 +544,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
                 const frontFrame = compiledPrefixFrames.frontFrames[frontIndex];
                 const outlinePadding = frameOutlines.front.reduce((prev, curr) => { return prev + ((curr.origin === compiledPrefixFrames.sourceID) ? 0 : curr.width) }, 0);
                 frontFrame.forEach(partOfFrame => {
-                    let strokedFrontFrame = partOfFrame.image;
+                    let strokedFrontFrame = partOfFrame.image.clone();
                     let paddingOffset = 0;
                     frameOutlines.front.forEach(outline => {
                         if (outline.origin !== compiledPrefixFrames.sourceID) {
