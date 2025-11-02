@@ -8,6 +8,7 @@ import { updatedCubes, updatedPrefixes, updatedBoxes } from "./updateconfig"
 (async () => {
     if ((updatedCubes.length + updatedPrefixes.length + updatedBoxes.length) > 0) {
         const iconDirectory = `./../ccicons/`
+        if (!fs.existsSync(iconDirectory)) return;
         const allFiles: string[] = await readDirectoryRecursively(iconDirectory);
         
         const updatedCubeFiles = [...allFiles].filter(file => updatedCubes.find(cubeID => file.includes(`${cubeID}.png`) || file.includes(`${cubeID}.gif`) ) !== undefined);

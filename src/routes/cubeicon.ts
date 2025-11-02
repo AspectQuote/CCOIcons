@@ -347,12 +347,12 @@ const route: CCOIcons.documentedRoute = {
                 examples: [
                     {
                         name: "Sacred Green Cube Icon",
-                        example: "/cubeicon/green?prefixes=Sacred",
+                        example: "/cubeicon/green?prefixes=sacred",
                         description: "Will return the 'green' cube with the 'Sacred' prefix applied."
                     },
                     {
                         name: "Flaming Marvelous Red Cube Icon",
-                        example: "/cubeicon/red?prefixes=Flaming,Marvelous",
+                        example: "/cubeicon/red?prefixes=flaming,marvelous",
                         description: "Will return the 'red' cube with the 'Flaming' and 'Marvelous' prefixes applied."
                     }
                 ],
