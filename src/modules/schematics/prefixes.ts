@@ -4895,16 +4895,16 @@ const prefixes = {
             const speechBubbleY = -8;
 
             prefixFrames.frontFrames.push([{
-                image: textImage,
-                compositePosition: {
-                    x: speechBubbleX,
-                    y: speechBubbleY
-                }
-            }, {
                 image: speechBubbleTail,
                 compositePosition: {
                     x: speechBubbleX,
                     y: speechBubbleY + (textImage.bitmap.height - speechBubblePadding)
+                }
+            }, {
+                image: textImage,
+                compositePosition: {
+                    x: speechBubbleX,
+                    y: speechBubbleY
                 }
             }])
 

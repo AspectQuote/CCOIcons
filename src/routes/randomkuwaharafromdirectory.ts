@@ -4,22 +4,33 @@ import * as path from 'node:path';
 import Jimp from 'jimp';
 import * as fs from 'fs-extra';
 
-import { basicKuwaharaFilter } from 'src/modules/basickuwahara';
+import { applyImageEffect } from '../modules/imageeffects';
 
 function consoleHighlight(input: string) {
     return `\x1b[33m${input}\x1b[0m`;
 }
 
+const filterIDs = ["specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
+type filterID = typeof filterIDs[number];
+
 const route: CCOIcons.documentedRoute = {
-    routes: ['/randomkuwaharafromdirectory/'],
+    routes: ['/randomfilterfromdirectory/:filter'],
     documentation: {
-        title: "Get Kuwahara-Filtered Image",
-        subtitle: "GETs custom images with the Kuwahara filtering algorithm applied.",
+        title: "Get Filtered Image",
+        subtitle: "GETs custom images with the a supplied filtering algorithm applied.",
         resolves: "image",
         author: "AspectQuote",
         description: "Generates a filtered version of an image in the provided directory. The server does not search the supplied directory recursively.",
         examples: [],
-        parameterDocs: [],
+        parameterDocs: [{
+            parameter: ":filter",
+            name: "Filter to Use",
+            subtitle: "The filter to apply",
+            description: "Tells the server what filter to apply to the image.",
+            examples: [],
+            requestBuilderPossibs: [...filterIDs],
+            required: true
+        }],
         queryDocs: [{
             query: 'dir',
             name: "Directory Name",
@@ -28,8 +39,8 @@ const route: CCOIcons.documentedRoute = {
             examples: [
                 {
                     name: "Directory",
-                    example: "/randomkuwaharafromdirectory?dir=C:",
-                    description: "Will scan C:\\ for images and return a random image from that directory, kuwahara-ified."
+                    example: "/randomfilterfromdirectory/kuwahara?dir=C:",
+                    description: "Will scan C:\\ for images and return a random image from that directory, filtered."
                 }
             ],
             requestBuilderPossibs: []
@@ -41,8 +52,11 @@ const route: CCOIcons.documentedRoute = {
 
         console.clear();
         const dirName = req.query.dir as string;
+        let filterName = req.params.filter as filterID;
         if (typeof dirName !== "string") return res.json({ success: false, message: "Failed to parse ?dir query parameter." });
         if (!fs.existsSync(dirName)) return res.json({ success: false, message: `Directory '${dirName}' does not exist.` });
+        if (!filterIDs.includes(filterName)) return res.json({ success: false, message: "Invalid filter supplied." })
+
         try {
             const acceptableFileExtensions = ['.png', '.jpeg', '.jpg'];
             const outputFileExtension = '.png';
@@ -51,14 +65,15 @@ const route: CCOIcons.documentedRoute = {
             if (files.length === 0) return res.json({ success: false, message: "Provided directory does not contain any valid files." });
 
             const inputFile = files[Math.floor(Math.random() * files.length)];
-            const outputDirectory = `${config.relativeRootDirectory}/ccicons/kuwaharaicons`;
+            console.log(`Total Files: ${files.length}`);
+            const outputDirectory = `${config.relativeRootDirectory}/ccicons/customfiltericons`;
             if (!fs.existsSync(outputDirectory)) fs.mkdirSync(outputDirectory, { recursive: true });
 
-            const outputFile = path.resolve(`${outputDirectory}/${Math.floor(Math.random() * 5000)}${path.basename(inputFile).replace(acceptableFileExtensions.find(fileExtension => inputFile.endsWith(fileExtension)) as string, outputFileExtension)}`);
+            const outputFile = path.resolve(`${outputDirectory}/${Math.floor(Math.random() * 5000)}${filterName}${path.basename(inputFile).replace(acceptableFileExtensions.find(fileExtension => inputFile.endsWith(fileExtension)) as string, outputFileExtension)}`);
             const inputImage = await Jimp.read(inputFile);
-            console.log(`\n- [Kuwahara Filter] -\nFile Information:\nPath: ${consoleHighlight(inputFile)}\nDimensions (original): ${consoleHighlight(`${(inputImage.bitmap.width.toLocaleString())}px x ${(inputImage.bitmap.height.toLocaleString())}px`)}`);
+            console.log(`\n- [${filterName} Filter] -\nFile Information:\nPath: ${consoleHighlight(inputFile)}\nDimensions (original): ${consoleHighlight(`${(inputImage.bitmap.width.toLocaleString())}px x ${(inputImage.bitmap.height.toLocaleString())}px`)}`);
 
-            const outputImage = await basicKuwaharaFilter(inputImage);
+            let outputImage = await applyImageEffect(inputImage, filterName, true);
 
             console.log(`\nOutput Information:\nFinal Dimensions: ${consoleHighlight(`${(outputImage.bitmap.width.toLocaleString())}px x ${(outputImage.bitmap.height.toLocaleString())}px`)}\nPixel Count: ${consoleHighlight(`${(outputImage.bitmap.width * outputImage.bitmap.height).toLocaleString()}px`)}`);
             console.log(`Output Directory: ${consoleHighlight(outputFile)}`);

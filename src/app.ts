@@ -34,6 +34,7 @@ import { boxContentsPreview } from './routes/boxcontentspreview';
 import { materialSpritesheet } from './routes/materialspritesheet';
 import { randomKuwaharaFromDirectory } from './routes/randomkuwaharafromdirectory';
 import { elementSpritesheet } from './routes/elementspritesheet';
+import { customBackgroundImage } from './routes/custombackgroundimage';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -96,7 +97,7 @@ const routes: CCOIcons.documentedRoute[] = [
         }
     },
     cubeIconRoute,
-    customBSideIconRoute,
+    // customBSideIconRoute,
     CCOHouTextureRoute,
     prefixIconRoute,
     directoryStructureRoute,
@@ -109,7 +110,8 @@ const routes: CCOIcons.documentedRoute[] = [
     boxContentsPreview,
     materialSpritesheet,
     randomKuwaharaFromDirectory,
-    elementSpritesheet
+    elementSpritesheet,
+    customBackgroundImage
 ];
 
 routes.forEach((routeInformation) => {

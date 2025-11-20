@@ -5,6 +5,7 @@ import * as gifwrap from 'gifwrap';
 import { coordinate, strokeMatrix } from 'src/typedefs';
 import * as config from './schematics/config';
 import { distanceBetweenPoints, leastCommonMultiple } from './maths';
+import { clampForRGB, luminanceFromColor } from './cubeiconutils';
 
 /**
  * Get the RGBA representation of a hex literal
@@ -19,6 +20,10 @@ function rgbaFromNumberLiteral(num: number) {
         blue: (num >> 8 & 255),
         alpha: (num & 255),
     }
+}
+
+function numberLiteralFromRGBA(r: number, g: number, b: number, a: number) {
+    return (Math.floor(clampForRGB(r)) * (2 ** 24)) + (Math.floor(clampForRGB(g)) * (2 ** 16)) + (Math.floor(clampForRGB(b)) * (2 ** 8)) + Math.floor(clampForRGB(a));
 }
 
 /**
@@ -309,6 +314,78 @@ function drawLine(image: Jimp, color: number, startPoint: coordinate, endPoint: 
     }
 }
 
+// Functions below created by Kamil Kiełczewski on StackOverflow
+function rgb2hsv(r: number, g: number, b: number): [number, number, number] {
+    let v = Math.max(r, g, b), c = v - Math.min(r, g, b);
+    let h = c && ((v == r) ? (g - b) / c : ((v == g) ? 2 + (b - r) / c : 4 + (r - g) / c));
+    return [60 * (h < 0 ? h + 6 : h), v && c / v, v];
+}
+function hsv2rgb(h: number, s: number, v: number): [number, number, number] {
+    let f = (n: number, k = (n + h / 60) % 6) => v - v * s * Math.max(Math.min(k, 4 - k, 1), 0);
+    return [f(5), f(3), f(1)];
+}
+function hsl2rgb(h: number, s: number, l: number): [number, number, number] {
+    let a = s * Math.min(l, 1 - l);
+    let f = (n: number, k = (n + h / 30) % 12) => l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return [f(0), f(8), f(4)];
+}
+function rgb2hsl(r: number, g: number, b: number): [number, number, number] {
+    let v = Math.max(r, g, b), c = v - Math.min(r, g, b), f = (1 - Math.abs(v + v - c - 1));
+    let h = c && ((v == r) ? (g - b) / c : ((v == g) ? 2 + (b - r) / c : 4 + (r - g) / c));
+    return [60 * (h < 0 ? h + 6 : h), f ? c / f : 0, (v + v - c) / 2];
+}
+
+async function hueShiftImage(image: Jimp, degrees: number) {
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(x, y, idx) {
+        const HSV: [number, number, number] = rgb2hsv(image.bitmap.data[idx + 0]/255, image.bitmap.data[idx + 1]/255, image.bitmap.data[idx + 2]/255);
+        HSV[0] = (HSV[0] + degrees) % 360;
+        if (HSV[0] < 0) HSV[0] = HSV[0] + 360;
+        const newRGB = hsv2rgb(...HSV);
+        image.bitmap.data[idx + 0] = Math.floor(newRGB[0] * 255);
+        image.bitmap.data[idx + 1] = Math.floor(newRGB[1] * 255);
+        image.bitmap.data[idx + 2] = Math.floor(newRGB[2] * 255);
+    })
+
+    return image;
+}
+
+async function saturateImage(image: Jimp, saturationIncrease: number) {
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
+        const HSV: [number, number, number] = rgb2hsv(image.bitmap.data[idx + 0] / 255, image.bitmap.data[idx + 1] / 255, image.bitmap.data[idx + 2] / 255);
+        HSV[1] = Math.max(0, (Math.min(1, HSV[1] += saturationIncrease)));
+        const newRGB = hsv2rgb(...HSV);
+        image.bitmap.data[idx + 0] = clampForRGB(newRGB[0] * 255);
+        image.bitmap.data[idx + 1] = clampForRGB(newRGB[1] * 255);
+        image.bitmap.data[idx + 2] = clampForRGB(newRGB[2] * 255);
+    })
+
+    return image;
+}
+
+async function vibrantizeImage(image: Jimp, vibranceAddition: number) {
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
+        const HSV: [number, number, number] = rgb2hsv(image.bitmap.data[idx + 0] / 255, image.bitmap.data[idx + 1] / 255, image.bitmap.data[idx + 2] / 255);
+        HSV[2] = Math.max(0, (Math.min(1, HSV[2] += vibranceAddition)));
+        const newRGB = hsv2rgb(...HSV);
+        image.bitmap.data[idx + 0] = clampForRGB(newRGB[0] * 255);
+        image.bitmap.data[idx + 1] = clampForRGB(newRGB[1] * 255);
+        image.bitmap.data[idx + 2] = clampForRGB(newRGB[2] * 255);
+    })
+
+    return image;
+}
+
+async function brightenImage(image: Jimp, brightnessFactor: number) {
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
+        const brightnessChange = 255 * brightnessFactor;
+        image.bitmap.data[idx + 0] = clampForRGB(image.bitmap.data[idx + 0] + (brightnessChange));
+        image.bitmap.data[idx + 1] = clampForRGB(image.bitmap.data[idx + 1] + (brightnessChange));
+        image.bitmap.data[idx + 2] = clampForRGB(image.bitmap.data[idx + 2] + (brightnessChange));
+    })
+
+    return image;
+}
+
 export {
     fillRect,
     rgbaFromNumberLiteral,
@@ -318,5 +395,14 @@ export {
     drawLine,
     parseHorizontalSpriteSheet,
     generateSmallWordImage,
-    fillHollowRect
+    fillHollowRect,
+    saturateImage,
+    hueShiftImage,
+    vibrantizeImage,
+    brightenImage,
+    rgb2hsv,
+    hsv2rgb,
+    hsl2rgb,
+    rgb2hsl,
+    numberLiteralFromRGBA
 }

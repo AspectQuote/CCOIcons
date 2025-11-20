@@ -10,7 +10,7 @@ export async function basicKuwaharaFilter(sourceImage: Jimp) {
     }
     
     const outputImage = new Jimp(sourceImage.bitmap.width, sourceImage.bitmap.height, 0x00000000);
-    const kernelSize = 5;
+    const kernelSize = 4;
     console.log(`[Kuwahara] Kernel size: ${kernelSize}`);
     
     sourceImage.scan(0, 0, sourceImage.bitmap.width, sourceImage.bitmap.height, function (sourceX, sourceY, sourceIDX) {

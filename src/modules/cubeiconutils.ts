@@ -411,7 +411,7 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
         frameModifiers: [],
         outlineFrames: [],
         maskFrames: [],
-        sourceID: "Sacred"
+        sourceID: "sacred"
     }], iconFrames[0].bitmap.width, iconFrames[0].bitmap.height);
 
     await compilePrefixFrames(true, {
@@ -1025,6 +1025,86 @@ async function generateCubeIcon(iconAttributes: Partial<cubeIconGenerationParame
     return path.resolve(`${config.relativeRootDirectory}${imageDirectories.join('')}${fileName}`);
 }
 
+function linearizeChannel(channel: number) {
+    if (channel < 0.04045) {
+        return channel/12.92;
+    } else {
+        return Math.pow((channel + 0.055)/1.055, 2.4);
+    }
+}
+
+const luminanceDelta = 6 / 29;
+const threeLuminanceDeltaSquared = Math.pow(luminanceDelta, 2) * 3;
+const luminanceDeltaCubed = Math.pow(luminanceDelta, 3);
+function luminanceFromColor(color: number) {
+    // r = COLOR >> 24 & 0xff
+    // g = COLOR >> 16 & 0xff
+    // b = COLOR >> 8 & 0xff
+    const Y = (linearizeChannel((color >> 24 & 0xff) / 0xff) * 0.2126) + (linearizeChannel((color >> 16 & 0xff) / 0xff) * 0.7152) + (linearizeChannel((color >> 8 & 0xff) / 0xff) * 0.0722);
+
+    let L = 0;
+    if (Y > luminanceDeltaCubed) {
+        L = Math.cbrt(Y);
+    } else {
+        L = (Y/threeLuminanceDeltaSquared) + (4/29);
+    }
+
+    const finalLuminance = ((116 * L) - 16)/100;
+    // console.log(finalLuminance);
+    return finalLuminance;
+}
+
+function twoDimensionalGaussianFunction(x: number, y: number, stdDev: number) {
+    const eulerTerm = Math.E ** (((x ** 2) + (y ** 2)) / (2 * (stdDev ** 2)));
+    return 1 / (2 * Math.PI * (stdDev ** 2) * eulerTerm);
+}
+
+function generateGaussianMatrix(radius: number) {
+    const outputArray: number[][] = [];
+    const deviation = radius / (2 * Math.sqrt(Math.PI));
+
+    for (let yIndex = -radius; yIndex < radius + 1; yIndex++) {
+        const row: number[] = [];
+        for (let xIndex = -radius; xIndex < radius + 1; xIndex++) {
+            const trueX = xIndex;
+            const trueY = yIndex;
+            row.push(twoDimensionalGaussianFunction(trueX, trueY, deviation));
+        }
+        outputArray.push(row);
+    }
+
+    return outputArray;
+}
+
+export async function gaussianBlur(sourceImage: Jimp, radius: number) {
+    const outputImage = sourceImage.clone();
+    const matrix = generateGaussianMatrix(radius);
+
+    outputImage.scan(0, 0, outputImage.bitmap.width, outputImage.bitmap.height, function (x, y, idx) {
+        let accumulatedRGB: [number, number, number] = [0, 0, 0];
+        for (let yIndex = -radius; yIndex < radius + 1; yIndex++) {
+            for (let xIndex = -radius; xIndex < radius + 1; xIndex++) {
+                const sourceIndex = sourceImage.getPixelIndex(x + xIndex, y + yIndex);
+                const matrixValue = matrix[yIndex + radius][xIndex + radius];
+
+                accumulatedRGB[0] += sourceImage.bitmap.data[sourceIndex + 0] * matrixValue;
+                accumulatedRGB[1] += sourceImage.bitmap.data[sourceIndex + 1] * matrixValue;
+                accumulatedRGB[2] += sourceImage.bitmap.data[sourceIndex + 2] * matrixValue;
+            }
+        }
+
+        outputImage.bitmap.data[idx + 0] = clampForRGB(Math.floor(accumulatedRGB[0]));
+        outputImage.bitmap.data[idx + 1] = clampForRGB(Math.floor(accumulatedRGB[1]));
+        outputImage.bitmap.data[idx + 2] = clampForRGB(Math.floor(accumulatedRGB[2]));
+    })
+
+    return outputImage;
+}
+
+export function clampForRGB(value: number) {
+    return Math.min(255, Math.max(0, value));
+}
+
 export {
     getSeededIconRNGValues,
     getPatternedIconAndPartDirectory,
@@ -1034,5 +1114,7 @@ export {
     generatePrefixedCube,
     customSeededCubes,
     type cubeIconGenerationParameters,
-    generateCubeIcon
+    generateCubeIcon,
+    luminanceFromColor,
+    generateGaussianMatrix
 }
