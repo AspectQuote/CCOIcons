@@ -1,6 +1,7 @@
 import { methods } from "@jimp/plugin-quantize";
-import { generateGaussianMatrix, luminanceFromColor } from './cubeiconutils';
+import { clampForRGB, generateGaussianMatrix, luminanceFromColor } from './cubeiconutils';
 import Jimp from "jimp";
+import { quantizeImage } from "./quantize";
 
 let bayer2x2 = [
     [0, 2],
@@ -85,25 +86,25 @@ function generateBayerMatrix(magnitude: number) {
 let screenToneMatrix = (() => {
     let outputMatrix: number[][] = [];
     const matrixRadius = 4;
-    const maxDistance = (matrixRadius) * Math.SQRT2;
+    const maxDistance = ((matrixRadius * 2) * Math.SQRT2);
 
     for (let yIndex = -matrixRadius; yIndex < matrixRadius + 1; yIndex++) {
         const newRow: number[] = [];
         for (let xIndex = -matrixRadius; xIndex < matrixRadius + 1; xIndex++) {
             const distance = Math.sqrt((yIndex ** 2) + (xIndex ** 2));
-            newRow.push(1-(distance/maxDistance));
+            newRow.push((1-(distance/maxDistance)) ** 2);
         }
         outputMatrix.push(newRow);
     }
 
-    outputMatrix.push(...structuredClone(outputMatrix));
+    // outputMatrix.push(...structuredClone(outputMatrix));
 
-    const shiftOperations = matrixRadius + 1;
-    for (let rowIndex = 0; rowIndex < matrixRadius * 2 + 1; rowIndex++) {
-        for (let shiftIndex = 0; shiftIndex < shiftOperations; shiftIndex++) {
-            outputMatrix[rowIndex].push(outputMatrix[rowIndex].shift() ?? 0);
-        }
-    }
+    // const shiftOperations = matrixRadius + 1;
+    // for (let rowIndex = 0; rowIndex < matrixRadius * 2 + 1; rowIndex++) {
+    //     for (let shiftIndex = 0; shiftIndex < shiftOperations; shiftIndex++) {
+    //         outputMatrix[rowIndex].push(outputMatrix[rowIndex].shift() ?? 0);
+    //     }
+    // }
 
     return outputMatrix;
 })()
@@ -172,23 +173,23 @@ export async function generateTwoToneImage(image: Jimp, matrix: Parameters<typeo
     return newImage.resize(newImage.bitmap.width * scaleFactor, newImage.bitmap.height * scaleFactor, Jimp.RESIZE_NEAREST_NEIGHBOR);
 }
 
-export async function ditherImage(image: Jimp, matrix: Parameters<typeof getDitheringMatrix>[0] = 4, scaleFactor: number = 4, colors: number = 64) {
-    const trueScaleFactor = Math.max(scaleFactor, Math.ceil(Math.sqrt(image.bitmap.width * image.bitmap.height) / 256));
-    const resizedImage = image.resize(image.bitmap.width * (1 / trueScaleFactor), image.bitmap.height * (1 / trueScaleFactor));
+export async function ditherImage(image: Jimp, matrix: Parameters<typeof getDitheringMatrix>[0] = 8, spread: number = 0.1, colorsPerChannel: number = 4, scaleFactor: number = 3) {
     let usingMatrix: number[][] = getDitheringMatrix(matrix);
 
-    const maskImage = new Jimp(resizedImage.bitmap.width, resizedImage.bitmap.height, 0x00000000);
-    resizedImage.scan(0, 0, resizedImage.bitmap.width, resizedImage.bitmap.height, function(x, y, idx) {
-        const matrixValue = usingMatrix[x % usingMatrix.length][y % usingMatrix.length];
-        const luminance = luminanceFromColor(this.getPixelColor(x, y));
-        if (luminance < matrixValue) maskImage.bitmap.data[idx + 3] = Math.floor(255/8);
+    image.resize(Math.floor(image.bitmap.width/scaleFactor), Math.floor(image.bitmap.height/scaleFactor), Jimp.RESIZE_BILINEAR);
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(x, y, idx) {
+        const matrixValue = Math.max(0, Math.min(1, (usingMatrix[y % usingMatrix.length][x % usingMatrix[y % usingMatrix.length].length] - 0.5) * spread));
+        image.bitmap.data[idx + 0] = clampForRGB(Math.floor(((image.bitmap.data[idx + 0] / 255) + matrixValue) * 255));
+        image.bitmap.data[idx + 1] = clampForRGB(Math.floor(((image.bitmap.data[idx + 1] / 255) + matrixValue) * 255));
+        image.bitmap.data[idx + 2] = clampForRGB(Math.floor(((image.bitmap.data[idx + 2] / 255) + matrixValue) * 255));
     });
 
-    return methods.quantize(resizedImage.composite(maskImage, 0, 0), { colors: Math.floor(colors) }).resize(resizedImage.bitmap.width * trueScaleFactor, resizedImage.bitmap.height * trueScaleFactor, Jimp.RESIZE_NEAREST_NEIGHBOR);
+    // return image
+    return (await quantizeImage(image, colorsPerChannel)).resize(Math.floor(image.bitmap.width * scaleFactor), Math.floor(image.bitmap.height * scaleFactor), Jimp.RESIZE_NEAREST_NEIGHBOR);
 }
 
 export async function fakeDither(image: Jimp, matrix: Parameters<typeof getDitheringMatrix>[0] = 4, scaleFactor: number = 2) {
-    const ditherToneImage = await generateTwoToneImage(image.clone(), matrix, scaleFactor, 0x00000000, 0x00000022);
-    
+    const ditherToneImage = await generateTwoToneImage(image.clone(), matrix, scaleFactor, 0x00000000, 0x00000044);
+
     return image.composite(ditherToneImage, 0, 0);
 }

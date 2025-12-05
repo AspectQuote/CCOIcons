@@ -10,12 +10,16 @@ export async function basicKuwaharaFilter(sourceImage: Jimp) {
     }
     
     const outputImage = new Jimp(sourceImage.bitmap.width, sourceImage.bitmap.height, 0x00000000);
-    const kernelSize = 4;
+    const kernelSize = 5;
     console.log(`[Kuwahara] Kernel size: ${kernelSize}`);
     
     sourceImage.scan(0, 0, sourceImage.bitmap.width, sourceImage.bitmap.height, function (sourceX, sourceY, sourceIDX) {
         // if (x > kernelSize && y > kernelSize && x < sourceImage.bitmap.width - 1 - kernelSize && y < sourceImage.bitmap.height - 1 - kernelSize) {
             const adjacentColorGroups: { r: number, g: number, b: number, deviation: number }[] = [];
+
+            function simpleReducer(a: number, b: number) {
+                return a + b;
+            }
 
             for (let quadrantIndex = 0; quadrantIndex < 4; quadrantIndex++) {
                 const xKernelMultiplier = (quadrantIndex % 2 == 1) ? 0 : -1;
@@ -36,15 +40,15 @@ export async function basicKuwaharaFilter(sourceImage: Jimp) {
                     }
                 })
                 if (colorGroup.r.length !== 0) {
-                    const totalR = colorGroup.r.reduce((a, b) => { return a + b }, 0);
+                    const totalR = colorGroup.r.reduce(simpleReducer, 0);
                     const meanR = totalR / colorGroup.r.length;
                     const RDeviation = Math.sqrt(colorGroup.r.reduce((a, b) => { return Math.pow(b - meanR, 2) + a }, 0) / colorGroup.r.length);
     
-                    const totalG = colorGroup.g.reduce((a, b) => { return a + b }, 0);
+                    const totalG = colorGroup.g.reduce(simpleReducer, 0);
                     const meanG = totalG / colorGroup.g.length;
                     const GDeviation = Math.sqrt(colorGroup.g.reduce((a, b) => { return Math.pow(b - meanG, 2) + a }, 0) / colorGroup.g.length);
     
-                    const totalB = colorGroup.b.reduce((a, b) => { return a + b }, 0);
+                    const totalB = colorGroup.b.reduce(simpleReducer, 0);
                     const meanB = totalB / colorGroup.b.length;
                     const BDeviation = Math.sqrt(colorGroup.b.reduce((a, b) => { return Math.pow(b - meanB, 2) + a }, 0) / colorGroup.b.length);
     

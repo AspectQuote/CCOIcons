@@ -4,14 +4,11 @@ import * as path from 'node:path';
 import Jimp from 'jimp';
 import * as fs from 'fs-extra';
 
-import { applyImageEffect } from '../modules/imageeffects';
+import { applyImageEffect, filterID, filterIDs } from '../modules/imageeffects';
 
 function consoleHighlight(input: string) {
     return `\x1b[33m${input}\x1b[0m`;
 }
-
-const filterIDs = ["specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
-type filterID = typeof filterIDs[number];
 
 const route: CCOIcons.documentedRoute = {
     routes: ['/randomfilterfromdirectory/:filter'],
@@ -69,9 +66,10 @@ const route: CCOIcons.documentedRoute = {
             const outputDirectory = `${config.relativeRootDirectory}/ccicons/customfiltericons`;
             if (!fs.existsSync(outputDirectory)) fs.mkdirSync(outputDirectory, { recursive: true });
 
+            console.log(`\n- [${filterName} Filter] -\nFile Information:\nPath: ${consoleHighlight(inputFile)}`);
             const outputFile = path.resolve(`${outputDirectory}/${Math.floor(Math.random() * 5000)}${filterName}${path.basename(inputFile).replace(acceptableFileExtensions.find(fileExtension => inputFile.endsWith(fileExtension)) as string, outputFileExtension)}`);
             const inputImage = await Jimp.read(inputFile);
-            console.log(`\n- [${filterName} Filter] -\nFile Information:\nPath: ${consoleHighlight(inputFile)}\nDimensions (original): ${consoleHighlight(`${(inputImage.bitmap.width.toLocaleString())}px x ${(inputImage.bitmap.height.toLocaleString())}px`)}`);
+            console.log(`Dimensions (original): ${consoleHighlight(`${(inputImage.bitmap.width.toLocaleString())}px x ${(inputImage.bitmap.height.toLocaleString())}px`)}`);
 
             let outputImage = await applyImageEffect(inputImage, filterName, true);
 

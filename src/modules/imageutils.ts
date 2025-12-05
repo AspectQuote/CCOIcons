@@ -362,6 +362,19 @@ async function saturateImage(image: Jimp, saturationIncrease: number) {
     return image;
 }
 
+async function setImageSaturate(image: Jimp, saturation: number) {
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
+        const HSV: [number, number, number] = rgb2hsv(image.bitmap.data[idx + 0] / 255, image.bitmap.data[idx + 1] / 255, image.bitmap.data[idx + 2] / 255);
+        HSV[1] = Math.max(0, (Math.min(1, saturation)));
+        const newRGB = hsv2rgb(...HSV);
+        image.bitmap.data[idx + 0] = clampForRGB(newRGB[0] * 255);
+        image.bitmap.data[idx + 1] = clampForRGB(newRGB[1] * 255);
+        image.bitmap.data[idx + 2] = clampForRGB(newRGB[2] * 255);
+    })
+
+    return image;
+}
+
 async function vibrantizeImage(image: Jimp, vibranceAddition: number) {
     image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
         const HSV: [number, number, number] = rgb2hsv(image.bitmap.data[idx + 0] / 255, image.bitmap.data[idx + 1] / 255, image.bitmap.data[idx + 2] / 255);
@@ -386,6 +399,13 @@ async function brightenImage(image: Jimp, brightnessFactor: number) {
     return image;
 }
 
+async function generateImageComparison(image1: Jimp, image2: Jimp) {
+    const newImage = new Jimp(image1.bitmap.width + image2.bitmap.width, Math.max(image1.bitmap.height, image2.bitmap.height));
+    newImage.composite(image1, 0, 0);
+    newImage.composite(image2, image1.bitmap.width, 0);
+    return newImage;
+}
+
 export {
     fillRect,
     rgbaFromNumberLiteral,
@@ -404,5 +424,7 @@ export {
     hsv2rgb,
     hsl2rgb,
     rgb2hsl,
-    numberLiteralFromRGBA
+    numberLiteralFromRGBA,
+    setImageSaturate,
+    generateImageComparison
 }

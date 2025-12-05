@@ -1059,9 +1059,9 @@ function twoDimensionalGaussianFunction(x: number, y: number, stdDev: number) {
     return 1 / (2 * Math.PI * (stdDev ** 2) * eulerTerm);
 }
 
-function generateGaussianMatrix(radius: number) {
+function generateGaussianMatrix(radius: number, deviationOverride: number | false = false) {
     const outputArray: number[][] = [];
-    const deviation = radius / (2 * Math.sqrt(Math.PI));
+    const deviation = (typeof deviationOverride === "number") ? deviationOverride : radius / (2 * Math.sqrt(Math.PI));
 
     for (let yIndex = -radius; yIndex < radius + 1; yIndex++) {
         const row: number[] = [];
@@ -1076,9 +1076,9 @@ function generateGaussianMatrix(radius: number) {
     return outputArray;
 }
 
-export async function gaussianBlur(sourceImage: Jimp, radius: number) {
+export async function gaussianBlur(sourceImage: Jimp, radius: number, deviationOverride: number | false = false) {
     const outputImage = sourceImage.clone();
-    const matrix = generateGaussianMatrix(radius);
+    const matrix = generateGaussianMatrix(radius, deviationOverride);
 
     outputImage.scan(0, 0, outputImage.bitmap.width, outputImage.bitmap.height, function (x, y, idx) {
         let accumulatedRGB: [number, number, number] = [0, 0, 0];

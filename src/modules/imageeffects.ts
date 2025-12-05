@@ -1,4 +1,4 @@
-import { brightenImage, hsv2rgb, hueShiftImage, numberLiteralFromRGBA, saturateImage, vibrantizeImage } from './imageutils';
+import { brightenImage, generateImageComparison, hsv2rgb, hueShiftImage, numberLiteralFromRGBA, saturateImage, setImageSaturate, vibrantizeImage } from './imageutils';
 import { clampForRGB, gaussianBlur } from './cubeiconutils';
 import Jimp from 'jimp';
 
@@ -8,13 +8,14 @@ import { basicKuwaharaFilter } from './basickuwahara';
 import { generateContrastMask, generateContrastMaskComparison } from './contrastmask';
 import { createBSideV2Image } from './bsidev2';
 import { generatePopArtFourSquare } from './popartfoursquare';
-import { gaussianEdgeDetection, sharpenImage } from './sharpness';
+import { gaussianEdgeDetection, sharpenedImageComparison, sharpenImage } from './sharpness';
 import { sepia } from './sepia';
 import { chromaticAbberation } from './abberation';
 import { CRTEffect } from './crtscreen';
 import { mosaicEffect } from './mosaic';
+import { quantizeImage } from './quantize';
 
-export const filterIDs = ["specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
+export const filterIDs = ["quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
 export type filterID = typeof filterIDs[number];
 
 export async function applyImageEffect(inputImage: Jimp, filterName: filterID, randomParameters: boolean) {
@@ -29,6 +30,10 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
     const contrastMaskHigh = 0.8;
     const gaussianRadius = 5;
     const usingDitherMatrix = 8;
+    const quantizeColors = 12;
+    const ditherSpread = 0.1;
+    const ditherScaleFactor = 3;
+    const sharpnessIntensity = 2;
 
     let twoToneHSV: number[];
 
@@ -43,11 +48,9 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
     const twoTonesLowTone = numberLiteralFromRGBA(twoTonesLowRGB[0], twoTonesLowRGB[1], twoTonesLowRGB[2], 0xff);
 
     const maxPixels = 1100 ** 2;
-    if (inputImage.bitmap.width * inputImage.bitmap.height > maxPixels) {
-        const scaleChange = Math.sqrt(maxPixels / (inputImage.bitmap.width * inputImage.bitmap.height));
-        console.log(`\n[Filters] Scale Change Applied. Original Pixel Count: ${inputImage.bitmap.width * inputImage.bitmap.height}\nNew Pixel Count: ${inputImage.bitmap.width * scaleChange * inputImage.bitmap.height * scaleChange}`);
-        inputImage.resize(Math.ceil(inputImage.bitmap.width * scaleChange), Math.ceil(inputImage.bitmap.height * scaleChange), Jimp.RESIZE_BILINEAR);
-    }
+    const scaleChange = Math.sqrt(maxPixels / (inputImage.bitmap.width * inputImage.bitmap.height));
+    console.log(`\n[Filters] Scale Change Applied. Original Pixel Count: ${inputImage.bitmap.width * inputImage.bitmap.height}\nNew Pixel Count: ${inputImage.bitmap.width * scaleChange * inputImage.bitmap.height * scaleChange}`);
+    inputImage.resize(Math.ceil(inputImage.bitmap.width * scaleChange), Math.ceil(inputImage.bitmap.height * scaleChange), Jimp.RESIZE_BICUBIC);
 
     let outputImage: Jimp;
 
@@ -66,9 +69,10 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             break;
         case "bside":
             outputImage = await createBSideV2Image(inputImage, undefined, 4);
+            // outputImage = await quantizeImage(outputImage, quantizeColors);
             break;
         case "dither":
-            outputImage = await ditherImage(inputImage, usingDitherMatrix);
+            outputImage = await ditherImage(inputImage, usingDitherMatrix, ditherSpread, quantizeColors, ditherScaleFactor);
             break;
         case "twotone":
             outputImage = await generateTwoToneImage(inputImage, usingDitherMatrix, undefined, twoTonesHighTone, twoTonesLowTone);
@@ -77,10 +81,13 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = await generatePopArtFourSquare(inputImage);
             break;
         case "sharpen":
-            outputImage = await sharpenImage(inputImage, 1, gaussianRadius);
+            // const oldInput = inputImage.clone();
+            outputImage = await sharpenImage(inputImage, sharpnessIntensity, gaussianRadius);
+            // outputImage = await generateImageComparison(oldInput, outputImage);
+            // outputImage = await sharpenedImageComparison(inputImage);
             break;
         case "extremesharpen":
-            outputImage = await sharpenImage(inputImage, 3, gaussianRadius);
+            outputImage = await sharpenImage(inputImage, sharpnessIntensity * 1.5, gaussianRadius);
             break;
         case "edgedetection":
             outputImage = await gaussianEdgeDetection(inputImage, gaussianRadius);
@@ -89,11 +96,11 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = await sepia(inputImage);
             break;
         case "sharpenanddither":
-            outputImage = await sharpenImage(inputImage, 3, gaussianRadius);
-            outputImage = await ditherImage(outputImage, usingDitherMatrix);
+            outputImage = await sharpenImage(inputImage, sharpnessIntensity, gaussianRadius);
+            outputImage = await ditherImage(outputImage, usingDitherMatrix, ditherSpread, quantizeColors, ditherScaleFactor);
             break;
         case "sepiaandsharpen":
-            outputImage = await sharpenImage(inputImage, 1, gaussianRadius);
+            outputImage = await sharpenImage(inputImage, sharpnessIntensity, gaussianRadius);
             outputImage = await sepia(outputImage);
             break;
         case "hueshift":
@@ -128,6 +135,10 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
         case "fakedither":
             outputImage = await fakeDither(inputImage, undefined, 3);
             break;
+        case "fakescreentone":
+            outputImage = await setImageSaturate(inputImage, 0);
+            outputImage = await fakeDither(outputImage, "screentone", 1);
+            break;
         case "screentone":
             outputImage = await generateTwoToneImage(inputImage, "screentone", 1, twoTonesHighTone, twoTonesLowTone);
             break;
@@ -149,6 +160,9 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = new Jimp(outputImage.bitmap.width * 2, outputImage.bitmap.height)
                 .composite(outputImage, 0, 0)
                 .composite(originalCustomImage, outputImage.bitmap.width, 0);
+            break;
+        case "quantize":
+            outputImage = await quantizeImage(inputImage, quantizeColors);
             break;
         default:
             outputImage = inputImage.clone();
