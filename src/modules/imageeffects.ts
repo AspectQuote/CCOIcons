@@ -8,14 +8,16 @@ import { basicKuwaharaFilter } from './basickuwahara';
 import { generateContrastMask, generateContrastMaskComparison } from './contrastmask';
 import { createBSideV2Image } from './bsidev2';
 import { generatePopArtFourSquare } from './popartfoursquare';
-import { gaussianEdgeDetection, sharpenedImageComparison, sharpenImage } from './sharpness';
+import { darkenedEdgeImage, gaussianEdgeDetection, separatedGaussianEdgeDetection, sharpenedImageComparison, sharpenImage, theresholdEdgeDetection } from './sharpness';
 import { sepia } from './sepia';
 import { chromaticAbberation } from './abberation';
 import { CRTEffect } from './crtscreen';
 import { mosaicEffect } from './mosaic';
 import { quantizeImage } from './quantize';
+import { separatedGaussianBlur } from './separatedgaussian';
+import { applyShear, rotateImage } from './matrixtransforms';
 
-export const filterIDs = ["quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
+export const filterIDs = ["shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
 export type filterID = typeof filterIDs[number];
 
 export async function applyImageEffect(inputImage: Jimp, filterName: filterID, randomParameters: boolean) {
@@ -28,7 +30,7 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
     const pixelSortDirections = ["rtl", "ltr", "btt", "ttb"] as const;
     const contrastMaskLow = 0.05;
     const contrastMaskHigh = 0.8;
-    const gaussianRadius = 5;
+    const gaussianRadius = 12;
     const usingDitherMatrix = 8;
     const quantizeColors = 12;
     const ditherSpread = 0.1;
@@ -82,7 +84,8 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             break;
         case "sharpen":
             // const oldInput = inputImage.clone();
-            outputImage = await sharpenImage(inputImage, sharpnessIntensity, gaussianRadius);
+            // outputImage = await generateImageComparison(await generateImageComparison(await sharpenImage(inputImage.clone(), sharpnessIntensity, gaussianRadius, "quality"), inputImage.clone()), await sharpenImage(inputImage.clone(), sharpnessIntensity, gaussianRadius, "fast"));
+            outputImage = await sharpenImage(inputImage.clone(), sharpnessIntensity, gaussianRadius, "fast");
             // outputImage = await generateImageComparison(oldInput, outputImage);
             // outputImage = await sharpenedImageComparison(inputImage);
             break;
@@ -90,7 +93,13 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = await sharpenImage(inputImage, sharpnessIntensity * 1.5, gaussianRadius);
             break;
         case "edgedetection":
-            outputImage = await gaussianEdgeDetection(inputImage, gaussianRadius);
+            outputImage = await separatedGaussianEdgeDetection(inputImage, gaussianRadius);
+            break;
+        case "theresholdedgedetection":
+            outputImage = await theresholdEdgeDetection(inputImage, gaussianRadius);
+            break;
+        case "darkenededges":
+            outputImage = await darkenedEdgeImage(inputImage, Math.ceil(gaussianRadius/2));
             break;
         case "sepia":
             outputImage = await sepia(inputImage);
@@ -144,18 +153,21 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             break;
         case "specialscreentone":
             outputImage = await vibrantizeImage(inputImage, -0.2);
-            outputImage = await sharpenImage(outputImage, 3, gaussianRadius);
+            outputImage = await sharpenImage(outputImage, 3, gaussianRadius, "fast");
             outputImage = await generateTwoToneImage(outputImage, "screentone", 1, twoTonesHighTone, twoTonesLowTone);
-            outputImage = await gaussianBlur(outputImage, 2);
+            outputImage = await separatedGaussianBlur(outputImage, 2);
             break;
         case "custom":
             const originalCustomImage = inputImage.clone();
 
             outputImage = inputImage;
-            outputImage = await vibrantizeImage(outputImage, -0.2);
-            outputImage = await sharpenImage(outputImage, 3, gaussianRadius);
-            outputImage = await generateTwoToneImage(outputImage, "screentone", 1, twoTonesHighTone, twoTonesLowTone);
-            outputImage = await gaussianBlur(outputImage, 2);
+            // outputImage = await ditherImage(outputImage, usingDitherMatrix, ditherSpread, quantizeColors, ditherScaleFactor);
+            outputImage = await generateTwoToneImage(outputImage, usingDitherMatrix, ditherScaleFactor * 5);
+            outputImage = await darkenedEdgeImage(inputImage, gaussianRadius);
+            // outputImage = await vibrantizeImage(outputImage, -0.2);
+            // outputImage = await sharpenImage(outputImage, 3, gaussianRadius, "fast");
+            // outputImage = await generateTwoToneImage(outputImage, "screentone", 1, twoTonesHighTone, twoTonesLowTone);
+            // outputImage = await separatedGaussianBlur(outputImage, 2);
             // outputImage = await mosaicEffect(outputImage, 3, undefined, undefined, 8);
             outputImage = new Jimp(outputImage.bitmap.width * 2, outputImage.bitmap.height)
                 .composite(outputImage, 0, 0)
@@ -163,6 +175,19 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             break;
         case "quantize":
             outputImage = await quantizeImage(inputImage, quantizeColors);
+            break;
+        case "separatedgaussian":
+            outputImage = await separatedGaussianBlur(inputImage, gaussianRadius);
+            break;
+        case "rotate":
+            const rot = 2 * Math.PI * Math.random();
+            outputImage = await rotateImage(inputImage, rot);
+            break;
+        case "shearx":
+            outputImage = await applyShear(inputImage, Math.random() * ((Math.random() > 0.5) ? -1 : 1));
+            break;
+        case "sheary":
+            outputImage = await applyShear(inputImage, undefined, Math.random() * ((Math.random() > 0.5) ? -1 : 1));
             break;
         default:
             outputImage = inputImage.clone();

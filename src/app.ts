@@ -35,6 +35,7 @@ import { materialSpritesheet } from './routes/materialspritesheet';
 import { randomKuwaharaFromDirectory } from './routes/randomkuwaharafromdirectory';
 import { elementSpritesheet } from './routes/elementspritesheet';
 import { customBackgroundImage } from './routes/custombackgroundimage';
+import { badgeSpriteSheet } from './routes/badgespritesheet';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -111,7 +112,8 @@ const routes: CCOIcons.documentedRoute[] = [
     materialSpritesheet,
     randomKuwaharaFromDirectory,
     elementSpritesheet,
-    customBackgroundImage
+    customBackgroundImage,
+    badgeSpriteSheet
 ];
 
 routes.forEach((routeInformation) => {
