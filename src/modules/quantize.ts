@@ -14,3 +14,8 @@ export async function quantizeImage(image: Jimp, colorsPerChannel: number): Prom
 
     return image;
 }
+
+export function quantizePixel(pixel: [number, number, number], colorsPerChannel: number): [number, number, number] {
+    const nM1 = Math.floor(colorsPerChannel) - 1;
+    return [modifyChannel(pixel[0] / 255, nM1), modifyChannel(pixel[1] / 255, nM1), modifyChannel(pixel[2] / 255, nM1)] as [number, number, number];
+}

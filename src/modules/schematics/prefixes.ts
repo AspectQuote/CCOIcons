@@ -5,6 +5,7 @@ import * as fs from 'fs-extra';
 import Jimp from 'jimp';
 import * as maths from '../maths';
 import { fillHollowRect, fillRect, generateSmallWordImage, loadAnimatedCubeIcon, parseHorizontalSpriteSheet, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
+import { blueprintify } from '../blueprint';
 let seedrandom: new (seed: string) => () => number = require('seedrandom');
 
 /**
@@ -6910,6 +6911,26 @@ const prefixes = {
                 }
 
                 prefixFrames.frontFrames.push(constructedFrame);
+            }
+
+            return prefixFrames;
+        }
+    },
+    /* "constructive": {
+        name: "Constructive",
+        tags: ["appliesDirectlyAfterAllPrefixes"],
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            const prefixFrames = structuredClone(basePrefixReturnObject);
+
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex];
+                prefixFrames.maskFrames.push(await blueprintify(iconFrame.clone()));
             }
 
             return prefixFrames;

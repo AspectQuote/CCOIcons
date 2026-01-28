@@ -1,4 +1,5 @@
 import Jimp from "jimp";
+import { generateTwoToneImage, getDitheringMatrix } from "./dither";
 
 export type LinearMatrix = [
     [number, number],
@@ -51,4 +52,29 @@ export function generateInverseLinearMatrix(matrix: LinearMatrix) {
         [ matrix[1][1] * inversionConstant, -matrix[0][1] * inversionConstant ],
         [ -matrix[1][0] * inversionConstant, matrix[0][0] * inversionConstant ]
     ] satisfies LinearMatrix;
+}
+
+export function resizeRotate(image: Jimp, radians: number) {
+    const RightBottomLength = Math.abs(image.bitmap.width * Math.sin(radians));
+    const BottomRightLength = Math.abs(image.bitmap.width * Math.cos(radians));
+    const BottomLeftLength = Math.abs(image.bitmap.height * Math.sin(radians));
+    const LeftBottomLength = Math.abs(image.bitmap.height * Math.cos(radians));
+
+    const newImage = new Jimp(BottomRightLength + BottomLeftLength, RightBottomLength + LeftBottomLength, 0x00000000);
+    newImage.composite(image, 0.5 * (newImage.bitmap.width - image.bitmap.width), 0.5 * (newImage.bitmap.height - image.bitmap.height));
+
+    return rotateImage(newImage, radians);
+}
+
+export async function rotatedScreentone(image: Jimp, rotation: number, matrix: Parameters<typeof getDitheringMatrix>[0] = 4, scaleFactor: number = 4, toneLight: number = 0xffffffff, toneDark: number = 0x000000ff) {
+    const originalDimensions = {
+        width: image.bitmap.width,
+        height: image.bitmap.height
+    }
+    let rotatedImage = await resizeRotate(image, rotation);
+    rotatedImage = await generateTwoToneImage(rotatedImage, matrix, scaleFactor, toneLight, toneDark);
+    rotatedImage = await rotateImage(rotatedImage, -rotation);
+    const newImage = new Jimp(originalDimensions.width, originalDimensions.height, 0x00000000);
+    newImage.composite(rotatedImage, (newImage.bitmap.width - rotatedImage.bitmap.width)/2, (newImage.bitmap.height - rotatedImage.bitmap.height)/2);
+    return newImage;
 }

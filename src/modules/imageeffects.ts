@@ -2,7 +2,7 @@ import { brightenImage, generateImageComparison, hsv2rgb, hueShiftImage, numberL
 import { clampForRGB, gaussianBlur } from './cubeiconutils';
 import Jimp from 'jimp';
 
-import { ditherImage, fakeDither, generateTwoToneImage } from './../modules/dither';
+import { ditherImage, errorDiffusionDither, errorDiffusionTwoTone, fakeDither, generateTwoToneImage } from './../modules/dither';
 import { pixelSortFilter } from './../modules/pixelsortfilter';
 import { basicKuwaharaFilter } from './basickuwahara';
 import { generateContrastMask, generateContrastMaskComparison } from './contrastmask';
@@ -15,9 +15,10 @@ import { CRTEffect } from './crtscreen';
 import { mosaicEffect } from './mosaic';
 import { quantizeImage } from './quantize';
 import { separatedGaussianBlur } from './separatedgaussian';
-import { applyShear, rotateImage } from './matrixtransforms';
+import { applyShear, resizeRotate, rotatedScreentone, rotateImage } from './matrixtransforms';
+import { blueprintify } from './blueprint';
 
-export const filterIDs = ["shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
+export const filterIDs = ["blueprintify", "errordiffusiondither", "errordiffusiontwotone", "rotatedscreentone", "resizerotate", "shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
 export type filterID = typeof filterIDs[number];
 
 export async function applyImageEffect(inputImage: Jimp, filterName: filterID, randomParameters: boolean) {
@@ -31,11 +32,12 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
     const contrastMaskLow = 0.05;
     const contrastMaskHigh = 0.8;
     const gaussianRadius = 12;
-    const usingDitherMatrix = 8;
+    const usingDitherMatrix = "45";
     const quantizeColors = 12;
     const ditherSpread = 0.1;
     const ditherScaleFactor = 3;
     const sharpnessIntensity = 2;
+    const usingErrorDiffusionMatrix = "Floyd-Steinberg" as const;
 
     let twoToneHSV: number[];
 
@@ -50,9 +52,11 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
     const twoTonesLowTone = numberLiteralFromRGBA(twoTonesLowRGB[0], twoTonesLowRGB[1], twoTonesLowRGB[2], 0xff);
 
     const maxPixels = 1100 ** 2;
-    const scaleChange = Math.sqrt(maxPixels / (inputImage.bitmap.width * inputImage.bitmap.height));
-    console.log(`\n[Filters] Scale Change Applied. Original Pixel Count: ${inputImage.bitmap.width * inputImage.bitmap.height}\nNew Pixel Count: ${inputImage.bitmap.width * scaleChange * inputImage.bitmap.height * scaleChange}`);
-    inputImage.resize(Math.ceil(inputImage.bitmap.width * scaleChange), Math.ceil(inputImage.bitmap.height * scaleChange), Jimp.RESIZE_BICUBIC);
+    if ((inputImage.bitmap.width * inputImage.bitmap.height) > maxPixels) {
+        const scaleChange = Math.sqrt(maxPixels / (inputImage.bitmap.width * inputImage.bitmap.height));
+        console.log(`\n[Filters] Scale Change Applied. Original Pixel Count: ${inputImage.bitmap.width * inputImage.bitmap.height}\nNew Pixel Count: ${inputImage.bitmap.width * scaleChange * inputImage.bitmap.height * scaleChange}`);
+        inputImage.resize(Math.ceil(inputImage.bitmap.width * scaleChange), Math.ceil(inputImage.bitmap.height * scaleChange), Jimp.RESIZE_BICUBIC);
+    }
 
     let outputImage: Jimp;
 
@@ -76,8 +80,17 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
         case "dither":
             outputImage = await ditherImage(inputImage, usingDitherMatrix, ditherSpread, quantizeColors, ditherScaleFactor);
             break;
+        case "errordiffusiontwotone":
+            outputImage = await errorDiffusionTwoTone(inputImage, usingErrorDiffusionMatrix, 2, twoTonesHighTone, twoTonesLowTone);
+            break;
+        case "errordiffusiondither":
+            outputImage = await errorDiffusionDither(inputImage, "Floyd-Steinberg", 5, 1);
+            break;
         case "twotone":
-            outputImage = await generateTwoToneImage(inputImage, usingDitherMatrix, undefined, twoTonesHighTone, twoTonesLowTone);
+            outputImage = await generateTwoToneImage(inputImage, usingDitherMatrix, 4, twoTonesHighTone, twoTonesLowTone);
+            break;
+        case "blueprintify":
+            outputImage = await blueprintify(inputImage);
             break;
         case "popartfoursquare":
             outputImage = await generatePopArtFourSquare(inputImage);
@@ -142,7 +155,7 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = await mosaicEffect(inputImage, 15, doX, randomParameters ? (doX ? Math.random() > 0.5 : true) : true);
             break;
         case "fakedither":
-            outputImage = await fakeDither(inputImage, undefined, 3);
+            outputImage = await fakeDither(inputImage, usingDitherMatrix, 3);
             break;
         case "fakescreentone":
             outputImage = await setImageSaturate(inputImage, 0);
@@ -188,6 +201,15 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             break;
         case "sheary":
             outputImage = await applyShear(inputImage, undefined, Math.random() * ((Math.random() > 0.5) ? -1 : 1));
+            break;
+        case "resizerotate":
+            const rot2 = 2 * Math.PI * Math.random();
+            outputImage = await resizeRotate(inputImage, rot2);
+            break;
+        case "rotatedscreentone":
+            // const originalImage = inputImage.clone();
+            outputImage = await rotatedScreentone(inputImage, Math.PI/4, "screentone", 1, twoTonesHighTone, twoTonesLowTone);
+            // outputImage = await generateImageComparison(originalImage, outputImage);
             break;
         default:
             outputImage = inputImage.clone();

@@ -36,6 +36,9 @@ import { randomKuwaharaFromDirectory } from './routes/randomkuwaharafromdirector
 import { elementSpritesheet } from './routes/elementspritesheet';
 import { customBackgroundImage } from './routes/custombackgroundimage';
 import { badgeSpriteSheet } from './routes/badgespritesheet';
+import { filterGif } from './routes/filtergif';
+import { emoteSpriteSheet } from './routes/emotespritesheet';
+import { staticEmote } from './routes/rawemote';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -113,7 +116,10 @@ const routes: CCOIcons.documentedRoute[] = [
     randomKuwaharaFromDirectory,
     elementSpritesheet,
     customBackgroundImage,
-    badgeSpriteSheet
+    badgeSpriteSheet,
+    filterGif,
+    emoteSpriteSheet,
+    staticEmote
 ];
 
 routes.forEach((routeInformation) => {

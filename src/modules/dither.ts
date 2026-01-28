@@ -1,7 +1,8 @@
 import { methods } from "@jimp/plugin-quantize";
 import { clampForRGB, generateGaussianMatrix, luminanceFromColor } from './cubeiconutils';
 import Jimp from "jimp";
-import { quantizeImage } from "./quantize";
+import { quantizeImage, quantizePixel } from "./quantize";
+import { sourceImagesDirectory } from "./schematics/config";
 
 let bayer2x2 = [
     [0, 2],
@@ -109,7 +110,7 @@ let screenToneMatrix = (() => {
     return outputMatrix;
 })()
 
-function getDitheringMatrix(matrix: 2 | 4 | 8 | "stripes" | "screentone") {
+export async function getDitheringMatrix(matrix: 2 | 4 | 8 | "stripes" | "screentone" | "45") {
     let usingMatrix: number[][];
     switch (matrix) {
         case 2:
@@ -145,7 +146,20 @@ function getDitheringMatrix(matrix: 2 | 4 | 8 | "stripes" | "screentone") {
             break;
         case "screentone":
             return screenToneMatrix;
-            break;
+        case "45":
+            const image = await Jimp.read(`${sourceImagesDirectory}/images/45dither.png`);
+            const constructedMatrix: number[][] = [];
+
+            for (let yIndex = 0; yIndex < image.bitmap.height; yIndex++) {
+                const newRow: number[] = [];
+                for (let xIndex = 0; xIndex < image.bitmap.height; xIndex++) {
+                    const pixelIndex = image.getPixelIndex(xIndex, yIndex);
+                    newRow.push(image.bitmap.data[pixelIndex] / 255);
+                }
+                constructedMatrix.push(newRow);
+            }
+
+            return constructedMatrix;
         default:
             usingMatrix = [[1]];
             break;
@@ -158,7 +172,7 @@ export async function generateTwoToneImage(image: Jimp, matrix: Parameters<typeo
     const resizedImage = image.resize(image.bitmap.width * (1 / scaleFactor), image.bitmap.height * (1 / scaleFactor));
     // const newImage = methods.quantize(resizedImage, { colors });
     const newImage = resizedImage;
-    let usingMatrix: number[][] = getDitheringMatrix(matrix);
+    let usingMatrix: number[][] = await getDitheringMatrix(matrix);
 
     newImage.scan(0, 0, newImage.bitmap.width, newImage.bitmap.height, function (x, y, idx) {
         const matrixValue = usingMatrix[y % usingMatrix.length][x % usingMatrix[y % usingMatrix.length].length];
@@ -174,7 +188,7 @@ export async function generateTwoToneImage(image: Jimp, matrix: Parameters<typeo
 }
 
 export async function ditherImage(image: Jimp, matrix: Parameters<typeof getDitheringMatrix>[0] = 8, spread: number = 0.1, colorsPerChannel: number = 4, scaleFactor: number = 3) {
-    let usingMatrix: number[][] = getDitheringMatrix(matrix);
+    let usingMatrix: number[][] = await getDitheringMatrix(matrix);
 
     image.resize(Math.floor(image.bitmap.width/scaleFactor), Math.floor(image.bitmap.height/scaleFactor), Jimp.RESIZE_BILINEAR);
     image.scan(0, 0, image.bitmap.width, image.bitmap.height, function(x, y, idx) {
@@ -193,3 +207,132 @@ export async function fakeDither(image: Jimp, matrix: Parameters<typeof getDithe
 
     return image.composite(ditherToneImage, 0, 0);
 }
+
+function generateTwoDimensionalArray(width: number, height: number): number[][] {
+    console.log(`Creating array of width: ${width} and height: ${height}`);
+    const columns: number[] = [];
+    while (columns.length < height) {
+        columns.push(0);
+    }
+    const rows: number[][] = [];
+    while (rows.length < width) {
+        rows.push(structuredClone(columns));
+    }
+    return rows;
+}
+
+const errorDiffusionMatrices = {
+    "Floyd-Steinberg": [
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 7 / 16, 0],
+        [0, 3 / 16, 5 / 16, 1 / 16, 0],
+        [0, 0, 0, 0, 0],
+    ],
+    "Atkinson": [
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 1 / 8, 1 / 8],
+        [0, 1 / 8, 1 / 8, 1 / 8, 0],
+        [0, 0, 1 / 8, 0, 0],
+    ],
+    "Custom": [
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 3 / 8, 3 / 8],
+        [0, 0, 2 / 8, 0, 0],
+        [0, 0, 0, 0, 0],
+    ]
+} as const satisfies {
+    [key: string]: [
+        [number, number, number, number, number],
+        [number, number, number, number, number],
+        [number, number, number, number, number],
+        [number, number, number, number, number],
+        [number, number, number, number, number],
+]};
+
+export async function errorDiffusionTwoTone(image: Jimp, algorithm: keyof typeof errorDiffusionMatrices, scaleFactor: number = 2, toneLight: number = 0xffffffff, toneDark: number = 0x000000ff) {
+    const resizedImage = image.resize(image.bitmap.width * (1 / scaleFactor), image.bitmap.height * (1 / scaleFactor));
+    const errorBitmap = generateTwoDimensionalArray(resizedImage.bitmap.width, resizedImage.bitmap.height);
+    // const newImage = methods.quantize(resizedImage, { colors });
+    const newImage = resizedImage.clone();
+
+    const diffusionMatrix = errorDiffusionMatrices[algorithm];
+
+    newImage.scan(0, 0, newImage.bitmap.width, newImage.bitmap.height, function (x, y, idx) {
+        const luminance = (luminanceFromColor(resizedImage.getPixelColor(x, y)) - 0.5) + errorBitmap[x][y];
+        // console.log(errorBitmap[x][y])
+        let distributedError = 0;
+        if (luminance > 0) {
+            this.setPixelColor(toneLight, x, y);
+            distributedError = luminance - 0.5;
+        } else {
+            this.setPixelColor(toneDark, x, y);
+            distributedError = luminance + 0.5;
+        }
+
+        for (let distributedY = 0; distributedY < 5; distributedY++) {
+            for (let distributedX = 0; distributedX < 5; distributedX++) {
+                const diffusionFactor = diffusionMatrix[distributedX][distributedY];
+                if (diffusionFactor > 0) {
+                    const xOffset = distributedX - 2;
+                    const yOffset = distributedY - 2;
+                    if (errorBitmap[x + xOffset] !== undefined && errorBitmap[x + xOffset][y + yOffset] !== undefined) {
+                        errorBitmap[x + xOffset][y + yOffset] += (distributedError * diffusionFactor);
+                    }
+                }
+            }
+        }
+    });
+
+    return newImage.resize(newImage.bitmap.width * scaleFactor, newImage.bitmap.height * scaleFactor, Jimp.RESIZE_NEAREST_NEIGHBOR);
+}
+
+export async function errorDiffusionDither(image: Jimp, algorithm: keyof typeof errorDiffusionMatrices, colorsPerChannel: number = 4, scaleFactor: number = 1) {
+    image.resize(Math.floor(image.bitmap.width / scaleFactor), Math.floor(image.bitmap.height / scaleFactor), Jimp.RESIZE_BILINEAR);
+
+    const errorRed = generateTwoDimensionalArray(image.bitmap.width, image.bitmap.height);
+    const errorGreen = generateTwoDimensionalArray(image.bitmap.width, image.bitmap.height);
+    const errorBlue = generateTwoDimensionalArray(image.bitmap.width, image.bitmap.height);
+    const diffusionMatrix = errorDiffusionMatrices[algorithm];
+
+    image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
+        const pixelIndex = image.getPixelIndex(x, y);
+        const oldColor = [
+            clampForRGB(image.bitmap.data[pixelIndex] + ((0.5 + errorRed[x][y]) * 255)),
+            clampForRGB(image.bitmap.data[pixelIndex + 1] + ((0.5 + errorGreen[x][y]) * 255)),
+            clampForRGB(image.bitmap.data[pixelIndex + 2] + ((0.5 + errorBlue[x][y]) * 255))
+        ];
+        const newColor = quantizePixel(structuredClone(oldColor) as [number, number, number], colorsPerChannel);
+        image.bitmap.data[idx + 0] = newColor[0];
+        image.bitmap.data[idx + 1] = newColor[1];
+        image.bitmap.data[idx + 2] = newColor[2];
+
+        for (let distributedY = 0; distributedY < 5; distributedY++) {
+            for (let distributedX = 0; distributedX < 5; distributedX++) {
+                const diffusionFactor = diffusionMatrix[distributedX][distributedY];
+                if (diffusionFactor > 0) {
+                    const xOffset = distributedX - 2;
+                    const yOffset = distributedY - 2;
+                    if (errorRed[x + xOffset] !== undefined && errorRed[x + xOffset][y + yOffset] !== undefined) {
+                        const distributedChannel = ((((oldColor[0] - newColor[0])/255) - 2) * diffusionFactor);
+                        errorRed[x + xOffset][y + yOffset] += (distributedChannel * diffusionFactor);
+                    }
+                    if (errorBlue[x + xOffset] !== undefined && errorBlue[x + xOffset][y + yOffset] !== undefined) {
+                        const distributedChannel = ((((oldColor[1] - newColor[1])/255) - 2) * diffusionFactor);
+                        errorBlue[x + xOffset][y + yOffset] += (distributedChannel * diffusionFactor);
+                    }
+                    if (errorGreen[x + xOffset] !== undefined && errorGreen[x + xOffset][y + yOffset] !== undefined) {
+                        const distributedChannel = ((((oldColor[2] - newColor[2])/255) - 2) * diffusionFactor);
+                        errorGreen[x + xOffset][y + yOffset] += (distributedChannel * diffusionFactor);
+                    }
+                }
+            }
+        }
+    });
+
+    // return image
+    return image.resize(Math.floor(image.bitmap.width * scaleFactor), Math.floor(image.bitmap.height * scaleFactor), Jimp.RESIZE_NEAREST_NEIGHBOR);
+}
+
