@@ -3,6 +3,7 @@ import { clampForRGB, generateGaussianMatrix, luminanceFromColor } from './cubei
 import Jimp from "jimp";
 import { quantizeImage, quantizePixel } from "./quantize";
 import { sourceImagesDirectory } from "./schematics/config";
+import { lerpColors, numberLiteralFromRGBA, rgbaFromNumberLiteral } from "./imageutils";
 
 let bayer2x2 = [
     [0, 2],
@@ -93,7 +94,7 @@ let screenToneMatrix = (() => {
         const newRow: number[] = [];
         for (let xIndex = -matrixRadius; xIndex < matrixRadius + 1; xIndex++) {
             const distance = Math.sqrt((yIndex ** 2) + (xIndex ** 2));
-            newRow.push((1-(distance/maxDistance)) ** 2);
+            newRow.push(Math.min(1, Math.max(0, (1-(distance/maxDistance)) ** 1.5)));
         }
         outputMatrix.push(newRow);
     }
@@ -173,14 +174,29 @@ export async function generateTwoToneImage(image: Jimp, matrix: Parameters<typeo
     // const newImage = methods.quantize(resizedImage, { colors });
     const newImage = resizedImage;
     let usingMatrix: number[][] = await getDitheringMatrix(matrix);
+    const toneLightRGBA = rgbaFromNumberLiteral(toneLight);
+    const toneDarkRGBA = rgbaFromNumberLiteral(toneDark);
 
     newImage.scan(0, 0, newImage.bitmap.width, newImage.bitmap.height, function (x, y, idx) {
-        const matrixValue = usingMatrix[y % usingMatrix.length][x % usingMatrix[y % usingMatrix.length].length];
         const luminance = luminanceFromColor(this.getPixelColor(x, y));
-        if (luminance > matrixValue) {
-            this.setPixelColor(toneLight, x, y);
+        if (matrix === "screentone") {
+            const matrixOffsetX = 0;
+            const matrixOffsetY = 0;
+            const matrixValue = usingMatrix[Math.abs(y + matrixOffsetY) % usingMatrix.length][Math.abs(x + matrixOffsetX) % usingMatrix[Math.abs(y + matrixOffsetY) % usingMatrix.length].length];
+            if (luminance > matrixValue) {
+                const appliedColor = numberLiteralFromRGBA(...lerpColors(toneDarkRGBA, toneLightRGBA, Math.min(1, (luminance - matrixValue)/0.33)));
+                this.setPixelColor(appliedColor, x, y);
+            } else {
+                // const appliedColor = numberLiteralFromRGBA(...lerpColors(toneLightRGBA, toneDarkRGBA, 1 - Math.min(1, (luminance - matrixValue))));
+                this.setPixelColor(toneDark, x, y);
+            }
         } else {
-            this.setPixelColor(toneDark, x, y);
+            const matrixValue = usingMatrix[y % usingMatrix.length][x % usingMatrix[y % usingMatrix.length].length];
+            if (luminance > matrixValue) {
+                this.setPixelColor(toneLight, x, y);
+            } else {
+                this.setPixelColor(toneDark, x, y);
+            }
         }
     });
 
@@ -203,8 +219,9 @@ export async function ditherImage(image: Jimp, matrix: Parameters<typeof getDith
 }
 
 export async function fakeDither(image: Jimp, matrix: Parameters<typeof getDitheringMatrix>[0] = 4, scaleFactor: number = 2) {
-    const ditherToneImage = await generateTwoToneImage(image.clone(), matrix, scaleFactor, 0x00000000, 0x00000044);
+    const ditherToneImage = await generateTwoToneImage(image.clone(), matrix, scaleFactor, 0x00000000, 0x00000066);
 
+    // return ditherToneImage;
     return image.composite(ditherToneImage, 0, 0);
 }
 

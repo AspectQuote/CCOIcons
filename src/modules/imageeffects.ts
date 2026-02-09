@@ -158,8 +158,8 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = await fakeDither(inputImage, usingDitherMatrix, 3);
             break;
         case "fakescreentone":
-            outputImage = await setImageSaturate(inputImage, 0);
-            outputImage = await fakeDither(outputImage, "screentone", 1);
+            // outputImage = await setImageSaturate(inputImage, 0);
+            outputImage = await fakeDither(inputImage, "screentone", 1);
             break;
         case "screentone":
             outputImage = await generateTwoToneImage(inputImage, "screentone", 1, twoTonesHighTone, twoTonesLowTone);

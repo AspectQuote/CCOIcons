@@ -406,11 +406,12 @@ async function generateImageComparison(image1: Jimp, image2: Jimp) {
     return newImage;
 }
 
-function lerpColors(color1: { red: number, green: number, blue: number, alpha: number }, color2: { red: number, green: number, blue: number, alpha: number }, alpha: number) {
+function lerpColors(color1: { red: number, green: number, blue: number, alpha: number }, color2: { red: number, green: number, blue: number, alpha: number }, alpha: number): [ number, number, number, number ] {
     return [
         ((color2.red - color1.red) * alpha) + color1.red,
         ((color2.green - color1.green) * alpha) + color1.green,
-        ((color2.blue - color1.blue) * alpha) + color1.blue
+        ((color2.blue - color1.blue) * alpha) + color1.blue,
+        ((color2.alpha - color1.alpha) * alpha) + color1.alpha
     ];
 }
 

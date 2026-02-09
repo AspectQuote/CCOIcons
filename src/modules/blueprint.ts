@@ -25,7 +25,7 @@ function getBlueprintColorFromLuminance(luminance: number) {
     const lerpAlpha = (luminance - (startingColorIndex * blueprintColorIndexValue))/blueprintColorIndexValue;
     // console.log(lerpAlpha);
     const lerpedChannels = lerpColors(blueprintColors[startingColorIndex], blueprintColors[endingColorIndex], lerpAlpha);
-    return numberLiteralFromRGBA(lerpedChannels[0], lerpedChannels[1], lerpedChannels[2], 255);
+    return numberLiteralFromRGBA(lerpedChannels[0], lerpedChannels[1], lerpedChannels[2], lerpedChannels[3]);
 }
 
 export async function blueprintify(image: Jimp) {

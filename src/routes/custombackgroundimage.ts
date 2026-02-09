@@ -57,7 +57,7 @@ const route: CCOIcons.documentedRoute = {
         if (imageName.includes('.')) return res.json({ success: false, message: "Image name is invalid." });
         if (!filterIDs.includes(filterName) || blacklistedFilterEffectsForBackgrounds.includes(filterName)) return res.json({ success: false, message: "Invalid filter supplied." });
         let sourceFile = path.resolve(`${config.sourceImagesDirectory}/images/${imageName}.jpg`);
-        const outputFile = path.resolve(`${config.relativeRootDirectory}/ccicons/custombackgrounds/${filterName}${imageName}.jpg`);
+        const outputFile = path.resolve(`${config.relativeRootDirectory}/ccicons/custombackgrounds/${filterName}${imageName}1.jpg`);
         if (!fs.existsSync(outputFile) || config.devmode) {
             if (fs.existsSync(sourceFile)) {
                 try {
