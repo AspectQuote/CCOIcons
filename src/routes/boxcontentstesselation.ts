@@ -6,6 +6,8 @@ import * as fs from 'fs-extra';
 let seedrandom: new (seed: string) => () => number = require('seedrandom');
 import { applyImageEffect, filterID, filterIDs } from '../modules/imageeffects';
 import { boxID, boxSchema } from 'src/modules/schematics/boxes';
+import { generateCubeIcon } from 'src/modules/cubeiconutils';
+import { loadAnimatedCubeIcon } from 'src/modules/imageutils';
 
 const cubes: { [key in CCOIcons.cubeID]: CCOIcons.cubeDefinition } = fs.readJSONSync('./config/cubes.json');
 const outputDirectory = path.resolve(`${config.relativeRootDirectory}/ccicons/boxtesselations/`);
@@ -46,44 +48,50 @@ const route: CCOIcons.documentedRoute = {
         const iconOutput = `${outputDirectory}/${boxID}.png`;
         if (!fs.existsSync(iconOutput) || config.devmode) {
             const cubeIDs = structuredClone(boxSchema[boxID].contents).filter(item => !(cubes[item].rarity === "unreal"));
-            const usingCubeIcons: Jimp[] = [];
+            const usingCubeIcons: CCOIcons.cubeID[] = [];
             const controlIcon = await Jimp.read(`${config.sourceImagesDirectory}/cubes/green/cube.png`);
 
             for (let cubeIDIndex = 0; cubeIDIndex < cubeIDs.length; cubeIDIndex++) {
                 const cubeID = cubeIDs[cubeIDIndex];
-                const cubeIcon = await Jimp.read(`${config.sourceImagesDirectory}/cubes/${cubeID}/cube.png`);
+                const cubeIcon = (await loadAnimatedCubeIcon(await generateCubeIcon({}, cubeID, 1, false)))[0];
 
                 let addIconToCubeIcons = (controlIcon.bitmap.width === cubeIcon.bitmap.width) && (controlIcon.bitmap.height === cubeIcon.bitmap.height);
                 
                 controlIcon.scan(0, 0, controlIcon.bitmap.width, controlIcon.bitmap.height, (x, y, idx) => {
                     const controlAlpha = controlIcon.bitmap.data[idx + 3];
-                    if (controlAlpha !== 0) {
-                        const iconAlpha = cubeIcon.bitmap.data[cubeIcon.getPixelIndex(x, y) + 3];
-                        if (iconAlpha !== controlAlpha) addIconToCubeIcons = false;
+                    const iconAlpha = cubeIcon.bitmap.data[cubeIcon.getPixelIndex(x, y) + 3];
+                    if (iconAlpha !== 0 && controlAlpha === 0) {
+                        addIconToCubeIcons = false;
                     }
                 })
 
                 if (addIconToCubeIcons) {
-                    usingCubeIcons.push(cubeIcon);
+                    usingCubeIcons.push(cubeID);
                 }
             }
 
             seededShuffle(usingCubeIcons, boxID);
             const iconSize = 32;
-            let rows = Math.ceil(usingCubeIcons.length/4);
+            let rows = Math.ceil(Math.sqrt(usingCubeIcons.length));
             if ((rows % 2) === 1) rows += 1;
-            const columns = Math.ceil(usingCubeIcons.length/5);
+            const columns = Math.ceil(Math.sqrt(usingCubeIcons.length) * 1.5);
 
             const outputIcon = new Jimp(columns * iconSize, rows * iconSize * 0.75, 0x00000000);
+            const RNGMethod = new seedrandom(`${boxID}rng`);
 
+            const repeatMin = rows - 2;
+            let lastFewIDs: CCOIcons.cubeID[] = [];
             for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
                 const y = rowIndex;
                 for (let columnIndex = 0; columnIndex < columns; columnIndex++) {
                     const x = columnIndex;
-                    const cubeIconIndex = (y * columns) + x;
                     const oddRow = rowIndex % 2;
                     let xOffset = oddRow ? 0.5 : 0;
-                    const cubeIcon = usingCubeIcons[cubeIconIndex % usingCubeIcons.length];
+                    const possibleCubeIDs = usingCubeIcons.filter(cubeID => !lastFewIDs.includes(cubeID));
+                    const cubeIconID = possibleCubeIDs[Math.floor(RNGMethod() * possibleCubeIDs.length)];
+                    lastFewIDs.push(cubeIconID);
+                    if (lastFewIDs.length > repeatMin) lastFewIDs.shift();
+                    const cubeIcon = (await loadAnimatedCubeIcon(await generateCubeIcon({}, cubeIconID, Math.floor(config.cubePatternIndexLimit * RNGMethod()), false)))[0];
                     outputIcon.composite(cubeIcon, (x + xOffset) * iconSize, y * iconSize * 0.75);
                     if (x === (columns - 1) && oddRow) outputIcon.composite(cubeIcon, -0.5 * iconSize, y * iconSize * 0.75);
                     if (y === (rows - 1)) outputIcon.composite(cubeIcon, (x + xOffset) * iconSize, iconSize * -0.75);
