@@ -17,8 +17,9 @@ import { quantizeImage } from './quantize';
 import { separatedGaussianBlur } from './separatedgaussian';
 import { applyShear, resizeRotate, rotatedScreentone, rotateImage } from './matrixtransforms';
 import { blueprintify } from './blueprint';
+import { trueScreenTone } from './truescreentone';
 
-export const filterIDs = ["blueprintify", "errordiffusiondither", "errordiffusiontwotone", "rotatedscreentone", "resizerotate", "shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
+export const filterIDs = ["truescreentone", "blueprintify", "errordiffusiondither", "errordiffusiontwotone", "rotatedscreentone", "resizerotate", "shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
 export type filterID = typeof filterIDs[number];
 
 export async function applyImageEffect(inputImage: Jimp, filterName: filterID, randomParameters: boolean) {
@@ -205,6 +206,9 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
         case "resizerotate":
             const rot2 = 2 * Math.PI * Math.random();
             outputImage = await resizeRotate(inputImage, rot2);
+            break;
+        case "truescreentone":
+            outputImage = await trueScreenTone(inputImage);
             break;
         case "rotatedscreentone":
             // const originalImage = inputImage.clone();

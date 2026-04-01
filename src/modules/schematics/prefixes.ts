@@ -104,7 +104,7 @@ function getNeededPaddingFromCompiledFrames(frames: CCOIcons.compiledPrefixFrame
     // If we are no longer at a 1:1 aspect ratio, then add padding to each side evenly to reach it.
     if ((resizeTarget.left + resizeTarget.right) !== (resizeTarget.above + resizeTarget.below)) {
         let inlineSize = 0;
-        let blockSize = 1;
+        let blockSize = 0;
         //                                 These modulus 2's here are to make sure the icon keeps vertical/horizontal padding symmetry
         while (inlineSize !== blockSize || inlineSize % 2 !== baseWidth % 2 || blockSize % 2 !== baseHeight % 2) {
             if (inlineSize < blockSize) {
@@ -6682,7 +6682,8 @@ const prefixes = {
             const minOrnamentDistance = possibleOrnaments[0].bitmap.width;
 
             let failsafe = 0;
-            while (generatedOrnaments.length == 0 && failsafe < Math.pow(minOrnamentDistance, 3)) {
+            let loopcount = 0;
+            while (generatedOrnaments.length == 0 && failsafe < Math.pow(minOrnamentDistance, 2)) {
                 iconFrames[0].scan(0, 0, iconFrames[0].bitmap.width, iconFrames[0].bitmap.height, function (x, y, idx) {
                     if (y < this.bitmap.height - 1) {
                         failsafe++;
@@ -6710,22 +6711,19 @@ const prefixes = {
             })
 
             const padding = (possibleOrnaments[0].bitmap.width / 2) + 4;
-            const neededAnimationFrames = iconFrames.length;
 
-            for (let newAnimationFrameIndex = 0; newAnimationFrameIndex < neededAnimationFrames; newAnimationFrameIndex++) {
-                let newFrame = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
-                for (let ornamentIndex = 0; ornamentIndex < generatedOrnaments.length; ornamentIndex++) {
-                    const ornament = generatedOrnaments[ornamentIndex];
-                    newFrame.composite(ornament.ornament, ornament.position.x - Math.floor(ornament.ornament.bitmap.width/2) + padding, ornament.position.y - 2 + padding);
-                }
-                prefixFrames.frontFrames.push([{
-                    image: newFrame,
-                    compositePosition: {
-                        x: -padding,
-                        y: -padding
-                    }
-                }])
+            let newFrame = new Jimp(iconFrames[0].bitmap.width + (padding * 2), iconFrames[0].bitmap.height + (padding * 2), 0x00000000);
+            for (let ornamentIndex = 0; ornamentIndex < generatedOrnaments.length; ornamentIndex++) {
+                const ornament = generatedOrnaments[ornamentIndex];
+                newFrame.composite(ornament.ornament, ornament.position.x - Math.floor(ornament.ornament.bitmap.width/2) + padding, ornament.position.y - 2 + padding);
             }
+            prefixFrames.frontFrames.push([{
+                image: newFrame,
+                compositePosition: {
+                    x: -padding,
+                    y: -padding
+                }
+            }])
 
             return prefixFrames;
         }

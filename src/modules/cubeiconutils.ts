@@ -439,7 +439,6 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
     );
 
     let newAnimation: Jimp[] = [];
-
     for (let newIconIndex = 0; newIconIndex < neededIconFrames; newIconIndex++) {
         const oldIconIndex = newIconIndex % iconFrames.length;
 
@@ -586,7 +585,6 @@ async function generatePrefixedCube(iconFrames: Jimp[], cubeID: CCOIcons.cubeID,
             newAnimation = (await prefixes[compilingPrefixID].compileFrames(retrievedParts, newAnimation, prefixSeed, cubes[cubeID], shownPrefixes)).maskFrames;
         }
     }
-
     return newAnimation;
 }
 
