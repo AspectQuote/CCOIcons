@@ -24,6 +24,7 @@ function getBlueprintColorFromLuminance(luminance: number) {
     const endingColorIndex = startingColorIndex + 1;
     const lerpAlpha = (luminance - (startingColorIndex * blueprintColorIndexValue))/blueprintColorIndexValue;
     // console.log(lerpAlpha);
+    return numberLiteralFromRGBA(blueprintColors[startingColorIndex].red, blueprintColors[startingColorIndex].green, blueprintColors[startingColorIndex].blue, blueprintColors[startingColorIndex].alpha);
     const lerpedChannels = lerpColors(blueprintColors[startingColorIndex], blueprintColors[endingColorIndex], lerpAlpha);
     return numberLiteralFromRGBA(lerpedChannels[0], lerpedChannels[1], lerpedChannels[2], lerpedChannels[3]);
 }

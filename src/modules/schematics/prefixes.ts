@@ -6,6 +6,7 @@ import Jimp from 'jimp';
 import * as maths from '../maths';
 import { fillHollowRect, fillRect, generateSmallWordImage, loadAnimatedCubeIcon, parseHorizontalSpriteSheet, saveAnimatedCubeIcon, strokeImage } from '../imageutils';
 import { blueprintify } from '../blueprint';
+import { dotMatrix } from '../dotmatrix';
 let seedrandom: new (seed: string) => () => number = require('seedrandom');
 
 /**
@@ -6913,6 +6914,27 @@ const prefixes = {
             return prefixFrames;
         }
     },
+    "dotted": {
+        name: "Constructive",
+        tags: [ "appliesDirectlyAfterAllPrefixes" ],
+        needs: {
+            heads: false,
+            eyes: false,
+            accents: false,
+            mouths: false
+        },
+        compileFrames: async function (anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
+            const prefixFrames = structuredClone(basePrefixReturnObject);
+            const radius = 7;
+
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex].resize(iconFrames[iconFrameIndex].bitmap.width * radius * 2, iconFrames[iconFrameIndex].bitmap.height * radius * 2, Jimp.RESIZE_NEAREST_NEIGHBOR);
+                prefixFrames.maskFrames.push(await dotMatrix(iconFrame, radius * 2));
+            }
+
+            return prefixFrames;
+        }
+    },
     /* "constructive": {
         name: "Constructive",
         tags: ["appliesDirectlyAfterAllPrefixes"],
@@ -7151,8 +7173,10 @@ const prefixes = {
  */
 const prefixIDApplicationOrder = [
     "fake", // Turns the icon into a 'fake' PNG
+    "dotted", // Gives the cube a "dot matrix" effect
     "rippling", // Adds a sine wave to the cube
     "musical", // Adds an animated music sheet to the cube
+    "dotted", // Gives the cube a "dot matrix" effect
 
     // -------------- Special cases
     "censored", // Adds a censor bar to the cube

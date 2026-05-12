@@ -18,8 +18,9 @@ import { separatedGaussianBlur } from './separatedgaussian';
 import { applyShear, resizeRotate, rotatedScreentone, rotateImage } from './matrixtransforms';
 import { blueprintify } from './blueprint';
 import { trueScreenTone } from './truescreentone';
+import { dotMatrix } from './dotmatrix';
 
-export const filterIDs = ["truescreentone", "blueprintify", "errordiffusiondither", "errordiffusiontwotone", "rotatedscreentone", "resizerotate", "shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
+export const filterIDs = ["dotmatrix", "reversesharpness", "truescreentone", "blueprintify", "errordiffusiondither", "errordiffusiontwotone", "rotatedscreentone", "resizerotate", "shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
 export type filterID = typeof filterIDs[number];
 
 export async function applyImageEffect(inputImage: Jimp, filterName: filterID, randomParameters: boolean) {
@@ -102,6 +103,10 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = await sharpenImage(inputImage.clone(), sharpnessIntensity, gaussianRadius, "fast");
             // outputImage = await generateImageComparison(oldInput, outputImage);
             // outputImage = await sharpenedImageComparison(inputImage);
+            break;
+        case "reversesharpness":
+            // outputImage = await sharpenImage(inputImage.clone(), -sharpnessIntensity, gaussianRadius, "fast");
+            outputImage = await sharpenedImageComparison(inputImage);
             break;
         case "extremesharpen":
             outputImage = await sharpenImage(inputImage, sharpnessIntensity * 1.5, gaussianRadius);
@@ -214,6 +219,9 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             // const originalImage = inputImage.clone();
             outputImage = await rotatedScreentone(inputImage, Math.PI/4, "screentone", 1, twoTonesHighTone, twoTonesLowTone);
             // outputImage = await generateImageComparison(originalImage, outputImage);
+            break;
+        case "dotmatrix":
+            outputImage = await dotMatrix(inputImage);
             break;
         default:
             outputImage = inputImage.clone();

@@ -41,6 +41,18 @@ function fillRect(image: Jimp, rectX: number, rectY: number, width: number, heig
     })
 }
 
+function fillCircle(image: Jimp, centerX: number, centerY: number, radius: number, color: number) {
+    image.scan(centerX - radius, centerY - radius, radius * 2, radius * 2, (x, y, idx) => {
+        const lhs = (y - centerY) ** 2;
+        const rhs = ((radius ** 2) - ((x - centerX) ** 2));
+        const pixelMeetsCondition = lhs <= rhs;
+        // console.log(`${lhs} <= ${rhs} : ${pixelMeetsCondition}`);
+        if (pixelMeetsCondition) {
+            image.setPixelColor(color, x, y);
+        }
+    });
+}
+
 function fillHollowRect(image: Jimp, rectX: number, rectY: number, width: number, height: number, color: number) {
     for (let topLineXIndex = 0; topLineXIndex < width; topLineXIndex++) {
         image.setPixelColor(color, rectX + topLineXIndex, rectY);
@@ -436,5 +448,6 @@ export {
     numberLiteralFromRGBA,
     setImageSaturate,
     generateImageComparison,
-    lerpColors
+    lerpColors,
+    fillCircle
 }
