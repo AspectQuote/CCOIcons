@@ -40,6 +40,7 @@ import { filterGif } from './routes/filtergif';
 import { emoteSpriteSheet } from './routes/emotespritesheet';
 import { staticEmote } from './routes/rawemote';
 import { boxContentsTesselation } from './routes/boxcontentstesselation';
+import { sigilSpriteSheet } from './routes/sigilspritesheet';
 
 const routes: CCOIcons.documentedRoute[] = [
     {
@@ -121,7 +122,8 @@ const routes: CCOIcons.documentedRoute[] = [
     filterGif,
     emoteSpriteSheet,
     staticEmote,
-    boxContentsTesselation
+    boxContentsTesselation,
+    sigilSpriteSheet
 ];
 
 routes.forEach((routeInformation) => {

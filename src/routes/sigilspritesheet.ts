@@ -25,5 +25,5 @@ const route: CCOIcons.documentedRoute = {
 }
 
 export {
-    route as badgeSpriteSheet
+    route as sigilSpriteSheet
 }
