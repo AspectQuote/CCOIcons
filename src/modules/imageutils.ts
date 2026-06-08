@@ -315,14 +315,21 @@ async function assembleWordImage(word: string, alphabetLetters: Jimp[], backgrou
     return strokeImage(image, background, padding);
 }
 
+// Implementation of bresenham's line algorithm
 function drawLine(image: Jimp, color: number, startPoint: coordinate, endPoint: coordinate, thickness: number) {
     const yChange = endPoint.y - startPoint.y;
     const xChange = endPoint.x - startPoint.x;
-    const loopTimes = Math.ceil(distanceBetweenPoints(startPoint, endPoint));
-    for (let linePositionIndex = 0; linePositionIndex < loopTimes; linePositionIndex++) {
-        const x = Math.round(startPoint.x + ((xChange/loopTimes) * linePositionIndex));
-        const y = Math.round(startPoint.y + ((yChange/loopTimes) * linePositionIndex));
-        image.setPixelColor(color, x, y);
+    let distance = (2 * yChange) - xChange;
+    let currentY = startPoint.y;
+
+    for (let currentX = startPoint.x; currentX < endPoint.x; currentX++) {
+        image.setPixelColor(color, currentX, currentY);
+        if (distance > 0) {
+            currentY++;
+            distance = distance + (2 * (yChange - xChange));
+        } else {
+            distance = distance + (2*yChange);
+        }
     }
 }
 

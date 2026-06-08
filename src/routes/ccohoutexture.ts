@@ -635,7 +635,7 @@ const route: CCOIcons.documentedRoute = {
         subtitle: "GETs custom texture that matches a CCOHou UV map.",
         resolves: "image",
         author: "AspectQuote",
-        description: "Uses basic linear maths to map cube icons to 3D Model UVs. These icons are used in a project that hasn't been released yet.",
+        description: "Uses basic linear maths to map cube icons to 3D Model UVs. These icons are used in CCOhou.",
         examples: [
             {
                 name: "Red Cube UV",

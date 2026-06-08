@@ -7021,20 +7021,115 @@ const prefixes = {
 
             return prefixFrames;
         }
-    }, /*
+    },
     "nailed": {
-        name: "",
-        tags: [],
+        name: "Nailed",
+        tags: [ "seeded" ],
         needs: {
-            heads: false,
+            heads: true,
             eyes: false,
             accents: false,
             mouths: false
         },
         compileFrames: async function(anchorPoints, iconFrames, seed, cubeData, allPrefixes) {
-            return structuredClone(basePrefixReturnObject)
+            let prefixFrames = structuredClone(basePrefixReturnObject);
+            prefixFrames.sourceID = "nailed";
+            let seedGen = new seedrandom(`nailed${seed}`);
+
+            const createPins = anchorPoints.heads.every((headFrame) => headFrame.positions[0].startPosition.x === anchorPoints.heads[0].positions[0].startPosition.x && headFrame.positions[0].startPosition.y === anchorPoints.heads[0].positions[0].startPosition.y && headFrame.positions[0].width === anchorPoints.heads[0].positions[0].width);
+
+            console.log(`Create Pins: ${createPins}`);
+
+            const usingPins: {
+                position: CCOIcons.coordinate,
+                length: number,
+                hue: number,
+            }[] = [];
+            let pinShaftImage = new Jimp(1, 1, 0x00000000);
+
+            const iconBitmap = iconFrames[0].bitmap;
+            const extraPinLength = 4;
+            const basePinLength = 8;
+            if (createPins) {
+                let failsafe = 0;
+                const pinCount = Math.round(seedGen() * 2) + 4;
+
+                while (usingPins.length < pinCount && failsafe < 250) {
+                    failsafe++;
+
+                    const chosenPosition = {
+                        x: Math.floor(seedGen() * iconBitmap.width),
+                        y: Math.floor(seedGen() * iconBitmap.height)
+                    }
+
+                    if (iconBitmap.data[iconFrames[0].getPixelIndex(chosenPosition.x, chosenPosition.y) + 3] > 100) { // if the pixel is transparent
+                        let valid = false;
+                        if (!usingPins.some(pinData => maths.distanceBetweenPoints(pinData.position, chosenPosition) < (iconFrames[0].bitmap.width / 3))) {
+                            if (chosenPosition.x >= (iconBitmap.width - 1) || chosenPosition.x <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x - 1, chosenPosition.y) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+
+                            if (chosenPosition.x >= (iconBitmap.width - 1) || chosenPosition.x <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x + 1, chosenPosition.y) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+
+                            if (chosenPosition.y >= (iconBitmap.height - 1) || chosenPosition.y <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x, chosenPosition.y - 1) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+
+                            if (chosenPosition.y >= (iconBitmap.height - 1) || chosenPosition.y <= 0 || (iconFrames[0].getPixelColor(chosenPosition.x, chosenPosition.y + 1) >> 0 && 0xff) < 100) {
+                                valid = true;
+                            }
+
+                            if (valid) {
+                                failsafe = 0;
+                                usingPins.push({
+                                    position: chosenPosition,
+                                    length: Math.ceil(seedGen() * extraPinLength) + basePinLength,
+                                    hue: Math.floor(360 * seedGen())
+                                });
+                            }
+                        }
+                    }
+
+                    for (let usingPinIndex = 0; usingPinIndex < usingPins.length; usingPinIndex++) {
+                        const usingPin = usingPins[usingPinIndex];
+                        // const endPos = {
+                        //     x: usingPin.position.x + Math.cos(usingPin)
+                        // }
+                    }
+                }
+
+                pinShaftImage = new Jimp(iconBitmap.width + (extraPinLength + basePinLength * 2), iconBitmap.height + (extraPinLength + basePinLength * 2), 0x00000000);
+
+                const pinPalette = {
+                    shaftMain: 0x696969ff,
+                    shaftShadow: 0x4a4a4aff
+                }
+
+                pinShaftImage = strokeImage(pinShaftImage, pinPalette.shaftShadow, 1, false, [[0, 0, 0], [0, 0, 0], [0, 1, 0]]);
+            }
+
+            for (let iconFrameIndex = 0; iconFrameIndex < iconFrames.length; iconFrameIndex++) {
+                const iconFrame = iconFrames[iconFrameIndex];
+                let constructedFrame: CCOIcons.compiledPrefixFrames["frontFrames"][number] = [];
+
+                if (createPins) {
+                    constructedFrame.push({
+                        image: pinShaftImage,
+                        compositePosition: {
+                            x: - extraPinLength - basePinLength - 1,
+                            y: - extraPinLength - basePinLength - 1
+                        }
+                    })
+                }
+
+                prefixFrames.frontFrames.push(constructedFrame);
+            }
+
+            return prefixFrames;
         }
-    },
+    }, /*
     "farmboy": {
         name: "",
         tags: [],

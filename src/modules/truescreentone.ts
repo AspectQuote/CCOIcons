@@ -3,14 +3,14 @@ import { gaussianBlur, luminanceFromColor } from "./cubeiconutils";
 import { quantizeImage } from "./quantize";
 
 const celSize = 8;
-const maxExponent = 64;
+const maxExponent = 128;
 const darkColor = 0x00000022;
-const lightColor = 0xffffff22;
+const lightColor = 0x00000000;
 export async function trueScreenTone(image: Jimp) {
     // image = await quantizeImage(image, 13);
-    image = image.resize(image.bitmap.width/(celSize/2), image.bitmap.height/(celSize/2), Jimp.RESIZE_BICUBIC);
-    image = image.resize(image.bitmap.width * (celSize/2), image.bitmap.height * (celSize/2), Jimp.RESIZE_NEAREST_NEIGHBOR)
-    const newImage = await gaussianBlur(image.clone(), 4);
+    // image = image.resize(image.bitmap.width/(celSize/2), image.bitmap.height/(celSize/2), Jimp.RESIZE_BICUBIC);
+    // image = image.resize(image.bitmap.width * (celSize/2), image.bitmap.height * (celSize/2), Jimp.RESIZE_NEAREST_NEIGHBOR)
+    const newImage = image.clone();
     newImage.scan(0, 0, newImage.bitmap.width, newImage.bitmap.height, (x, y, idx) => {
         const luminance = luminanceFromColor(newImage.getPixelColor(x, y));
         // const luminance = 0.7;
@@ -31,7 +31,7 @@ export async function trueScreenTone(image: Jimp) {
             if (oddXQuadrant) pixelX -= 1;
             let pixelY = (celSize - (y % celSize))/celSize;
             if (oddYQuadrant) pixelY -= 1;
-            let normalizedLuminance = (1 - (2 * Math.abs(luminance - 0.5))) - 0.15;
+            let normalizedLuminance = (1 - (2 * Math.abs(luminance - 0.5)));
             normalizedLuminance = Math.max(normalizedLuminance, 0);
             let luminanceExponent = normalizedLuminance * maxExponent;
             luminanceExponent = Math.floor(luminanceExponent / 2)*2;
@@ -61,6 +61,11 @@ export async function trueScreenTone(image: Jimp) {
                 }
             }
         }
+        const imagePixelIndex = image.getPixelIndex(x, y);
+        image.bitmap.data[imagePixelIndex + 0] = Math.floor(255 * luminance);
+        image.bitmap.data[imagePixelIndex + 1] = Math.floor(255 * luminance);
+        image.bitmap.data[imagePixelIndex + 2] = Math.floor(255 * luminance);
+        // image.bitmap.data[imagePixelIndex + 3] = 0;
     })
     return image.composite(newImage, 0, 0);
 }

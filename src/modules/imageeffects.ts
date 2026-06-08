@@ -22,9 +22,9 @@ import { dotMatrix } from './dotmatrix';
 
 export const filterIDs = ["dotmatrix", "reversesharpness", "truescreentone", "blueprintify", "errordiffusiondither", "errordiffusiontwotone", "rotatedscreentone", "resizerotate", "shearx", "sheary", "rotate", "separatedgaussian", "quantize", "fakescreentone", "specialscreentone", "random", "kuwahara", "pixelsort", "contrastmask", "bside", "contrastmaskcomparison", "dither", "twotone", "popartfoursquare", "sharpen", "edgedetection", "darkenededges", "theresholdedgedetection", "sepia", "sharpenanddither", "sepiaandsharpen", "extremesharpen", "hueshift", "brighten", "saturate", "vibrantize", "custom", "chromaticabberate", "crtscreen", "mosaic", "fakedither", "screentone"] as const;
 export type filterID = typeof filterIDs[number];
+export const blackListedRandomFilters: filterID[] = ["random", "contrastmask", "contrastmaskcomparison", "edgedetection", "custom", "edgedetection", "popartfoursquare"];
 
 export async function applyImageEffect(inputImage: Jimp, filterName: filterID, randomParameters: boolean) {
-    const blackListedRandomFilters: filterID[] = ["random", "contrastmask", "contrastmaskcomparison", "edgedetection", "custom"];
     if (filterName == "random") {
         const validFilterIDs = filterIDs.filter(filter => !blackListedRandomFilters.includes(filter));
         filterName = validFilterIDs[Math.floor(Math.random() * validFilterIDs.length)];
@@ -105,8 +105,8 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             // outputImage = await sharpenedImageComparison(inputImage);
             break;
         case "reversesharpness":
-            // outputImage = await sharpenImage(inputImage.clone(), -sharpnessIntensity, gaussianRadius, "fast");
-            outputImage = await sharpenedImageComparison(inputImage);
+            outputImage = await sharpenImage(inputImage.clone(), -sharpnessIntensity, gaussianRadius, "fast");
+            // outputImage = await sharpenedImageComparison(inputImage);
             break;
         case "extremesharpen":
             outputImage = await sharpenImage(inputImage, sharpnessIntensity * 1.5, gaussianRadius);
@@ -228,5 +228,31 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             break;
     }
 
+    return outputImage;
+}
+
+const maxGigaImageSize = 650 ** 2;
+export async function gigaImage(inputImage: Jimp) {
+    if ((inputImage.bitmap.width * inputImage.bitmap.height) > maxGigaImageSize) {
+        const scaleChange = Math.sqrt(maxGigaImageSize / (inputImage.bitmap.width * inputImage.bitmap.height));
+        console.log(`\n[GigaImage] Scale Change Applied. Original Pixel Count: ${inputImage.bitmap.width * inputImage.bitmap.height}\nNew Pixel Count: ${inputImage.bitmap.width * scaleChange * inputImage.bitmap.height * scaleChange}`);
+        inputImage.resize(Math.ceil(inputImage.bitmap.width * scaleChange), Math.ceil(inputImage.bitmap.height * scaleChange), Jimp.RESIZE_BICUBIC);
+    }
+    const usingFilters = filterIDs.filter(filterID => !blackListedRandomFilters.includes(filterID));
+    const outputImageMaxIndices = Math.ceil(Math.sqrt(usingFilters.length));
+    const gigaWidth = outputImageMaxIndices * inputImage.bitmap.width;
+    const gigaHeight = outputImageMaxIndices * inputImage.bitmap.height;
+
+    const outputImage = new Jimp(gigaWidth, gigaHeight, 0x00000000);
+
+    for (let filterIDIndex = 0; filterIDIndex < usingFilters.length; filterIDIndex++) {
+        const filterID = usingFilters[filterIDIndex];
+        console.log(`Performing ${filterID}...`);
+        const xPosition = Math.floor(((filterIDIndex % outputImageMaxIndices) / outputImageMaxIndices) * gigaWidth);
+        const yPosition = Math.floor((Math.floor(filterIDIndex / outputImageMaxIndices) / outputImageMaxIndices) * gigaHeight);
+        const effectImage = await applyImageEffect(inputImage.clone(), filterID, true);
+        effectImage.resize(inputImage.bitmap.width, inputImage.bitmap.height, Jimp.RESIZE_NEAREST_NEIGHBOR);
+        outputImage.composite(effectImage, xPosition, yPosition);
+    }
     return outputImage;
 }

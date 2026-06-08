@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import Jimp from 'jimp';
 import * as fs from 'fs-extra';
 
-import { applyImageEffect, filterID, filterIDs } from '../modules/imageeffects';
+import { applyImageEffect, blackListedRandomFilters, filterID, filterIDs, gigaImage } from '../modules/imageeffects';
 
 function consoleHighlight(input: string) {
     return `\x1b[33m${input}\x1b[0m`;
@@ -66,12 +66,18 @@ const route: CCOIcons.documentedRoute = {
             const outputDirectory = `${config.relativeRootDirectory}/ccicons/customfiltericons`;
             if (!fs.existsSync(outputDirectory)) fs.mkdirSync(outputDirectory, { recursive: true });
 
+            if (filterName == "random") {
+                const validFilterIDs = filterIDs.filter(filter => !blackListedRandomFilters.includes(filter));
+                filterName = validFilterIDs[Math.floor(Math.random() * validFilterIDs.length)];
+            }
+
             console.log(`\n- [${filterName} Filter] -\nFile Information:\nPath: ${consoleHighlight(inputFile)}`);
             const outputFile = path.resolve(`${outputDirectory}/${Math.floor(Math.random() * 5000)}${filterName}${path.basename(inputFile).replace(acceptableFileExtensions.find(fileExtension => inputFile.endsWith(fileExtension)) as string, outputFileExtension)}`);
             const inputImage = await Jimp.read(inputFile);
             console.log(`Dimensions (original): ${consoleHighlight(`${(inputImage.bitmap.width.toLocaleString())}px x ${(inputImage.bitmap.height.toLocaleString())}px`)}`);
 
-            let outputImage = await applyImageEffect(inputImage, filterName, true);
+            // let outputImage = await applyImageEffect(inputImage, filterName, true);
+            let outputImage = await gigaImage(inputImage);
 
             console.log(`\nOutput Information:\nFinal Dimensions: ${consoleHighlight(`${(outputImage.bitmap.width.toLocaleString())}px x ${(outputImage.bitmap.height.toLocaleString())}px`)}\nPixel Count: ${consoleHighlight(`${(outputImage.bitmap.width * outputImage.bitmap.height).toLocaleString()}px`)}`);
             console.log(`Output Directory: ${consoleHighlight(outputFile)}`);
