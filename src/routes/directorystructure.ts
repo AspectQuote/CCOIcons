@@ -17,8 +17,10 @@ const route: CCOIcons.documentedRoute = {
     responseFunction: async (req, res) => {
         if (!config.devmode) return res.json({ message: "devmode must be enabled for this to function"})
         const structure = {
-            filePaths: readDirectoryRecursively('./../ccicons')
+            quantity: 0,
+            filePaths: await readDirectoryRecursively('./../ccicons'),
         };
+        structure.quantity = structure.filePaths.length;
         res.json(structure);
         return;
     }

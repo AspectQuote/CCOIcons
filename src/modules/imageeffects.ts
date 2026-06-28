@@ -34,7 +34,7 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
     const contrastMaskLow = 0.05;
     const contrastMaskHigh = 0.8;
     const gaussianRadius = 12;
-    const usingDitherMatrix = "45";
+    const usingDitherMatrix = 8;
     const quantizeColors = 12;
     const ditherSpread = 0.1;
     const ditherScaleFactor = 3;
@@ -86,7 +86,7 @@ export async function applyImageEffect(inputImage: Jimp, filterName: filterID, r
             outputImage = await errorDiffusionTwoTone(inputImage, usingErrorDiffusionMatrix, 2, twoTonesHighTone, twoTonesLowTone);
             break;
         case "errordiffusiondither":
-            outputImage = await errorDiffusionDither(inputImage, "Floyd-Steinberg", 5, 1);
+            outputImage = await errorDiffusionDither(inputImage, usingErrorDiffusionMatrix, 5, 1);
             break;
         case "twotone":
             outputImage = await generateTwoToneImage(inputImage, usingDitherMatrix, 4, twoTonesHighTone, twoTonesLowTone);

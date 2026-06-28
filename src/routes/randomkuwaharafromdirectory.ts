@@ -76,8 +76,8 @@ const route: CCOIcons.documentedRoute = {
             const inputImage = await Jimp.read(inputFile);
             console.log(`Dimensions (original): ${consoleHighlight(`${(inputImage.bitmap.width.toLocaleString())}px x ${(inputImage.bitmap.height.toLocaleString())}px`)}`);
 
-            // let outputImage = await applyImageEffect(inputImage, filterName, true);
-            let outputImage = await gigaImage(inputImage);
+            let outputImage = await applyImageEffect(inputImage, filterName, true);
+            // let outputImage = await gigaImage(inputImage);
 
             console.log(`\nOutput Information:\nFinal Dimensions: ${consoleHighlight(`${(outputImage.bitmap.width.toLocaleString())}px x ${(outputImage.bitmap.height.toLocaleString())}px`)}\nPixel Count: ${consoleHighlight(`${(outputImage.bitmap.width * outputImage.bitmap.height).toLocaleString()}px`)}`);
             console.log(`Output Directory: ${consoleHighlight(outputFile)}`);
